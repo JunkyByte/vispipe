@@ -6,6 +6,7 @@ from threading import Thread, Event
 from queue import Queue
 
 MAXSIZE = 100
+assert np.log10(MAXSIZE) == int(np.log10(MAXSIZE))
 
 class Pipeline:
     def __init__(self):
@@ -19,10 +20,13 @@ class Pipeline:
         self._blocks[block.name] = block
 
     def add_node(self, block):
-        self.pipeline.add_node(block)
+        return self.pipeline.add_node(block)
 
-    def add_conn(self):
-        raise NotImplementedError
+    def remove_node(self, block, index):
+        self.pipeline.remove_node(block, index)
+
+    def add_conn(self, from_block, from_idx, out_idx, to_block, to_idx, inp_idx):
+        self.pipeline.add_connection(from_block, from_idx, out_idx, to_block, to_idx, inp_idx)
 
     def build(self) -> None:
         # ask runner to build the pipeline
@@ -32,13 +36,67 @@ class PipelineRunner:
     def __init__(self):
         self.built = False
         self.threads = []
-        self.in_queues = []
-        self.out_queues = []
+        self.out_queues = {}
 
     def build_pipeline(self, pipeline):
         # Collect each block arguments, create connections between each other using separated threads
         # use queues to pass data between the threads.
-        self.built = True
+        used_ids = np.array(list(pipeline.ids.values()))
+        used_ids.sort()
+        nodes = pipeline.nodes[used_ids]
+        nodes_conn = np.array([x[used_ids] for x in pipeline.matrix[used_ids]])
+        map_idx_id = dict(zip(range(len(nodes_conn)), used_ids))
+        map_id_idx = {v: k for k, v in map_idx_id.items()}
+        gain = np.array([n.num_outputs() / (n.num_inputs() + 1e-16) for n in nodes])
+        to_process = list(used_ids[(-gain).argsort()])
+        trash = []
+
+        i = 0
+        while to_process != []:
+            idx = to_process[i]
+            id = map_idx_id[idx]
+
+            node = nodes[id]
+            out_conn = nodes_conn[id]
+            in_conn = nodes_conn[:, id]
+            out_conn_count = np.count_nonzero(np.concatenate(out_conn))
+            in_conn_count = np.count_nonzero(np.concatenate(in_conn))
+
+            # If inputs are not satisfied we trash the node and continue the processing
+            if in_conn_count < node.num_inputs():
+                trash.append(id)
+                to_process.pop(i)
+                continue
+
+            # Helper to create input queues
+            def get_input_queues(conn):
+                in_q = [None for _ in range(node.num_inputs())]
+                for conn_id, value in conn:
+                    for out_idx, inp_idx in enumerate(value):
+                        if inp_idx == 0:
+                            continue
+                        in_q[inp_idx - 1] = self.out_queues[conn_id][out_idx]
+                    return in_q
+
+            # Create input and output queues
+            in_q = None
+            if node.num_inputs() != 0:  # If there are inputs
+                conn = [(map_idx_id[k], value) for k, value in enumerate(in_conn) if value.any() != 0]
+                try:  # Try to build dependencies (they can not exist at this time)
+                    in_q = get_input_queues(conn)
+                except KeyError:
+                    i = i + 1 % len(to_process)
+                    continue
+            self.out_queues[id] = [Queue(node.max_queue) for _ in range(out_conn_count)]
+
+            # Create the thread
+            thr_func = lambda: run_block(**dict(node), in_q=in_q, out_q=self.out_queues[id])
+            thr = TerminableThread(thr_func)
+            thr.daemon = True
+            self.threads.append(thr)
+            to_process.pop(i)
+            i = 0  # If we successfully processed a node we go back to the highest priority
+
         for block in pipeline:
             in_q = Queue(10)
             out_q = Queue(10)
@@ -57,36 +115,63 @@ class PipelineRunner:
             print(i)
             time.sleep(3)
 
+        self.built = True
+
 class PipelineGraph:
     def __init__(self):
         self.matrix = np.empty((MAXSIZE, MAXSIZE), dtype=object)  # Adjacency matrix
-        self.inputs = np.zeros((MAXSIZE,), dtype=np.int)
+        self.nodes = np.empty((MAXSIZE,), dtype=Block)
 
         self.ids = {}  # Map from hash to assigned ids
-        self.free_idx = set()
-        self.free_idx.update([i for i in range(MAXSIZE)])
+        self.instances = {}  # Free ids for instances of same block
+        self.free_idx = set([i for i in range(MAXSIZE)])  # Free ids for blocks
 
-    def get_hash(self, block):
-        return hash(block)
+    def get_hash(self, block, index=None):
+        hash_block = hash(block)
+        if not hash_block in self.instances.keys() and index is None:
+            self.instances[hash_block] = set([i for i in range(MAXSIZE)])
+
+        if index is None:
+            index = self.instances[hash_block].pop()
+        hash_index = hash_block * MAXSIZE + index
+        return (hash_index, hash_block)
+
+    def hash_to_instance(self, hash_index, hash_block):
+        return hash_index - hash_block * MAXSIZE
 
     def register_node(self, block, id):
-        hash_block = self.get_hash(block)
-        self.ids[hash_block] = id
+        hash_index, hash_block = self.get_hash(block)
+        assert hash_index not in self.ids.keys()
+        self.ids[hash_index] = id
+        return self.hash_to_instance(hash_index, hash_block)
 
     def add_node(self, block):
         id = self.free_idx.pop()
-        self.register_node(block, id)  # Register block in the matrix
-        num_inputs = block.num_inputs()
-        num_outputs = block.num_output()
-        self.inputs[id] = num_inputs  # Store inputs
-        out = [0 for _ in range(num_outputs)]
-        for i in range(MAXSIZE): self.matrix[id, i] = out  # and outputs
+        index = self.register_node(block, id)  # Register block in the matrix
+        num_outputs = block.num_outputs()
+        self.nodes[id] = block  # Store the node instance
+        out = np.array([0 for _ in range(num_outputs)])
+        for i in range(MAXSIZE): self.matrix[id, i] = out
+        return index
 
-    def remove_node(self):
-        raise NotImplementedError
+    def remove_node(self, block, index):
+        hash_index, hash_block = self.get_hash(block, index=index)
+        id = self.ids.pop(hash_index)
+        self.nodes[id] = None  # unassign the node instance
+        self.matrix[id, :] = None  # delete the node connections
+        self.instances[hash_block].add(self.hash_to_instance(hash_index, hash_block))
 
-    def add_connection(self):
-        raise NotImplementedError
+    def add_connection(self, from_block, from_idx, out_idx, to_block, to_idx, inp_idx):
+        assert inp_idx < to_block.num_inputs()
+        assert out_idx < from_block.num_outputs()
+        hash_from, hash_from_block = self.get_hash(from_block, from_idx)
+        hash_to, hash_to_block = self.get_hash(to_block, to_idx)
+        assert hash_from != hash_to
+
+        from_id = self.ids[hash_from]
+        to_id = self.ids[hash_to]
+
+        self.matrix[from_id][to_id] = np.array([inp_idx + 1])
 
 class Block:
     def __init__(self, f: Callable, input_args: List[str], max_queue: int, output_names: List[str]):
@@ -99,7 +184,7 @@ class Block:
     def num_inputs(self):
         return len(self.input_args)
 
-    def num_output(self):
+    def num_outputs(self):
         return len(self.output_names)
 
     def __iter__(self):
@@ -130,9 +215,12 @@ def block(f=None, max_queue=2, output_names=None, tag='None'):
     return f
 
 def run_block(f, in_q, out_q, *args, **kwargs):
-    x = in_q.get()
+    x = []
+    if in_q is not None:
+        x = in_q.get()
     ret = f(*x)
-    out_q.put(ret)
+    for q in out_q:
+        q.put(ret)
 
 class TerminableThread(Thread):
 
