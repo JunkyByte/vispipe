@@ -45,14 +45,15 @@ high_gain = vispipe.pipeline.add_node(high_g)
 vispipe.pipeline.add_conn(custom_noinp, inp1, 0, custom_add, sum_full1, 0)
 vispipe.pipeline.add_conn(custom_noinp, inp2, 0, custom_add, sum_full1, 1)
 # Add 2 has one input connected to the input node and one connected to Add 1
-vispipe.pipeline.add_conn(custom_noinp, inp1, 0, custom_add, sum_full2, 0)
-vispipe.pipeline.add_conn(custom_add, sum_full1, 0, custom_add, sum_full2, 1)
+#vispipe.pipeline.add_conn(custom_noinp, inp1, 0, custom_add, sum_full2, 0)
+#vispipe.pipeline.add_conn(custom_add, sum_full1, 0, custom_add, sum_full2, 1)
 # Two out has one input connected and it's output are not connected
-vispipe.pipeline.add_conn(custom_noinp, inp1, 0, two_out, two_out_idx, 0)
+#vispipe.pipeline.add_conn(custom_noinp, inp1, 0, two_out, two_out_idx, 0)
 # High gain, fully connected but has dependencies
-vispipe.pipeline.add_conn(custom_add, sum_full2, 0, high_g, high_gain, 0)
+#vispipe.pipeline.add_conn(custom_add, sum_full2, 0, high_g, high_gain, 0)
 
-# build the pipeline
 vispipe.pipeline.build()
+
+vispipe.pipeline.run()
 
 print(0)

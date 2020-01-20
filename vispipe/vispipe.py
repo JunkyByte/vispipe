@@ -4,6 +4,7 @@ from inspect import signature, isgeneratorfunction
 from typing import List, Callable
 from threading import Thread, Event
 from queue import Queue
+import time
 
 MAXSIZE = 100
 assert np.log10(MAXSIZE) == int(np.log10(MAXSIZE))
@@ -29,8 +30,10 @@ class Pipeline:
         self.pipeline.add_connection(from_block, from_idx, out_idx, to_block, to_idx, inp_idx)
 
     def build(self) -> None:
-        # ask runner to build the pipeline
         self.runner.build_pipeline(self.pipeline)
+
+    def run(self) -> None:
+        self.runner.run()
 
 class PipelineRunner:
     def __init__(self):
@@ -45,77 +48,67 @@ class PipelineRunner:
         used_ids.sort()
         nodes = pipeline.nodes[used_ids]
         nodes_conn = np.array([x[used_ids] for x in pipeline.matrix[used_ids]])
-        map_idx_id = dict(zip(range(len(nodes_conn)), used_ids))
-        map_id_idx = {v: k for k, v in map_idx_id.items()}
         gain = np.array([n.num_outputs() / (n.num_inputs() + 1e-16) for n in nodes])
-        to_process = list(used_ids[(-gain).argsort()])
+        to_process = list(np.arange(len(used_ids))[(-gain).argsort()])
         trash = []
 
         i = 0
         while to_process != []:
             idx = to_process[i]
-            id = map_idx_id[idx]
 
-            node = nodes[id]
-            out_conn = nodes_conn[id]
-            in_conn = nodes_conn[:, id]
+            node = nodes[idx]
+            out_conn = nodes_conn[idx]
+            in_conn = nodes_conn[:, idx]
             out_conn_count = np.count_nonzero(np.concatenate(out_conn))
             in_conn_count = np.count_nonzero(np.concatenate(in_conn))
 
             # If inputs are not satisfied we trash the node and continue the processing
             if in_conn_count < node.num_inputs():
-                trash.append(id)
+                trash.append(idx)
                 to_process.pop(i)
                 continue
 
             # Helper to create input queues
             def get_input_queues(conn):
-                in_q = [None for _ in range(node.num_inputs())]
+                in_q = [FakeQueue() for _ in range(node.num_inputs())]
                 for conn_id, value in conn:
                     for out_idx, inp_idx in enumerate(value):
                         if inp_idx == 0:
                             continue
                         in_q[inp_idx - 1] = self.out_queues[conn_id][out_idx]
-                    return in_q
+                return in_q
 
             # Create input and output queues
             in_q = None
             if node.num_inputs() != 0:  # If there are inputs
-                conn = [(map_idx_id[k], value) for k, value in enumerate(in_conn) if value.any() != 0]
+                conn = [(k, value) for k, value in enumerate(in_conn) if value.any() != 0]
                 try:  # Try to build dependencies (they can not exist at this time)
                     in_q = get_input_queues(conn)
                 except KeyError:
                     i = i + 1 % len(to_process)
                     continue
-            self.out_queues[id] = [Queue(node.max_queue) for _ in range(out_conn_count)]
+
+            # TODO: Fix me must be split between the different outputs (multiple counters)
+            self.out_queues[idx] = [Queue(node.max_queue) for _ in range(out_conn_count)]
 
             # Create the thread
-            thr_func = lambda: run_block(**dict(node), in_q=in_q, out_q=self.out_queues[id])
-            thr = TerminableThread(thr_func)
+            func = lambda node=dict(node), in_q=in_q, out_q=self.out_queues[idx]: run_block(**node, in_q=in_q, out_q=out_q)
+            thr = TerminableThread(func)
             thr.daemon = True
             self.threads.append(thr)
             to_process.pop(i)
             i = 0  # If we successfully processed a node we go back to the highest priority
-
-        for block in pipeline:
-            in_q = Queue(10)
-            out_q = Queue(10)
-            thr = TerminableThread(lambda: run_block(**dict(block), in_q=in_q, out_q=out_q))
-            thr.daemon = True
-            self.threads.append(thr)
-
-        for thr in self.threads:
-            thr.start()
-
-        i = 0
-        while True:
-            import time
-            in_q.put((i, i))
-            i = list(out_q.get())[0]
-            print(i)
-            time.sleep(3)
-
         self.built = True
+
+    def run(self):
+        if self.built:
+            for thr in self.threads:
+                thr.start()
+            for thr in self.threads:
+                thr.join()
+        else:
+            raise Exception('The pipeline has not been built')
+
 
 class PipelineGraph:
     def __init__(self):
@@ -217,17 +210,24 @@ def block(f=None, max_queue=2, output_names=None, tag='None'):
 def run_block(f, in_q, out_q, *args, **kwargs):
     x = []
     if in_q is not None:
-        x = in_q.get()
-    ret = f(*x)
+        x = [q.get() for q in in_q]
+    ret = list(f(*x))
+    print('I am %s and with parameters: %s i got %s' % (kwargs['name'], x, ret))
     for q in out_q:
-        q.put(ret)
+        q.put(ret[0])
+    time.sleep(10)
+
+def null_output():
+    raise NotImplementedError
+
+class FakeQueue:
+    def get(self):
+        return []
 
 class TerminableThread(Thread):
-
     # Thread class with a _stop() method.
     # The thread itself has to check
     # regularly for the stopped() condition.
-
     def __init__(self, f, thread_args=(), thread_kwargs={}, *args, **kwargs):
         super(TerminableThread, self).__init__(*thread_args, **thread_kwargs)
         self._stopper = Event()
