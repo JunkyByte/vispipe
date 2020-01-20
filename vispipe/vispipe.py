@@ -126,18 +126,6 @@ class PipelineRunner:
         else:
             raise Exception('The pipeline has not been built')
 
-def split_tee(n: List, q):
-    it = iter(q)
-    deques = [[collections.deque() for _ in range(length)] for length in n]
-    def gen(mydeque):
-        while True:
-            if not mydeque:
-                newval = next(it)
-                for d in deques:
-                    d.append(newval)
-            yield mydeque.popleft()
-    return [tuple(gen(d) for d in deq) for deq in deques]
-
 class PipelineGraph:
     def __init__(self):
         self.matrix = np.empty((MAXSIZE, MAXSIZE), dtype=object)  # Adjacency matrix
@@ -240,13 +228,9 @@ def run_block(f, in_q, out_q, *args, **kwargs):
     if in_q is not None:
         x = [q.get() for q in in_q]
     ret = list(f(*x))
-    print('I am %s and with parameters: %s i got %s' % (kwargs['name'], x, ret))
-    for q in out_q:
-        q.put(ret[0])
-    time.sleep(10)
-
-def null_output():
-    raise NotImplementedError
+    for i, out in enumerate(out_q):
+        for q in out:
+            q.put(ret[i])
 
 class FakeQueue:
     def get(self):
