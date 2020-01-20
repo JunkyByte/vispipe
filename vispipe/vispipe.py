@@ -4,6 +4,7 @@ from inspect import signature, isgeneratorfunction
 from typing import List, Callable
 from threading import Thread, Event
 from queue import Queue
+import collections
 import time
 
 MAXSIZE = 100
@@ -40,6 +41,7 @@ class PipelineRunner:
         self.built = False
         self.threads = []
         self.out_queues = {}
+        self.out_queues_state = []
 
     def build_pipeline(self, pipeline):
         # Collect each block arguments, create connections between each other using separated threads
@@ -57,16 +59,28 @@ class PipelineRunner:
             idx = to_process[i]
 
             node = nodes[idx]
-            out_conn = nodes_conn[idx]
+            out_conn = np.array(list(nodes_conn[idx]))
             in_conn = nodes_conn[:, idx]
-            out_conn_count = np.count_nonzero(np.concatenate(out_conn))
+            out_conn_total = np.count_nonzero(out_conn)
+            out_conn_split = np.count_nonzero(out_conn, axis=0)
             in_conn_count = np.count_nonzero(np.concatenate(in_conn))
+
 
             # If inputs are not satisfied we trash the node and continue the processing
             if in_conn_count < node.num_inputs():
                 trash.append(idx)
                 to_process.pop(i)
                 continue
+
+            # Helper to get free queues
+            def get_free_out_q(conn_id, out_idx):
+                for i, cand in enumerate(self.out_queues[conn_id][out_idx]):
+                    q, state = cand
+                    if state == False:
+                        self.out_queues[conn_id][out_idx][i][1] = True
+                        return q
+                raise AssertionError
+
 
             # Helper to create input queues
             def get_input_queues(conn):
@@ -75,7 +89,9 @@ class PipelineRunner:
                     for out_idx, inp_idx in enumerate(value):
                         if inp_idx == 0:
                             continue
-                        in_q[inp_idx - 1] = self.out_queues[conn_id][out_idx]
+
+                        free_q = get_free_out_q(conn_id, out_idx)
+                        in_q[inp_idx - 1] = free_q
                 return in_q
 
             # Create input and output queues
@@ -88,11 +104,12 @@ class PipelineRunner:
                     i = i + 1 % len(to_process)
                     continue
 
-            # TODO: Fix me must be split between the different outputs (multiple counters)
-            self.out_queues[idx] = [Queue(node.max_queue) for _ in range(out_conn_count)]
+            # Populate the output queue dictionary
+            self.out_queues[idx] = [[[Queue(node.max_queue), False] for _ in range(out)] for out in out_conn_split]
+            out_q = [[x[0] for x in out] for out in self.out_queues[idx]]
 
             # Create the thread
-            func = lambda node=dict(node), in_q=in_q, out_q=self.out_queues[idx]: run_block(**node, in_q=in_q, out_q=out_q)
+            func = lambda node=dict(node), in_q=in_q, out_q=out_q: run_block(**node, in_q=in_q, out_q=out_q)
             thr = TerminableThread(func)
             thr.daemon = True
             self.threads.append(thr)
@@ -109,6 +126,17 @@ class PipelineRunner:
         else:
             raise Exception('The pipeline has not been built')
 
+def split_tee(n: List, q):
+    it = iter(q)
+    deques = [[collections.deque() for _ in range(length)] for length in n]
+    def gen(mydeque):
+        while True:
+            if not mydeque:
+                newval = next(it)
+                for d in deques:
+                    d.append(newval)
+            yield mydeque.popleft()
+    return [tuple(gen(d) for d in deq) for deq in deques]
 
 class PipelineGraph:
     def __init__(self):
