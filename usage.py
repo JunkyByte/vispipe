@@ -11,6 +11,10 @@ def custom_block_rand():
     yield np.random.randn()
 
 @vispipe.block
+def custom_block_rand_range(min=-1., max=1.):
+    yield (np.random.random() * (max - min)) - min
+
+@vispipe.block
 def custom_block_test_identity(input1):
     yield input1
 
@@ -43,20 +47,21 @@ def custom_block_print_test(input1):
 custom_add = vispipe.pipeline._blocks['custom_block_test_addition']
 custom_sin = vispipe.pipeline._blocks['custom_block_sin']
 custom_noinp = vispipe.pipeline._blocks['custom_block_no_input']
-custom_rand = vispipe.pipeline._blocks['custom_block_rand']
+custom_rand = vispipe.pipeline._blocks['custom_block_rand_range']
 two_out = vispipe.pipeline._blocks['custom_block_test_identity_2_out']
 out_test = vispipe.pipeline._blocks['custom_block_print_test']
 
 inp1 = vispipe.pipeline.add_node(custom_noinp)
-rand = vispipe.pipeline.add_node(custom_rand)
-sumbetw = vispipe.pipeline.add_node(custom_add)
+rand = vispipe.pipeline.add_node(custom_rand, min=0, max=np.pi / 2)
+#sumbetw = vispipe.pipeline.add_node(custom_add)
 output_print = vispipe.pipeline.add_node(out_test)
 sin = vispipe.pipeline.add_node(custom_sin)
 
 # Constant input are attached to sum which returns 2
-vispipe.pipeline.add_conn(custom_noinp, inp1, 0, custom_add, sumbetw, 0)
-vispipe.pipeline.add_conn(custom_rand, rand, 0, custom_add, sumbetw, 1)
-vispipe.pipeline.add_conn(custom_add, sumbetw, 0, custom_sin, sin, 0)
+#vispipe.pipeline.add_conn(custom_noinp, inp1, 0, custom_add, sumbetw, 0)
+#vispipe.pipeline.add_conn(custom_rand, rand, 0, custom_add, sumbetw, 1)
+#vispipe.pipeline.add_conn(custom_add, sumbetw, 0, custom_sin, sin, 0)
+vispipe.pipeline.add_conn(custom_rand, rand, 0, custom_sin, sin, 0)
 vispipe.pipeline.add_conn(custom_sin, sin, 0, out_test, output_print, 0)
 
 vispipe.pipeline.build()

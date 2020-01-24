@@ -1,6 +1,6 @@
 import numpy as np
 from functools import partial
-from inspect import signature, isgeneratorfunction
+from inspect import signature, isgeneratorfunction, _empty
 from typing import List, Callable
 from threading import Thread, Event
 from queue import Queue
@@ -21,8 +21,8 @@ class Pipeline:
         assert block.name not in self._blocks.keys(), 'The name %s is already registered as a pipeline block' % block.name
         self._blocks[block.name] = block
 
-    def add_node(self, block):
-        return self.pipeline.add_node(block)
+    def add_node(self, block, **kwargs):
+        return self.pipeline.add_node(block, **kwargs)
 
     def remove_node(self, block, index):
         self.pipeline.remove_node(block, index)
@@ -49,6 +49,7 @@ class PipelineRunner:
         used_ids = np.array(list(pipeline.ids.values()))
         used_ids.sort()
         nodes = pipeline.nodes[used_ids]
+        custom_args = pipeline.custom_args[used_ids]
         nodes_conn = np.array([x[used_ids] for x in pipeline.matrix[used_ids]])
         gain = np.array([n.num_outputs() / (n.num_inputs() + 1e-16) for n in nodes])
         to_process = list(np.arange(len(used_ids))[(-gain).argsort()])
@@ -59,6 +60,7 @@ class PipelineRunner:
             idx = to_process[i]
 
             node = nodes[idx]
+            custom_arg = custom_args[idx]
             out_conn = np.array(list(nodes_conn[idx]))
             in_conn = nodes_conn[:, idx]
             out_conn_total = np.count_nonzero(out_conn)
@@ -109,7 +111,8 @@ class PipelineRunner:
             out_q = [[x[0] for x in out] for out in self.out_queues[idx]]
 
             # Create the thread
-            func = lambda node=dict(node), in_q=in_q, out_q=out_q: run_block(**node, in_q=in_q, out_q=out_q)
+            func = lambda node=dict(node), in_q=in_q, out_q=out_q, custom_arg=custom_arg: \
+                run_block(**node, in_q=in_q, out_q=out_q, custom_arg=custom_arg)
             thr = TerminableThread(func)
             thr.daemon = True
             self.threads.append(thr)
@@ -130,6 +133,7 @@ class PipelineGraph:
     def __init__(self):
         self.matrix = np.empty((MAXSIZE, MAXSIZE), dtype=object)  # Adjacency matrix
         self.nodes = np.empty((MAXSIZE,), dtype=Block)
+        self.custom_args = np.empty((MAXSIZE,), dtype=dict)
 
         self.ids = {}  # Map from hash to assigned ids
         self.instances = {}  # Free ids for instances of same block
@@ -154,11 +158,12 @@ class PipelineGraph:
         self.ids[hash_index] = id
         return self.hash_to_instance(hash_index, hash_block)
 
-    def add_node(self, block):
+    def add_node(self, block, **kwargs):
         id = self.free_idx.pop()
         index = self.register_node(block, id)  # Register block in the matrix
         num_outputs = block.num_outputs()
         self.nodes[id] = block  # Store the node instance
+        self.custom_args[id] = kwargs
         out = np.array([0 for _ in range(num_outputs)])
         for i in range(MAXSIZE): self.matrix[id, i] = out
         return index
@@ -167,6 +172,7 @@ class PipelineGraph:
         hash_index, hash_block = self.get_hash(block, index=index)
         id = self.ids.pop(hash_index)
         self.nodes[id] = None  # unassign the node instance
+        self.custom_args[id] = None
         self.matrix[id, :] = None  # delete the node connections
         self.instances[hash_block].add(self.hash_to_instance(hash_index, hash_block))
 
@@ -183,10 +189,12 @@ class PipelineGraph:
         self.matrix[from_id][to_id] = np.array([inp_idx + 1])
 
 class Block:
-    def __init__(self, f: Callable, input_args: List[str], max_queue: int, output_names: List[str]):
+    def __init__(self, f: Callable, input_args, max_queue: int, output_names: List[str]):
         self.f = f
         self.name = f.__name__
-        self.input_args = input_args
+        args = [(k, val.default) for k, val in input_args.items()]
+        self.input_args = dict([(k, val) for k, val in args if val == _empty])
+        self.custom_args = dict([(k, val) for k, val in args if val != _empty])
         self.max_queue = max_queue
         self.output_names = output_names if output_names != None else ['y']
 
@@ -223,11 +231,11 @@ def block(f=None, max_queue=2, output_names=None, tag='None'):
     pipeline.register_block(f, max_queue, output_names)
     return f
 
-def run_block(f, in_q, out_q, *args, **kwargs):
+def run_block(f, in_q, out_q, custom_arg, *args, **kwargs):
     x = []
     if in_q is not None:
         x = [q.get() for q in in_q]
-    ret = list(f(*x))
+    ret = list(f(*x, **custom_arg))
     for i, out in enumerate(out_q):
         for q in out:
             q.put(ret[i])
