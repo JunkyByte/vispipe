@@ -4,8 +4,7 @@ from inspect import signature, isgeneratorfunction, _empty
 from typing import List, Callable
 from threading import Thread, Event
 from queue import Queue
-import collections
-import time
+import types
 
 MAXSIZE = 100
 assert np.log10(MAXSIZE) == int(np.log10(MAXSIZE))
@@ -16,8 +15,8 @@ class Pipeline:
         self.pipeline = PipelineGraph()
         self.runner = PipelineRunner()
 
-    def register_block(self, f : Callable, max_queue : int, output_names=None) -> None:
-        block = Block(f, signature(f).parameters, max_queue, output_names)
+    def register_block(self, f : Callable, is_class: bool, max_queue : int, output_names=None) -> None:
+        block = Block(f, is_class, max_queue, output_names)
         assert block.name not in self._blocks.keys(), 'The name %s is already registered as a pipeline block' % block.name
         self._blocks[block.name] = block
 
@@ -97,7 +96,7 @@ class PipelineRunner:
                 return in_q
 
             # Create input and output queues
-            in_q = None
+            in_q = []
             if node.num_inputs() != 0:  # If there are inputs
                 conn = [(k, value) for k, value in enumerate(in_conn) if value.any() != 0]
                 try:  # Try to build dependencies (they can not exist at this time)
@@ -111,9 +110,8 @@ class PipelineRunner:
             out_q = [[x[0] for x in out] for out in self.out_queues[idx]]
 
             # Create the thread
-            func = lambda node=dict(node), in_q=in_q, out_q=out_q, custom_arg=custom_arg: \
-                run_block(**node, in_q=in_q, out_q=out_q, custom_arg=custom_arg)
-            thr = TerminableThread(func)
+            runner = BlockRunner(node, in_q, out_q, custom_arg)
+            thr = TerminableThread(runner.run)
             thr.daemon = True
             self.threads.append(thr)
             to_process.pop(i)
@@ -189,9 +187,15 @@ class PipelineGraph:
         self.matrix[from_id][to_id] = np.array([inp_idx + 1])
 
 class Block:
-    def __init__(self, f: Callable, input_args, max_queue: int, output_names: List[str]):
+    def __init__(self, f: Callable, is_class: bool, max_queue: int, output_names: List[str]):
         self.f = f
         self.name = f.__name__
+        self.is_class = is_class
+        if self.is_class:
+            input_args = dict(signature(self.f.run).parameters)
+            del input_args['self']
+        else:
+            input_args = dict(signature(self.f).parameters)
         args = [(k, val.default) for k, val in input_args.items()]
         self.input_args = dict([(k, val) for k, val in args if val == _empty])
         self.custom_args = dict([(k, val) for k, val in args if val != _empty])
@@ -223,22 +227,40 @@ def block(f=None, max_queue=2, output_names=None, tag='None'):
     if f is None:  # Correctly manage decorator duality
         return partial(block, max_queue=max_queue, output_names=output_names, tag=tag)
 
-    if not isgeneratorfunction(f):
-        raise TypeError('The function you tagged is not a generator')
-    if signature(f).parameters and list(signature(f).parameters.keys())[0] == 'self':
-        raise TypeError('The function you passed is a class method, we only support functions right now')
+    if isinstance(f, types.FunctionType):
+        if not isgeneratorfunction(f):
+            raise TypeError('The function you tagged is not a generator')
+        if signature(f).parameters and list(signature(f).parameters.keys())[0] == 'self':
+            raise TypeError('The function you passed is a class method, we only support functions right now')
+        is_class = False
+    else:
+        # Is a custom class so we need to process it differently (instantiate)
+        assert hasattr(f, 'run'), 'The class %s you decorated must have a run method' % f.__name__
+        if not isgeneratorfunction(f.run):
+            raise TypeError('The function you tagged is not a generator')
+        is_class = True
 
-    pipeline.register_block(f, max_queue, output_names)
+    pipeline.register_block(f, is_class, max_queue, output_names)
     return f
 
-def run_block(f, in_q, out_q, custom_arg, *args, **kwargs):
-    x = []
-    if in_q is not None:
-        x = [q.get() for q in in_q]
-    ret = list(f(*x, **custom_arg))
-    for i, out in enumerate(out_q):
-        for q in out:
-            q.put(ret[i])
+class BlockRunner:
+    def __init__(self, node, in_q, out_q, custom_arg):
+        self.node = node
+        self.in_q = in_q
+        self.out_q = out_q
+        self.custom_arg = custom_arg
+
+        if node.is_class:
+            self.f = node.f().run
+        else:
+            self.f = node.f
+
+    def run(self):
+        x = [q.get() for q in self.in_q]
+        ret = list(self.f(*x, **self.custom_arg))
+        for i, out in enumerate(self.out_q):
+            for q in out:
+                q.put(ret[i])
 
 class FakeQueue:
     def get(self):
