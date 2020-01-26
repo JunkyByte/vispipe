@@ -5,6 +5,8 @@ from typing import List, Callable
 from threading import Thread, Event
 from queue import Queue
 import types
+import pickle
+import os
 
 MAXSIZE = 100
 assert np.log10(MAXSIZE) == int(np.log10(MAXSIZE))
@@ -34,6 +36,15 @@ class Pipeline:
 
     def run(self) -> None:
         self.runner.run()
+
+    def save(self, path) -> None:
+        with open(os.path.join(path, 'pipeline.pickle'), 'wb') as f:
+            pickle.dump(self.pipeline, f)
+
+    def load(self, path) -> None:
+        with open(os.path.join(path, 'pipeline.pickle'), 'rb') as f:
+            self.pipeline = pickle.load(f)
+
 
 class PipelineRunner:
     def __init__(self):
