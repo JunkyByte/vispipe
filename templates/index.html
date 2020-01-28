@@ -1,0 +1,30 @@
+
+<!DOCTYPE html>
+<style>
+body {
+  margin:0;
+  padding:0;
+  overflow:hidden;
+}
+
+canvas {
+    display:block;
+}
+</style>
+
+<body>
+<script src="//code.jquery.com/jquery-3.3.1.min.js"></script>
+<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.6/socket.io.min.js"></script>
+<script src="static/javascript/pixi/pixi.min.js"></script>
+<script src="static/javascript/js/application.js"></script>
+<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+<!-- <div id="log"> -->
+  <script type="text/javascript">
+    let type = "WebGL";
+    if(!PIXI.utils.isWebGLSupported()){
+      type = "canvas";
+    }
+
+    PIXI.utils.sayHello(type);
+  </script>
+</body>
