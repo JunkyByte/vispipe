@@ -1,4 +1,5 @@
 from vispipe import vispipe
+import usage
 from flask_socketio import SocketIO, emit
 from flask import Flask, render_template, url_for, copy_current_request_context
 from random import random
@@ -15,19 +16,21 @@ app.config['DEBUG'] = True
 socketio = SocketIO(app, async_mode=None, logger=True, engineio_logger=True)
 
 #random number Generator Thread
-thread = Thread()
-thread_stop_event = Event()
+#thread = Thread()
+#thread_stop_event = Event()
 
-@socketio.on('test_receive', namespace='/test')
-def show_msg(msg):
-    print(msg)
+#@socketio.on('test_receive')
+#def show_msg(msg):
+#    print(msg)
 
-def socket_blocks():
-    while not thread_stop_event.isSet():
-        number = round(random()*10, 3)
-        print(number)
-        socketio.emit('newnumber', {'number': number}, namespace='/test')
-        socketio.sleep(5)
+#def socket_blocks():
+#    while not thread_stop_event.isSet():
+#        socketio.emit('block_info', {'number': number}, namespace='/test')
+#        socketio.sleep(5)
+
+def share_blocks():
+    for block in vispipe.pipeline.get_blocks(serializable=True):
+        socketio.emit('block', block)
 
 @app.route('/')
 def index():
@@ -39,18 +42,20 @@ def show_session():
     print(session['test_session'])
     return '%s' % session.get('test_session')
 
-@socketio.on('connect', namespace='/test')
+@socketio.on('connect')
 def test_connect():
     # need visibility of the global thread object
-    global thread
+    #global thread
     print('Client connected')
+    print('Sharing blocks')
+    share_blocks()
 
-    #Start the random number generator thread only if the thread has not been started before.
-    if not thread.isAlive():
-        print("Starting Thread")
-        thread = socketio.start_background_task(socket_blocks)
+    #if not thread.isAlive():
+        #print("Starting Thread")
+        #thread = socketio.start_background_task(socket_blocks)
 
-@socketio.on('disconnect', namespace='/test')
+
+@socketio.on('disconnect')
 def test_disconnect():
     print('Client disconnected')
 

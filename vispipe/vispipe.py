@@ -17,6 +17,18 @@ class Pipeline:
         self.pipeline = PipelineGraph()
         self.runner = PipelineRunner()
 
+    def get_blocks(self, serializable=False):
+        x = []
+        for block in self._blocks.values():
+            v = dict(block)
+            if serializable:
+                del v['f']
+                # TODO: Change me to a custom value, using None can cause problems
+                # TODO: Support np array by casting to nested lists
+                v['input_args'] = dict([(k, v if v != _empty else None) for k, v in v['input_args'].items()])
+            x.append(v)
+        return x
+
     def register_block(self, f : Callable, is_class: bool, max_queue : int, output_names=None) -> None:
         block = Block(f, is_class, max_queue, output_names)
         assert block.name not in self._blocks.keys(), 'The name %s is already registered as a pipeline block' % block.name
@@ -223,6 +235,7 @@ class Block:
         yield 'f', self.f
         yield 'name', self.name
         yield 'input_args', self.input_args
+        yield 'custom_args', self.custom_args
         yield 'max_queue', self.max_queue
         yield 'output_names', self.output_names
 
