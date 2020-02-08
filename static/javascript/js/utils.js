@@ -28,18 +28,37 @@ function onDragMove()
 }
 
 function name_to_size(name){
-    w = name.length * 35;
-    h = 75; //name.length * 20;
-    return [w, h];
+    w = 40 + name.length * 10;
+    h = 40; //name.length * 20;
+    return [w, h]
 }
 
-function draw_block(name){
-    var [width, height] = name_to_size(name);
+function draw_rect(width, height, color, scale=1){
     var obj = new PIXI.Graphics();
     obj.lineStyle(2, 0x000000, 1);
-    obj.beginFill(0x9eef92);
-    obj.drawRect(0, 0, width, height);
+    obj.beginFill(color);
+    obj.drawRect(0, 0, width * scale, height * scale);
     obj.endFill();
     return obj
 }
 
+function draw_block(name){
+    var [width, height] = name_to_size(name);
+    var obj = draw_rect(width, height, color=BLOCK_COLOR, scale=1);
+    var text = draw_text(name);
+    text.anchor.set(0.5, 0.5);
+    text.position.set(obj.width / 2, obj.height / 2);
+    obj.addChild(text);
+    return [obj, text]
+}
+
+function draw_text(text, scale=1){
+    text = new PIXI.Text(text,
+        {
+            fontFamily : FONT,
+            fontSize: FONT_SIZE * scale,
+            fill : TEXT_COLOR,
+            align : 'right'
+        });
+    return text
+}

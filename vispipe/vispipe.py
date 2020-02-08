@@ -29,8 +29,8 @@ class Pipeline:
             x.append(v)
         return x
 
-    def register_block(self, f : Callable, is_class: bool, max_queue : int, output_names=None) -> None:
-        block = Block(f, is_class, max_queue, output_names)
+    def register_block(self, f : Callable, is_class: bool, max_queue : int, output_names=None, tag='None') -> None:
+        block = Block(f, is_class, max_queue, output_names, tag)
         assert block.name not in self._blocks.keys(), 'The name %s is already registered as a pipeline block' % block.name
         self._blocks[block.name] = block
 
@@ -210,10 +210,11 @@ class PipelineGraph:
         self.matrix[from_id][to_id] = np.array([inp_idx + 1])
 
 class Block:
-    def __init__(self, f: Callable, is_class: bool, max_queue: int, output_names: List[str]):
+    def __init__(self, f: Callable, is_class: bool, max_queue: int, output_names: List[str], tag: str):
         self.f = f
         self.name = f.__name__
         self.is_class = is_class
+        self.tag = tag
         if self.is_class:
             input_args = dict(signature(self.f.run).parameters)
             del input_args['self']
@@ -238,6 +239,7 @@ class Block:
         yield 'custom_args', self.custom_args
         yield 'max_queue', self.max_queue
         yield 'output_names', self.output_names
+        yield 'tag', self.tag
 
 def block(f=None, max_queue=2, output_names=None, tag='None'):
     """
@@ -264,7 +266,7 @@ def block(f=None, max_queue=2, output_names=None, tag='None'):
             raise TypeError('The function you tagged is not a generator')
         is_class = True
 
-    pipeline.register_block(f, is_class, max_queue, output_names)
+    pipeline.register_block(f, is_class, max_queue, output_names, tag)
     return f
 
 class BlockRunner:

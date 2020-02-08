@@ -31,6 +31,7 @@ socketio = SocketIO(app, async_mode=None, logger=True, engineio_logger=True)
 def share_blocks():
     for block in vispipe.pipeline.get_blocks(serializable=True):
         socketio.emit('block', block)
+    socketio.emit('end_block', None)
 
 @app.route('/')
 def index():
@@ -61,4 +62,4 @@ def test_disconnect():
 
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True)
+    socketio.run(app)

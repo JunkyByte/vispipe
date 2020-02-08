@@ -39,6 +39,22 @@ def custom_high_gain_test(input1):
     yield input1
 
 @vispipe.block
+def another_1(input1):
+    yield 0
+
+@vispipe.block
+def another_2(input1):
+    yield 0
+
+@vispipe.block
+def another_3(input1):
+    yield 0
+
+@vispipe.block
+def another_4(input1):
+    yield 0
+
+@vispipe.block
 def custom_block_print_test(input1):
     print('I am a print block and my value is %s' % input1)
     yield None
@@ -52,7 +68,6 @@ class custom_block_class:
         print('I am a print block CLASS and last value was %s while now is %s' % (self.last_element, input1))
         self.last_element = input1
         yield None
-
 
 # Pipeline Test
 custom_add = vispipe.pipeline._blocks['custom_block_test_addition']
