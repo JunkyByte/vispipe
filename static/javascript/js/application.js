@@ -14,7 +14,6 @@ var FONT_SIZE = 18;
 var TEXT_COLOR = 'white';
 var BUTTON_COLOR = 0xcfef92;
 var BLOCK_COLOR = 0x5DBCD2;
-
 // Listen for window resize events
 window.addEventListener('resize', resize);
 
@@ -43,12 +42,12 @@ $(document).ready(function(){
     });
 
     socket.on('end_block', function(msg) {
-        sidemenu.populate_menu(pipeline);
+        sidemenu.populate_menu(pipeline, app);
     });
 
     socket.on('node_id', function(msg) {
         var block = new Block(msg.name, msg.input_args, msg.custom_args, msg.output_names, msg.tag);
-        pipeline.DYNAMIC_NODES.push(new Node(block, msg.id));
+        pipeline.DYNAMIC_NODES.push(new Node(block, msg.id))
     });
 
     //socket.emit('test_receive', 'test_send_see_me_python')

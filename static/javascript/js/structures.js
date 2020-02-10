@@ -32,7 +32,7 @@ class Node extends AbstractNode {
             .on('mousemove', onDragMove)
             .on('touchmove', onDragMove);
         this.rect.position.set(200, 200);
-        app.stage.addChild(rect);
+        app.stage.addChild(this.rect);
     }
 }
 
@@ -49,9 +49,9 @@ class Block {
 class Button {
     constructor(name) {
         var [width, height] = name_to_size(name);
-        this.rect = draw_rect(width, height, color=BUTTON_COLOR, scale=0.8);
+        this.rect = draw_rect(width, height, BUTTON_COLOR, 0.8);
         this.rect.buttonMode = true;
-        this.text = draw_text(name, scale=0.9);
+        this.text = draw_text(name, 0.9);
         this.text.anchor.set(0.5, 0.5);
         this.text.position.set(this.rect.width / 2, this.rect.height / 2);
         this.rect.addChild(this.text);

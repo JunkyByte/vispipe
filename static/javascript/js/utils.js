@@ -6,6 +6,7 @@ function onDragStart(event)
     this.data = event.data;
     this.alpha = 0.5;
     this.dragging = this.data.getLocalPosition(this.parent);
+    app.stage.setChildIndex(this, app.stage.children.length-1)
 }
 
 function onDragEnd()
@@ -44,7 +45,7 @@ function draw_rect(width, height, color, scale=1){
 
 function draw_block(name){
     var [width, height] = name_to_size(name);
-    var obj = draw_rect(width, height, color=BLOCK_COLOR, scale=1);
+    var obj = draw_rect(width, height, BLOCK_COLOR, 1);
     var text = draw_text(name);
     text.anchor.set(0.5, 0.5);
     text.position.set(obj.width / 2, obj.height / 2);
@@ -62,3 +63,4 @@ function draw_text(text, scale=1){
         });
     return text
 }
+

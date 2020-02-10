@@ -70,7 +70,6 @@ class custom_block_class:
         self.last_element = input1
         yield None
 
-
 # Pipeline Test
 custom_add = vispipe.pipeline._blocks['custom_block_test_addition']
 custom_sin = vispipe.pipeline._blocks['custom_block_sin']
