@@ -7,7 +7,6 @@ from queue import Queue
 import types
 import pickle
 import os
-
 MAXSIZE = 100
 assert np.log10(MAXSIZE) == int(np.log10(MAXSIZE))
 
@@ -20,13 +19,11 @@ class Pipeline:
     def get_blocks(self, serializable=False):
         x = []
         for block in self._blocks.values():
-            v = dict(block)
             if serializable:
-                del v['f']
-                # TODO: Change me to a custom value, using None can cause problems
-                # TODO: Support np array by casting to nested lists
-                v['input_args'] = dict([(k, v if v != _empty else None) for k, v in v['input_args'].items()])
-            x.append(v)
+                block = block.serialize()
+            else:
+                block = dict(block)
+            x.append(block)
         return x
 
     def register_block(self, f : Callable, is_class: bool, max_queue : int, output_names=None, tag='None') -> None:
@@ -231,6 +228,14 @@ class Block:
 
     def num_outputs(self):
         return len(self.output_names)
+
+    def serialize(self):
+        x = dict(self)
+        del x['f']
+        # TODO: Change me to a custom value, using None can cause problems
+        # TODO: Support np array by casting to nested lists
+        x['input_args'] = dict([(k, v if v != _empty else None) for k, v in x['input_args'].items()])
+        return x
 
     def __iter__(self):
         yield 'f', self.f

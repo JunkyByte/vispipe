@@ -46,6 +46,7 @@ def another_1(input1):
 def another_2(input1):
     yield 0
 
+
 @vispipe.block
 def another_3(input1):
     yield 0
@@ -68,6 +69,7 @@ class custom_block_class:
         print('I am a print block CLASS and last value was %s while now is %s' % (self.last_element, input1))
         self.last_element = input1
         yield None
+
 
 # Pipeline Test
 custom_add = vispipe.pipeline._blocks['custom_block_test_addition']

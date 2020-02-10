@@ -5,6 +5,7 @@ from flask import Flask, render_template, url_for, copy_current_request_context
 from random import random
 from threading import Thread, Event
 from flask import session
+import itertools
 
 app = Flask(__name__)
 SESSION_TYPE = 'redis'
@@ -19,10 +20,6 @@ socketio = SocketIO(app, async_mode=None, logger=True, engineio_logger=True)
 #thread = Thread()
 #thread_stop_event = Event()
 
-#@socketio.on('test_receive')
-#def show_msg(msg):
-#    print(msg)
-
 #def socket_blocks():
 #    while not thread_stop_event.isSet():
 #        socketio.emit('block_info', {'number': number}, namespace='/test')
@@ -30,8 +27,14 @@ socketio = SocketIO(app, async_mode=None, logger=True, engineio_logger=True)
 
 def share_blocks():
     for block in vispipe.pipeline.get_blocks(serializable=True):
-        socketio.emit('block', block)
+        socketio.emit('new_block', block)
     socketio.emit('end_block', None)
+
+@socketio.on('new_node')
+def new_node(block):
+    block = vispipe.pipeline._blocks[block['name']]
+    id = vispipe.pipeline.add_node(block)
+    socketio.emit('node_id', {**{'id': id}, **block.serialize()})
 
 @app.route('/')
 def index():

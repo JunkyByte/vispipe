@@ -28,7 +28,7 @@ function onDragMove()
 }
 
 function name_to_size(name){
-    w = 40 + name.length * 10;
+    w = 35 + name.length * 8;
     h = 40; //name.length * 20;
     return [w, h]
 }

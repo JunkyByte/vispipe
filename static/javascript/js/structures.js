@@ -2,20 +2,37 @@ class AbstractNode {
     constructor(block) {
         this.block = block;
         [this.rect, this.text] = draw_block(this.block.name);
+        this.rect.buttonMode = true;
+        this.rect.interactive = true;
     }
 }
 
 class StaticNode extends AbstractNode {
     constructor(block) {
         super(block);
-        this.rect.buttonMode = true;
-        this.rect.interactive = true;
+        this.rect.on('mousedown', ev => pipeline.spawn_node(this.block), false);
+        this.rect.on('touchstart', ev => pipeline.spawn_node(this.block), false);
     }
 }
 
 class Node extends AbstractNode {
-    constructor(block) {
+    constructor(block, id) {
         super(block);
+        this.id = id;
+        this.rect
+            // events for drag start
+            .on('mousedown', onDragStart)
+            .on('touchstart', onDragStart)
+            // events for drag end
+            .on('mouseup', onDragEnd)
+            .on('mouseupoutside', onDragEnd)
+            .on('touchend', onDragEnd)
+            .on('touchendoutside', onDragEnd)
+            // events for drag move
+            .on('mousemove', onDragMove)
+            .on('touchmove', onDragMove);
+        this.rect.position.set(200, 200);
+        app.stage.addChild(rect);
     }
 }
 
@@ -41,10 +58,15 @@ class Button {
         this.rect.interactive = true;
     }
 }
+
 class Pipeline {
     constructor() {
         this.STATIC_NODES = [];
         this.DYNAMIC_NODES = [];
+    }
+
+    spawn_node(block){
+        socket.emit('new_node', block);
     }
 }
 
@@ -76,9 +98,10 @@ class SideMenu {
             this.pane[tag].interactive = true;
         }
 
-        for (var i = 0; i < this.tags.length; i++){
+        for (i = 0; i < this.tags.length; i++){
             var y = 45;
             for (var j = 0; j < this.pane[this.tags[i]].children.length; j++){
+                this.pane[this.tags[i]].children[j].scale.set(0.8);  // TODO: Pick me up
                 var x = WIDTH - this.pane[this.tags[i]].children[j].width;
                 this.pane[this.tags[i]].children[j].position.set(x, y);
                 y += 50
@@ -94,7 +117,6 @@ class SideMenu {
             app.stage.setChildIndex(this.tag_button[i].rect, app_length-1)
         }
     }
-
     update_tag_labels(){
         for (var i = 0; i < 3; i++){
             if (i < this.tags.length) {
@@ -104,8 +126,18 @@ class SideMenu {
         }
     }
 
-    update_tag_blocks(){
+    update_tag_blocks(){  // TODO: This logic is not connected to anything
         this.pane[this.selected_tag].visible = true;
+    }
+
+    scroll_blocks(ev){
+        for (var i = 0; i < sidemenu.tags.length; i++){
+            if (sidemenu.pane[sidemenu.tags[i]].visible === true){
+                var new_y = sidemenu.pane[sidemenu.tags[i]].y += ev.wheelDelta / 5;
+                new_y = Math.max(new_y, -(50 - HEIGHT + 50 * sidemenu.pane[sidemenu.tags[i]].children.length));
+                sidemenu.pane[sidemenu.tags[i]].y = Math.min(0, new_y);
+            }
+        }
     }
 
     resize_menu(){
