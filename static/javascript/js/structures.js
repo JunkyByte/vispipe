@@ -31,7 +31,9 @@ class Node extends AbstractNode {
             // events for drag move
             .on('mousemove', onDragMove)
             .on('touchmove', onDragMove);
-        this.rect.position.set(200, 200);
+
+        draw_conn(Object.keys(block.input_args).length, block.output_names.length, this.rect)
+        this.rect.position.set(WIDTH/3, HEIGHT/2);
         app.stage.addChild(this.rect);
     }
 }

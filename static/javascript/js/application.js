@@ -14,6 +14,8 @@ var FONT_SIZE = 18;
 var TEXT_COLOR = 'white';
 var BUTTON_COLOR = 0xcfef92;
 var BLOCK_COLOR = 0x5DBCD2;
+var INPUT_COLOR = 0x5DBCD2;  // TODO: Add me
+var OUTPUT_COLOR = 0x5DBCD2;
 // Listen for window resize events
 window.addEventListener('resize', resize);
 

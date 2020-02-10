@@ -10,6 +10,7 @@ import os
 MAXSIZE = 100
 assert np.log10(MAXSIZE) == int(np.log10(MAXSIZE))
 
+
 class Pipeline:
     def __init__(self):
         self._blocks = {}
@@ -26,7 +27,7 @@ class Pipeline:
             x.append(block)
         return x
 
-    def register_block(self, f : Callable, is_class: bool, max_queue : int, output_names=None, tag='None') -> None:
+    def register_block(self, f: Callable, is_class: bool, max_queue: int, output_names=None, tag='None') -> None:
         block = Block(f, is_class, max_queue, output_names, tag)
         assert block.name not in self._blocks.keys(), 'The name %s is already registered as a pipeline block' % block.name
         self._blocks[block.name] = block
