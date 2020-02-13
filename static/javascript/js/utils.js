@@ -12,23 +12,22 @@ function onDragStart(event)
         this.child = event.target.children[i];
         if (this.child.text === undefined && this.child.containsPoint(event.data.global)) { // TODO: Find better way than checking text
             var obj = new PIXI.Graphics();
-            obj.moveTo(event.data.global.x, event.data.global.y);
-            obj.lineStyle(2, 0x46b882, 1);
             this.ischild = obj;
-            app.stage.addChild(this.ischild);
+            app.stage.addChildAt(this.ischild, app.stage.children.length);
             break;
         }
     }
 
     this.start_pos = new PIXI.Point(event.data.global.x, event.data.global.y);
     this.data = event.data;
+    this.dragging = this.data.getLocalPosition(this.parent);
 
     if (!this.ischild){
         this.alpha = 0.5;
+        app.stage.setChildIndex(this, app.stage.children.length-1);
+    } else {
+        app.stage.setChildIndex(this, app.stage.children.length-2);
     }
-
-    this.dragging = this.data.getLocalPosition(this.parent);
-    app.stage.setChildIndex(this, app.stage.children.length-1);
 }
 
 function onDragEnd(event)
@@ -45,25 +44,29 @@ function onDragEnd(event)
         console.log(this.child.index, this.child.type);
         var target_node = point_to_node(event.data.global);
         var target_parent = target_node.parent.node;
-        if (target_node){ // First of all check if target node is actually a node
-            if (target_node.type !== this.child.type){ // Check if compatible connection
-                console.log('Compatible connection');
-                var input = (this.child.type === 'input') ? this.child : target_node;
-                var output = (this.child.type === 'output') ? this.child : target_node;
-                // There are two things to consider:
-                // If we connect a input node which is already connected we need to remap
-                // its connection to the new output
-                // If we connect a output node which is already connected we need to APPEND
-                // its new connection
-                if (input.connection){
-                    console.log('Already connected input');
-                    // TODO: MANAGE HERE the remap
-                }
-                input.connection = output;
-                output.connection.push(input);
+        if (target_node && target_node.type !== this.child.type){
+            console.log('Compatible connection');
+            var input = (this.child.type === 'input') ? this.child : target_node;
+            var output = (this.child.type === 'output') ? this.child : target_node;
+            // There are two things to consider:
+            // If we connect a input node which is already connected we need to remap
+            // its connection to the new output
+            // If we connect a output node which is already connected we need to APPEND
+            // its new connection
+            if (input.connection){
+                console.log('Already connected input');
+                // TODO: MANAGE HERE the remap
             }
+            input.connection = output;
+            output.connection.push(input);
+            this.ischild.from = input;
+            this.ischild.to = output;
+            input.line = this.ischild;
+            output.line.push(this.ischild);
+            // TODO: ADD ACTUAL CONN LOGIC (PIPELINE CLASS)
+        } else {
+            this.ischild.destroy();
         }
-        this.ischild.destroy();
     }
 
     this.ischild = false;
@@ -72,15 +75,16 @@ function onDragEnd(event)
 }
 
 function point_to_node(point){
-    var i;
-    root_obj = app.renderer.plugins.interaction.hitTest(point);
+    var i, child;
+    var root_obj = app.renderer.plugins.interaction.hitTest(point);
+
     for (i=0; i<root_obj.children.length; i++){
         child = root_obj.children[i];
-        if (child.text == undefined && child.containsPoint(point)) { // TODO: Find bw than text
-            return child
+        if (child.text === undefined && child.containsPoint(point)) { // TODO: Find bw than text
+            return child;
         }
     }
-    return null
+    return null;
 }
 
 function onDragMove(event)
@@ -91,27 +95,44 @@ function onDragMove(event)
         this.position.x += (newPosition.x - this.dragging.x);
         this.position.y += (newPosition.y - this.dragging.y);
         this.dragging = newPosition;
+        update_all_lines(this.target.node);
     } else if (this.ischild) {
-        this.ischild.clear();
-        this.ischild.moveTo(this.start_pos.x, this.start_pos.y);
-        this.ischild.lineStyle(2, 0x46b882, 1);
+        update_line(this.ischild, this.start_pos, event.data.global);
+    }
+}
 
-        var xctrl = (1.5 * event.data.global.x + 0.5 * this.start_pos.x) / 2;
-        var delta = event.data.global.y - this.start_pos.y;
-        if (delta < 0){
-            var yctrl = (event.data.global.y + this.start_pos.y) / 2 + Math.min(Math.abs(delta), 50);
-        } else {
-            var yctrl = (event.data.global.y + this.start_pos.y) / 2 - Math.min(Math.abs(delta), 50);
+function update_all_lines(node){
+    var i, j, from, to, from_pos, to_pos;
+
+    for (i=0; i<node.in_c.length; i++){
+        if (node.in_c[i].line){
+            from = node.in_c[i].line.from;
+            from_pos = new PIXI.Point(from.worldTransform.tx, from.worldTransform.ty);
+            to = node.in_c[i].line.to;
+            to_pos = new PIXI.Point(to.worldTransform.tx, to.worldTransform.ty);
+            update_line(node.in_c[i].line, from_pos, to_pos)
+            app.stage.setChildIndex(node.in_c[i].line, app.stage.children.length-1);
         }
+    }
 
-        this.ischild.quadraticCurveTo(xctrl, yctrl, event.data.global.x, event.data.global.y);
+    for (i=0; i<node.out_c.length; i++){
+        for (j=0; j<node.out_c[i].line.length; j++){
+            if (node.out_c[i].line[j]){ 
+                from = node.out_c[i].line[j].from;
+                from_pos = new PIXI.Point(from.worldTransform.tx, from.worldTransform.ty);
+                to = node.out_c[i].line[j].to;
+                to_pos = new PIXI.Point(to.worldTransform.tx, to.worldTransform.ty);
+                update_line(node.out_c[i].line[j], from_pos, to_pos)
+                app.stage.setChildIndex(node.out_c[i].line[j], app.stage.children.length-1);
+            }
+        }
     }
 }
 
 function update_line(line, from, to){
     line.clear();
     line.moveTo(from.x, from.y);
-    line.lineStyle(2, 0x46b882, 1);
+    line.lineStyle(3, 0x46b882, 1);
 
     var xctrl = (1.5 * to.x + 0.5 * from.x) / 2;
     var delta = to.y - from.y;
