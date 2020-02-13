@@ -87,7 +87,6 @@ class PipelineRunner:
             out_conn_split = np.count_nonzero(out_conn, axis=0)
             in_conn_count = np.count_nonzero(np.concatenate(in_conn))
 
-
             # If inputs are not satisfied we trash the node and continue the processing
             if in_conn_count < node.num_inputs():
                 trash.append(idx)
@@ -98,11 +97,10 @@ class PipelineRunner:
             def get_free_out_q(conn_id, out_idx):
                 for i, cand in enumerate(self.out_queues[conn_id][out_idx]):
                     q, state = cand
-                    if state == False:
+                    if state is False:
                         self.out_queues[conn_id][out_idx][i][1] = True
                         return q
                 raise AssertionError
-
 
             # Helper to create input queues
             def get_input_queues(conn):
@@ -147,6 +145,7 @@ class PipelineRunner:
                 thr.join()
         else:
             raise Exception('The pipeline has not been built')
+
 
 class PipelineGraph:
     def __init__(self):

@@ -95,7 +95,8 @@ class classex:
         self.last_element = None
 
     def run(self, input1):
-        print('I am a print block CLASS and last value was %s while now is %s' % (self.last_element, input1))
+        print('I am a print block CLASS and last value was %s while now is %s' % (
+            self.last_element, input1))
         self.last_element = input1
         yield None
 
@@ -127,10 +128,11 @@ vispipe.pipeline.add_conn(custom_rand, rand, 0, custom_sin, sin, 0)
 vispipe.pipeline.add_conn(custom_rand, rand2, 0, custom_sin, sin2, 0)
 #vispipe.pipeline.add_conn(custom_sin, sin, 0, out_test, output_print, 0)
 vispipe.pipeline.add_conn(custom_sin, sin, 0, out_test_class, output_print, 0)
-vispipe.pipeline.add_conn(custom_sin, sin2, 0, out_test_class, output_print2, 0)
+vispipe.pipeline.add_conn(
+    custom_sin, sin2, 0, out_test_class, output_print2, 0)
 
 vispipe.pipeline.build()
 
-#vispipe.pipeline.run()
+# vispipe.pipeline.run()
 
 print(0)

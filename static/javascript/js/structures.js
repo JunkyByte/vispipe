@@ -4,13 +4,14 @@ class AbstractNode {
         [this.rect, this.text] = draw_block(this.block.name);
         this.rect.buttonMode = true;
         this.rect.interactive = true;
+        this.rect.node = this;
     }
 }
 
 class StaticNode extends AbstractNode {
     constructor(block) {
         super(block);
-        this.rect.on('mousedown', ev => pipeline.spawn_node(this.block), false);
+        this.rect.on('mousedown', ev => pipeline.spawn_node(this.block), false);  // TODO: Refactor this into this.rect attribute
         this.rect.on('touchstart', ev => pipeline.spawn_node(this.block), false);
     }
 }
@@ -32,7 +33,21 @@ class Node extends AbstractNode {
             .on('mousemove', onDragMove)
             .on('touchmove', onDragMove);
 
-        draw_conn(Object.keys(block.input_args).length, block.output_names.length, this.rect)
+        [this.in_c, this.out_c] = draw_conn(Object.keys(block.input_args).length, block.output_names.length, this.rect)
+        for (var i=0; i<this.in_c.length; i++){
+            this.in_c[i].index = i;
+            this.in_c[i].type = 'input';
+            this.in_c[i].connection = null;
+            this.in_c[i].line = null;
+            this.rect.addChild(this.in_c[i]);
+        }
+        for (i=0; i<this.out_c.length; i++){
+            this.out_c[i].index = i;
+            this.out_c[i].type = 'output';
+            this.out_c[i].connection = [];
+            this.out_c[i].line = [];
+            this.rect.addChild(this.out_c[i]);
+        }
         this.rect.position.set(WIDTH/3, HEIGHT/2);
         app.stage.addChild(this.rect);
     }
@@ -62,6 +77,7 @@ class Button {
 }
 
 class Pipeline {
+    // TODO: Convert to singleton (and change all reference to singleton instance)
     constructor() {
         this.STATIC_NODES = [];
         this.DYNAMIC_NODES = [];
@@ -69,6 +85,10 @@ class Pipeline {
 
     spawn_node(block){
         socket.emit('new_node', block);
+    }
+
+    add_connection(from_block, from_idx, to_block, to_idx){
+        console.log(from_block, from_idx, to_block, to_idx);
     }
 }
 
