@@ -39,31 +39,33 @@ function onDragEnd(event)
     this.data = null;
 
     if (this.ischild){
-        // START FROM HERE -> in this.target you have original obj. run a search (on point) on each dynamic node child.
-        // this.target.node is a reference to the node (with id)
-        console.log(this.child.index, this.child.type);
-        var target_node = point_to_node(event.data.global);
-        var target_parent = target_node.parent.node;
-        if (target_node && target_node.type !== this.child.type){
+        var target_conn = point_to_conn(event.data.global); // The connection we arrived to
+        if (target_conn && target_conn.type !== this.child.type){
             console.log('Compatible connection');
-            var input = (this.child.type === 'input') ? this.child : target_node;
-            var output = (this.child.type === 'output') ? this.child : target_node;
-            // There are two things to consider:
+            var input = (this.child.type === 'input') ? this.child : target_conn;
+            var output = (this.child.type === 'output') ? this.child : target_conn;
+            var input_node = input.parent.node;
+            var output_node = output.parent.node;
             // If we connect a input node which is already connected we need to remap
             // its connection to the new output
             // If we connect a output node which is already connected we need to APPEND
             // its new connection
             if (input.connection){
-                console.log('Already connected input');
-                // TODO: MANAGE HERE the remap
+                console.log('Remapping connected input');
+                input.connection.connection.splice(input.connection.connection.indexOf(input), 1);
+                input.connection.conn_line.splice(input.connection.conn_line.indexOf(input.conn_line), 1);
+                input.conn_line.destroy();
+                input.conn_line = [];
+                input.connection = null;
             }
             input.connection = output;
             output.connection.push(input);
             this.ischild.from = input;
             this.ischild.to = output;
-            input.line = this.ischild;
-            output.line.push(this.ischild);
-            // TODO: ADD ACTUAL CONN LOGIC (PIPELINE CLASS)
+            input.conn_line = this.ischild;
+            output.conn_line.push(this.ischild);
+            pipeline.add_connection(output_node.block, output_node.id, output.index,
+                                    input_node.block, input_node.id, input.index);
         } else {
             this.ischild.destroy();
         }
@@ -74,14 +76,16 @@ function onDragEnd(event)
     this.target = null;
 }
 
-function point_to_node(point){
+function point_to_conn(point){
     var i, child;
     var root_obj = app.renderer.plugins.interaction.hitTest(point);
 
-    for (i=0; i<root_obj.children.length; i++){
-        child = root_obj.children[i];
-        if (child.text === undefined && child.containsPoint(point)) { // TODO: Find bw than text
-            return child;
+    if (root_obj){
+        for (i=0; i<root_obj.children.length; i++){
+            child = root_obj.children[i];
+            if (child.text === undefined && child.containsPoint(point)) { // TODO: Find bw than text
+                return child;
+            }
         }
     }
     return null;
@@ -101,29 +105,41 @@ function onDragMove(event)
     }
 }
 
+function onMouseOver(event){
+    if (!this.dragging){
+        event.target.alpha = 0.9;
+    }
+}
+
+function onMouseOut(event){
+    if (!this.dragging){
+        event.currentTarget.alpha = 1;
+    }
+}
+
 function update_all_lines(node){
     var i, j, from, to, from_pos, to_pos;
 
     for (i=0; i<node.in_c.length; i++){
-        if (node.in_c[i].line){
-            from = node.in_c[i].line.from;
+        if (node.in_c[i].conn_line){
+            from = node.in_c[i].conn_line.from;
             from_pos = new PIXI.Point(from.worldTransform.tx, from.worldTransform.ty);
-            to = node.in_c[i].line.to;
+            to = node.in_c[i].conn_line.to;
             to_pos = new PIXI.Point(to.worldTransform.tx, to.worldTransform.ty);
-            update_line(node.in_c[i].line, from_pos, to_pos)
-            app.stage.setChildIndex(node.in_c[i].line, app.stage.children.length-1);
+            update_line(node.in_c[i].conn_line, to_pos, from_pos) // Is inverted
+            app.stage.setChildIndex(node.in_c[i].conn_line, app.stage.children.length-1);
         }
     }
 
     for (i=0; i<node.out_c.length; i++){
-        for (j=0; j<node.out_c[i].line.length; j++){
-            if (node.out_c[i].line[j]){ 
-                from = node.out_c[i].line[j].from;
+        for (j=0; j<node.out_c[i].conn_line.length; j++){
+            if (node.out_c[i].conn_line[j]){ 
+                from = node.out_c[i].conn_line[j].from;
                 from_pos = new PIXI.Point(from.worldTransform.tx, from.worldTransform.ty);
-                to = node.out_c[i].line[j].to;
+                to = node.out_c[i].conn_line[j].to;
                 to_pos = new PIXI.Point(to.worldTransform.tx, to.worldTransform.ty);
-                update_line(node.out_c[i].line[j], from_pos, to_pos)
-                app.stage.setChildIndex(node.out_c[i].line[j], app.stage.children.length-1);
+                update_line(node.out_c[i].conn_line[j], to_pos, from_pos) // Is inverted
+                app.stage.setChildIndex(node.out_c[i].conn_line[j], app.stage.children.length-1);
             }
         }
     }
@@ -136,10 +152,11 @@ function update_line(line, from, to){
 
     var xctrl = (1.5 * to.x + 0.5 * from.x) / 2;
     var delta = to.y - from.y;
+    var yctrl;
     if (delta < 0){
-        var yctrl = (to.y + from.y) / 2 + Math.min(Math.abs(delta), 50);
+        yctrl = (to.y + from.y) / 2 + Math.min(Math.abs(delta), 50);
     } else {
-        var yctrl = (to.y + from.y) / 2 - Math.min(Math.abs(delta), 50);
+        yctrl = (to.y + from.y) / 2 - Math.min(Math.abs(delta), 50);
     }
 
     line.quadraticCurveTo(xctrl, yctrl, to.x, to.y);
@@ -227,5 +244,16 @@ function draw_conn(inputs, outputs, rect){
         output_conn.push(obj);
     }
 
+    function sort_logic(x, y){
+        if (x.position.x < y.position.x){
+            return -1;
+        } else if (x.position.x > y.position.x){
+            return 1;
+        }
+        return 0
+    }
+
+    input_conn.sort(sort_logic);
+    output_conn.sort(sort_logic);
     return [input_conn, output_conn]
 }

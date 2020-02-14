@@ -30,26 +30,36 @@ def share_blocks():
         socketio.emit('new_block', block)
     socketio.emit('end_block', None)
 
+
 @socketio.on('new_node')
 def new_node(block):
     block = vispipe.pipeline._blocks[block['name']]
     id = vispipe.pipeline.add_node(block)
     socketio.emit('node_id', {**{'id': id}, **block.serialize()})
 
+
+@socketio.on('new_conn')
+def new_conn(x):
+    from_block = vispipe.pipeline._blocks[x['from_block']['name']]
+    to_block = vispipe.pipeline._blocks[x['to_block']['name']]
+    vispipe.pipeline.add_conn(from_block, x['from_idx'], x['out_idx'], to_block, x['to_idx'], x['inp_idx'])
+
+
 @app.route('/')
 def index():
     session['test_session'] = 42
     return render_template('index.html')
+
 
 @app.route('/get/')
 def show_session():
     print(session['test_session'])
     return '%s' % session.get('test_session')
 
+
 @socketio.on('connect')
 def test_connect():
     # need visibility of the global thread object
-    #global thread
     print('Client connected')
     print('Sharing blocks')
     share_blocks()

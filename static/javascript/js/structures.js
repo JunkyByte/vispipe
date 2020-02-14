@@ -31,21 +31,23 @@ class Node extends AbstractNode {
             .on('touchendoutside', onDragEnd)
             // events for drag move
             .on('mousemove', onDragMove)
-            .on('touchmove', onDragMove);
+            .on('touchmove', onDragMove)
+            .on('mouseover', onMouseOver)
+            .on('mouseout', onMouseOut);
 
         [this.in_c, this.out_c] = draw_conn(Object.keys(block.input_args).length, block.output_names.length, this.rect)
         for (var i=0; i<this.in_c.length; i++){
             this.in_c[i].index = i;
             this.in_c[i].type = 'input';
             this.in_c[i].connection = null;
-            this.in_c[i].line = null;
+            this.in_c[i].conn_line = null;
             this.rect.addChild(this.in_c[i]);
         }
         for (i=0; i<this.out_c.length; i++){
             this.out_c[i].index = i;
             this.out_c[i].type = 'output';
             this.out_c[i].connection = [];
-            this.out_c[i].line = [];
+            this.out_c[i].conn_line = [];
             this.rect.addChild(this.out_c[i]);
         }
         this.rect.position.set(WIDTH/3, HEIGHT/2);
@@ -87,8 +89,13 @@ class Pipeline {
         socket.emit('new_node', block);
     }
 
-    add_connection(from_block, from_idx, to_block, to_idx){
-        console.log(from_block, from_idx, to_block, to_idx);
+    add_connection(from_block, from_idx, out_idx, to_block, to_idx, inp_idx){
+        socket.emit('new_conn', {'from_block': from_block, 'from_idx': from_idx, 'out_idx': out_idx,
+                                 'to_block': to_block, 'to_idx': to_idx, 'inp_idx': inp_idx}); 
+    }
+
+    remove_connection(block, id){
+        console.log(block, id);
     }
 }
 
@@ -123,7 +130,7 @@ class SideMenu {
         for (i = 0; i < this.tags.length; i++){
             var y = 45;
             for (var j = 0; j < this.pane[this.tags[i]].children.length; j++){
-                this.pane[this.tags[i]].children[j].scale.set(0.8);  // TODO: Pick me up
+                this.pane[this.tags[i]].children[j].scale.set(0.8);
                 var x = WIDTH - this.pane[this.tags[i]].children[j].width;
                 this.pane[this.tags[i]].children[j].position.set(x, y);
                 y += 50
@@ -135,7 +142,7 @@ class SideMenu {
         this.update_tag_blocks();
 
         var app_length = app.stage.children.length;
-        for (var i = 0; i < this.tag_button.length; i++){  // TODO: Hacky but works
+        for (var i = 0; i < this.tag_button.length; i++){
             app.stage.setChildIndex(this.tag_button[i].rect, app_length-1)
         }
     }
