@@ -12,6 +12,8 @@ assert np.log10(MAXSIZE) == int(np.log10(MAXSIZE))
 
 
 class Pipeline:
+    _empty = object()
+
     def __init__(self):
         self._blocks = {}
         self.pipeline = PipelineGraph()
@@ -291,7 +293,9 @@ class BlockRunner:
         ret = list(self.f(*x, **self.custom_arg))
         for i, out in enumerate(self.out_q):
             for q in out:
-                q.put(ret[i])
+                v = ret[i]
+                if v is not pipeline._empty:
+                    q.put(v)
 
 class FakeQueue:
     def get(self):

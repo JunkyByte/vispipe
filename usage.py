@@ -100,6 +100,23 @@ class classex:
         self.last_element = input1
         yield None
 
+@vispipe.block
+class testempty:
+    def __init__(self):
+        self.count = 0
+        self.sum = 0
+
+    def run(self, input1):
+        if self.count == 10:
+            val = self.sum
+            self.sum = 0
+            self.count = 0
+            yield val
+        else:
+            self.sum += input1
+            self.count += 1
+            yield vispipe.pipeline._empty
+
 
 # Pipeline Test
 custom_add = vispipe.pipeline._blocks['test_addition']
@@ -109,30 +126,20 @@ custom_rand = vispipe.pipeline._blocks['rand_range']
 two_out = vispipe.pipeline._blocks['test_identity_2_out']
 out_test = vispipe.pipeline._blocks['print_test']
 out_test_class = vispipe.pipeline._blocks['classex']
+classempty = vispipe.pipeline._blocks['testempty']
 
-#inp1 = vispipe.pipeline.add_node(custom_noinp)
 rand = vispipe.pipeline.add_node(custom_rand, min=0, max=np.pi / 2)
-rand2 = vispipe.pipeline.add_node(custom_rand, min=0, max=np.pi / 2)
-#sumbetw = vispipe.pipeline.add_node(custom_add)
-#output_print = vispipe.pipeline.add_node(out_test)
-output_print = vispipe.pipeline.add_node(out_test_class)
-output_print2 = vispipe.pipeline.add_node(out_test_class)
+output_print = vispipe.pipeline.add_node(out_test)
 sin = vispipe.pipeline.add_node(custom_sin)
-sin2 = vispipe.pipeline.add_node(custom_sin)
+empty = vispipe.pipeline.add_node(classempty)
 
 # Constant input are attached to sum which returns 2
-#vispipe.pipeline.add_conn(custom_noinp, inp1, 0, custom_add, sumbetw, 0)
-#vispipe.pipeline.add_conn(custom_rand, rand, 0, custom_add, sumbetw, 1)
-#vispipe.pipeline.add_conn(custom_add, sumbetw, 0, custom_sin, sin, 0)
 vispipe.pipeline.add_conn(custom_rand, rand, 0, custom_sin, sin, 0)
-vispipe.pipeline.add_conn(custom_rand, rand2, 0, custom_sin, sin2, 0)
-#vispipe.pipeline.add_conn(custom_sin, sin, 0, out_test, output_print, 0)
-vispipe.pipeline.add_conn(custom_sin, sin, 0, out_test_class, output_print, 0)
-vispipe.pipeline.add_conn(
-    custom_sin, sin2, 0, out_test_class, output_print2, 0)
+vispipe.pipeline.add_conn(custom_sin, sin, 0, classempty, empty, 0)
+vispipe.pipeline.add_conn(classempty, empty, 0, out_test, output_print, 0)
 
 vispipe.pipeline.build()
 
-# vispipe.pipeline.run()
+vispipe.pipeline.run()
 
 print(0)
