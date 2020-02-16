@@ -34,9 +34,27 @@ var sidemenu = new SideMenu();
 window.addEventListener('resize', function() {sidemenu.resize_menu()}, false);
 window.addEventListener('mousewheel', function(ev){sidemenu.scroll_blocks(ev)}, false);
 
+var JsonToArray = function(json)
+{
+    var ret = new Uint8Array(json.length);
+    for (var i = 0; i < json.length; i++) {
+        ret[i] = json[i];
+    }
+    return ret
+};
+
+
 var socket;
 $(document).ready(function(){
     socket = io.connect('http://' + document.domain + ':' + location.port);
+
+    socket.on('test_send', function(msg) {
+        let data = JsonToArray(msg.x);
+        let texture = PIXI.Texture.fromBuffer(data, 100, 100);
+        let sprite = PIXI.Sprite.from(texture);
+        sprite.position.set(WIDTH/2, HEIGHT/2);
+        app.stage.addChild(sprite);
+    });
 
     socket.on('new_block', function(msg) {
         var block = new Block(msg.name, msg.input_args, msg.custom_args, msg.output_names, msg.tag);

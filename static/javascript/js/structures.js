@@ -93,10 +93,6 @@ class Pipeline {
         socket.emit('new_conn', {'from_block': from_block, 'from_idx': from_idx, 'out_idx': out_idx,
                                  'to_block': to_block, 'to_idx': to_idx, 'inp_idx': inp_idx}); 
     }
-
-    remove_connection(block, id){
-        console.log(block, id);
-    }
 }
 
 class SideMenu {

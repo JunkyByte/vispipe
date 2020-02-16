@@ -1,12 +1,12 @@
-import numpy as np
 from functools import partial
 from inspect import signature, isgeneratorfunction, _empty
 from typing import List, Callable
 from threading import Thread, Event
 from queue import Queue
+import os
 import types
 import pickle
-import os
+import numpy as np
 MAXSIZE = 100
 assert np.log10(MAXSIZE) == int(np.log10(MAXSIZE))
 
@@ -20,17 +20,17 @@ class Pipeline:
         self.runner = PipelineRunner()
 
     def get_blocks(self, serializable=False):
-        x = []
+        blocks = []
         for block in self._blocks.values():
             if serializable:
                 block = block.serialize()
             else:
                 block = dict(block)
-            x.append(block)
-        return x
+            blocks.append(block)
+        return blocks
 
-    def register_block(self, f: Callable, is_class: bool, max_queue: int, output_names=None, tag='None') -> None:
-        block = Block(f, is_class, max_queue, output_names, tag)
+    def register_block(self, func: Callable, is_class: bool, max_queue: int, output_names=None, tag='None') -> None:
+        block = Block(func, is_class, max_queue, output_names, tag)
         assert block.name not in self._blocks.keys(), 'The name %s is already registered as a pipeline block' % block.name
         self._blocks[block.name] = block
 
@@ -85,7 +85,7 @@ class PipelineRunner:
             custom_arg = custom_args[idx]
             out_conn = np.array(list(nodes_conn[idx]))
             in_conn = nodes_conn[:, idx]
-            out_conn_total = np.count_nonzero(out_conn)
+            # out_conn_total = np.count_nonzero(out_conn)
             out_conn_split = np.count_nonzero(out_conn, axis=0)
             in_conn_count = np.count_nonzero(np.concatenate(in_conn))
 
@@ -161,7 +161,7 @@ class PipelineGraph:
 
     def get_hash(self, block, index=None):
         hash_block = hash(block)
-        if not hash_block in self.instances.keys() and index is None:
+        if hash_block not in self.instances.keys() and index is None:
             self.instances[hash_block] = set([i for i in range(MAXSIZE)])
 
         if index is None:
@@ -185,7 +185,8 @@ class PipelineGraph:
         self.nodes[id] = block  # Store the node instance
         self.custom_args[id] = kwargs
         out = np.array([0 for _ in range(num_outputs)])
-        for i in range(MAXSIZE): self.matrix[id, i] = out
+        for i in range(MAXSIZE):
+            self.matrix[id, i] = out
         return index
 
     def remove_node(self, block, index):
@@ -208,6 +209,7 @@ class PipelineGraph:
 
         self.matrix[from_id][to_id] = np.array([inp_idx + 1])
 
+
 class Block:
     def __init__(self, f: Callable, is_class: bool, max_queue: int, output_names: List[str], tag: str):
         self.f = f
@@ -223,7 +225,7 @@ class Block:
         self.input_args = dict([(k, val) for k, val in args if val == _empty])
         self.custom_args = dict([(k, val) for k, val in args if val != _empty])
         self.max_queue = max_queue
-        self.output_names = output_names if output_names != None else ['y']
+        self.output_names = output_names if output_names is not None else ['y']
 
     def num_inputs(self):
         return len(self.input_args)
@@ -247,6 +249,7 @@ class Block:
         yield 'max_queue', self.max_queue
         yield 'output_names', self.output_names
         yield 'tag', self.tag
+
 
 def block(f=None, max_queue=2, output_names=None, tag='None'):
     """
@@ -276,6 +279,7 @@ def block(f=None, max_queue=2, output_names=None, tag='None'):
     pipeline.register_block(f, is_class, max_queue, output_names, tag)
     return f
 
+
 class BlockRunner:
     def __init__(self, node, in_q, out_q, custom_arg):
         self.node = node
@@ -297,9 +301,11 @@ class BlockRunner:
                 if v is not pipeline._empty:
                     q.put(v)
 
+
 class FakeQueue:
     def get(self):
         return []
+
 
 class TerminableThread(Thread):
     # Thread class with a _stop() method.
