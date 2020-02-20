@@ -2,17 +2,21 @@ from functools import partial
 from inspect import signature, isgeneratorfunction, _empty
 from typing import List, Callable
 from threading import Thread, Event
-from queue import Queue
+from queue import Queue, Empty
 import os
 import types
 import pickle
 import numpy as np
+import time
 MAXSIZE = 100
 assert np.log10(MAXSIZE) == int(np.log10(MAXSIZE))
 
 
 class Pipeline:
     _empty = object()
+    # TODO: Plot? Should be converted internally to an image
+    data_type = ['raw', 'image', 'plot']
+    vis_tag = 'vis'
 
     def __init__(self):
         self._blocks = {}
@@ -29,8 +33,8 @@ class Pipeline:
             blocks.append(block)
         return blocks
 
-    def register_block(self, func: Callable, is_class: bool, max_queue: int, output_names=None, tag='None') -> None:
-        block = Block(func, is_class, max_queue, output_names, tag)
+    def register_block(self, func: Callable, is_class: bool, max_queue: int, output_names=None, tag: str = 'None', data_type: str = 'raw') -> None:
+        block = Block(func, is_class, max_queue, output_names, tag, data_type)
         assert block.name not in self._blocks.keys(), 'The name %s is already registered as a pipeline block' % block.name
         self._blocks[block.name] = block
 
@@ -40,14 +44,25 @@ class Pipeline:
     def remove_node(self, block, index):
         self.pipeline.remove_node(block, index)
 
+    def clear_pipeline(self):
+        self.pipeline.clear_pipeline()
+        self.runner.unbuild()
+
     def add_conn(self, from_block, from_idx, out_idx, to_block, to_idx, inp_idx):
-        self.pipeline.add_connection(from_block, from_idx, out_idx, to_block, to_idx, inp_idx)
+        self.pipeline.add_connection(
+            from_block, from_idx, out_idx, to_block, to_idx, inp_idx)
 
     def build(self) -> None:
         self.runner.build_pipeline(self.pipeline)
 
+    def unbuild(self) -> None:
+        self.runner.unbuild()
+
     def run(self) -> None:
         self.runner.run()
+
+    def stop(self) -> None:
+        self.runner.stop()
 
     def save(self, path) -> None:
         with open(os.path.join(path, 'pipeline.pickle'), 'wb') as f:
@@ -63,9 +78,12 @@ class PipelineRunner:
         self.built = False
         self.threads = []
         self.out_queues = {}
-        self.out_queues_state = []
+        self.vis_source = {}
 
     def build_pipeline(self, pipeline):
+        assert not self.built
+        if len(pipeline.ids.keys()) == 0:
+            return
         # Collect each block arguments, create connections between each other using separated threads
         # use queues to pass data between the threads.
         used_ids = np.array(list(pipeline.ids.values()))
@@ -73,7 +91,8 @@ class PipelineRunner:
         nodes = pipeline.nodes[used_ids]
         custom_args = pipeline.custom_args[used_ids]
         nodes_conn = np.array([x[used_ids] for x in pipeline.matrix[used_ids]])
-        gain = np.array([n.num_outputs() / (n.num_inputs() + 1e-16) for n in nodes])
+        gain = np.array([n.num_outputs() / (n.num_inputs() + 1e-16)
+                         for n in nodes])
         to_process = list(np.arange(len(used_ids))[(-gain).argsort()])
         trash = []
 
@@ -82,6 +101,10 @@ class PipelineRunner:
             idx = to_process[i]
 
             node = nodes[idx]
+            is_vis = True if node.tag == Pipeline.vis_tag else False
+            if is_vis:
+                data_type = node.data_type
+
             custom_arg = custom_args[idx]
             out_conn = np.array(list(nodes_conn[idx]))
             in_conn = nodes_conn[:, idx]
@@ -119,7 +142,8 @@ class PipelineRunner:
             # Create input and output queues
             in_q = []
             if node.num_inputs() != 0:  # If there are inputs
-                conn = [(k, value) for k, value in enumerate(in_conn) if value.any() != 0]
+                conn = [(k, value)
+                        for k, value in enumerate(in_conn) if value.any() != 0]
                 try:  # Try to build dependencies (they can not exist at this time)
                     in_q = get_input_queues(conn)
                 except KeyError:
@@ -127,37 +151,135 @@ class PipelineRunner:
                     continue
 
             # Populate the output queue dictionary
-            self.out_queues[idx] = [[[Queue(node.max_queue), False] for _ in range(out)] for out in out_conn_split]
-            out_q = [[x[0] for x in out] for out in self.out_queues[idx]]
+            if is_vis:  # Visualization blocks have an hardcoded single queue as output
+                instance_idx = pipeline.index_to_id(node, used_ids[idx])
+                q = Queue(node.max_queue)
+                out_q = [[q]]
+            else:
+                self.out_queues[idx] = [[[Queue(node.max_queue), False] for _ in range(out)]
+                                        for out in out_conn_split]
+                out_q = [[x[0] for x in out] for out in self.out_queues[idx]]
 
             # Create the thread
             runner = BlockRunner(node, in_q, out_q, custom_arg)
             thr = TerminableThread(runner.run)
             thr.daemon = True
             self.threads.append(thr)
+
+            # Create the thread consumer of the visualization
+            if is_vis:
+                self.vis_source[(node, instance_idx)] = QueueConsumer(q)
+
             to_process.pop(i)
             i = 0  # If we successfully processed a node we go back to the highest priority
         self.built = True
 
+    def unbuild(self):
+        for i in reversed(range(len(self.threads))):
+            thr = self.threads[i]
+            if thr.is_alive():
+                thr.kill()
+            del self.threads[i]
+
+        for k in list(self.vis_source.keys()):
+            thr = self.vis_source.pop(k)
+            if thr.is_alive():
+                thr.kill()
+            del thr
+        self.built = False
+
     def run(self):
-        if self.built:
-            for thr in self.threads:
-                thr.start()
-            for thr in self.threads:
-                thr.join()
-        else:
+        if not self.built:
             raise Exception('The pipeline has not been built')
+
+        # Start all threads
+        for thr in self.threads:
+            if thr.is_stopped():
+                thr.resume()
+            else:
+                thr.start()
+        for k, thr in self.vis_source.items():
+            if thr.is_stopped():
+                thr.resume()
+            else:
+                thr.start()
+
+        # Join all threads TODO
+        #for thr in self.threads:
+        #    thr.join()
+        #for k, thr in self.vis_source.items():
+        #    thr.join()
+
+    def stop(self):
+        if not self.built:
+            raise Exception('The pipeline has not been built')
+
+        for thr in self.threads:
+            thr.stop()
+        for k, thr in self.vis_source.items():
+            thr.stop()
+
+
+class QueueConsumer:
+    def __init__(self, q):
+        self.in_q = q
+        self.out_q = Queue()
+        self._t = TerminableThread(self._reader)
+        self._t.daemon = True
+
+    def is_alive(self):
+        return self._t.is_alive()
+
+    def start(self):
+        self._t.start()
+
+    def stop(self):
+        self._t.stop()
+
+    def is_stopped(self):
+        return self._t.is_stopped()
+
+    def join(self):
+        self._t.join()
+
+    def kill(self):
+        self._t.kill()
+
+    def resume(self):
+        self._t.resume()
+
+    # read from queue as soon as possible, keeping only most recent result
+    def _reader(self):
+        while True:
+            x = self.in_q.get()
+            if not self.out_q.empty():
+                try:
+                    self.out_q.get_nowait()
+                except Empty:
+                    pass
+            self.out_q.put(x)
+
+    def read(self):
+        return self.out_q.get()
 
 
 class PipelineGraph:
     def __init__(self):
-        self.matrix = np.empty((MAXSIZE, MAXSIZE), dtype=object)  # Adjacency matrix
+        self.matrix = np.empty(
+            (MAXSIZE, MAXSIZE), dtype=object)  # Adjacency matrix
         self.nodes = np.empty((MAXSIZE,), dtype=Block)
         self.custom_args = np.empty((MAXSIZE,), dtype=dict)
 
         self.ids = {}  # Map from hash to assigned ids
         self.instances = {}  # Free ids for instances of same block
         self.free_idx = set([i for i in range(MAXSIZE)])  # Free ids for blocks
+
+    def index_to_id(self, block, index):
+        for k, v in self.ids.items():
+            if v == index:
+                hash_block = self.get_hash(block, index=0)[1]
+                return k - hash_block * MAXSIZE
+        assert False, 'The index has not been found'
 
     def get_hash(self, block, index=None):
         hash_block = hash(block)
@@ -195,11 +317,20 @@ class PipelineGraph:
         self.nodes[id] = None  # unassign the node instance
         self.custom_args[id] = None
         self.matrix[id, :] = None  # delete the node connections
+        self.free_idx.add(id)
         self.instances[hash_block].add(self.hash_to_instance(hash_index, hash_block))
+
+    def clear_pipeline(self):
+        self.matrix[:, :] = None
+        self.nodes[:] = None
+        self.custom_args[:] = None
+        self.free_idx = set([i for i in range(MAXSIZE)])
+        self.ids = {}
 
     def add_connection(self, from_block, from_idx, out_idx, to_block, to_idx, inp_idx):
         assert inp_idx < to_block.num_inputs()
         assert out_idx < from_block.num_outputs()
+        assert from_block.tag != Pipeline.vis_tag  # Prevent connections from vis blocks
         hash_from, hash_from_block = self.get_hash(from_block, from_idx)
         hash_to, hash_to_block = self.get_hash(to_block, to_idx)
         assert hash_from != hash_to
@@ -211,11 +342,12 @@ class PipelineGraph:
 
 
 class Block:
-    def __init__(self, f: Callable, is_class: bool, max_queue: int, output_names: List[str], tag: str):
+    def __init__(self, f: Callable, is_class: bool, max_queue: int, output_names: List[str], tag: str, data_type: str):
         self.f = f
         self.name = f.__name__
         self.is_class = is_class
         self.tag = tag
+        self.data_type = data_type
         if self.is_class:
             input_args = dict(signature(self.f.run).parameters)
             del input_args['self']
@@ -238,7 +370,8 @@ class Block:
         del x['f']
         # TODO: Change me to a custom value, using None can cause problems
         # TODO: Support np array by casting to nested lists
-        x['input_args'] = dict([(k, v if v != _empty else None) for k, v in x['input_args'].items()])
+        x['input_args'] = dict([(k, v if v != _empty else None)
+                                for k, v in x['input_args'].items()])
         return x
 
     def __iter__(self):
@@ -249,9 +382,10 @@ class Block:
         yield 'max_queue', self.max_queue
         yield 'output_names', self.output_names
         yield 'tag', self.tag
+        yield 'data_type', self.data_type
 
 
-def block(f=None, max_queue=2, output_names=None, tag='None'):
+def block(f=None, max_queue=2, output_names=None, tag='None', data_type='raw'):
     """
     Decorator function to tag custom blocks to be added to pipeline
     :param f: The function to tag (as a decorator it will be automatically passed)
@@ -261,22 +395,29 @@ def block(f=None, max_queue=2, output_names=None, tag='None'):
     :return:
     """
     if f is None:  # Correctly manage decorator duality
-        return partial(block, max_queue=max_queue, output_names=output_names, tag=tag)
+        return partial(block, max_queue=max_queue, output_names=output_names, tag=tag, data_type=data_type)
 
     if isinstance(f, types.FunctionType):
         if not isgeneratorfunction(f):
             raise TypeError('The function you tagged is not a generator')
         if signature(f).parameters and list(signature(f).parameters.keys())[0] == 'self':
-            raise TypeError('The function you passed is a class method, we only support functions right now')
+            raise TypeError(
+                'The function you passed is a class method, we only support functions right now')
         is_class = False
     else:
         # Is a custom class so we need to process it differently (instantiate)
-        assert hasattr(f, 'run'), 'The class %s you decorated must have a run method' % f.__name__
+        assert hasattr(
+            f, 'run'), 'The class %s you decorated must have a run method' % f.__name__
         if not isgeneratorfunction(f.run):
             raise TypeError('The function you tagged is not a generator')
         is_class = True
 
-    pipeline.register_block(f, is_class, max_queue, output_names, tag)
+    assert data_type in pipeline.data_type
+    if tag == pipeline.vis_tag:  # TODO: Is this a good idea?
+        output_names = []
+
+    pipeline.register_block(f, is_class, max_queue,
+                            output_names, tag, data_type)
     return f
 
 
@@ -313,19 +454,41 @@ class TerminableThread(Thread):
     # regularly for the stopped() condition.
     def __init__(self, f, thread_args=(), thread_kwargs={}, *args, **kwargs):
         super(TerminableThread, self).__init__(*thread_args, **thread_kwargs)
-        self._stopper = Event()
+        self._killer = Event()
+        self._pause = Event()
+        self.name = f.__name__
         self.target = lambda: f(*args, **kwargs)
 
+    def __del__(self):
+        print('Deleted Thread Successfully')  # TODO: Remove me
+
+    def kill(self):
+        self._killer.set()
+
     def stop(self):
-        self._stopper.set()
+        self._pause.set()
+
+    def resume(self):
+        self._pause.clear()
+
+    def is_stopped(self):
+        return self._pause.is_set()
+
+    def _killed(self):
+        return self._killer.isSet()
 
     def _stopped(self):
-        return self._stopper.isSet()
+        return self._pause.isSet()
 
     def run(self):
         while True:
-            if self._stopped():
+            if self._killed():
                 return
+
+            if self._stopped():
+                time.sleep(0.5)
+                continue
+
             self.target()
 
 

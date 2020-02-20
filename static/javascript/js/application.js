@@ -9,13 +9,15 @@ app.renderer.view.style.display = 'block';
 document.body.appendChild(app.view);
 var WIDTH = app.renderer.width / app.renderer.resolution;
 var HEIGHT = app.renderer.height / app.renderer.resolution;
+var VIS_IMAGE_SIZE = 128;
 var FONT = 'Arial';
 var FONT_SIZE = 18;
 var TEXT_COLOR = 'white';
-var BUTTON_COLOR = 0xcfef92;
+var BUTTON_COLOR = 0x5DBCD2;
 var BLOCK_COLOR = 0x5DBCD2;
 var INPUT_COLOR = 0x5DBCD2;  // TODO: Add me
 var OUTPUT_COLOR = 0x5DBCD2;
+
 // Listen for window resize events
 window.addEventListener('resize', resize);
 
@@ -24,40 +26,23 @@ function resize() {
     app.renderer.resize(window.innerWidth, window.innerHeight);
     WIDTH = app.renderer.width / app.renderer.resolution;
     HEIGHT = app.renderer.height / app.renderer.resolution;
-
 }
 resize();
 
 // Pipeline class
 var pipeline = new Pipeline();
 var sidemenu = new SideMenu();
+var runmenu = new RunMenu();
+window.addEventListener('resize', function() {runmenu.resize_menu()}, false);
 window.addEventListener('resize', function() {sidemenu.resize_menu()}, false);
 window.addEventListener('mousewheel', function(ev){sidemenu.scroll_blocks(ev)}, false);
-
-var JsonToArray = function(json)
-{
-    var ret = new Uint8Array(json.length);
-    for (var i = 0; i < json.length; i++) {
-        ret[i] = json[i];
-    }
-    return ret
-};
-
 
 var socket;
 $(document).ready(function(){
     socket = io.connect('http://' + document.domain + ':' + location.port);
 
-    socket.on('test_send', function(msg) {
-        let data = JsonToArray(msg.x);
-        let texture = PIXI.Texture.fromBuffer(data, 100, 100);
-        let sprite = PIXI.Sprite.from(texture);
-        sprite.position.set(WIDTH/2, HEIGHT/2);
-        app.stage.addChild(sprite);
-    });
-
     socket.on('new_block', function(msg) {
-        var block = new Block(msg.name, msg.input_args, msg.custom_args, msg.output_names, msg.tag);
+        var block = new Block(msg.name, msg.input_args, msg.custom_args, msg.output_names, msg.tag, msg.data_type);
         pipeline.STATIC_NODES.push(new StaticNode(block));
     });
 
@@ -65,11 +50,23 @@ $(document).ready(function(){
         sidemenu.populate_menu(pipeline, app);
     });
 
-    socket.on('node_id', function(msg) {
-        var block = new Block(msg.name, msg.input_args, msg.custom_args, msg.output_names, msg.tag);
-        pipeline.DYNAMIC_NODES.push(new Node(block, msg.id))
+    socket.on('send_vis', function(msg) {
+        var id = msg.id;
+        var name = msg.name;
+
+        value = new Uint8Array(msg.value);
+        var size = value.length / 4;
+        var s = Math.sqrt(size);
+
+        let texture = PIXI.Texture.fromBuffer(value, s, s);
+        pipeline.vis[id + '-' + name].update_texture(texture);
+    });
+
+    socket.on('message', function(msg) {
+        console.log(msg);
     });
 
     //socket.emit('test_receive', 'test_send_see_me_python')
 });
 //$('#log').html(numbers_string);
+

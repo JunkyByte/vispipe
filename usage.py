@@ -2,6 +2,8 @@ from vispipe import vispipe
 import numpy as np
 import math
 
+import time
+
 
 @vispipe.block
 def no_input():
@@ -9,8 +11,34 @@ def no_input():
 
 
 @vispipe.block
+def image():
+    time.sleep(1)
+    yield np.concatenate([np.random.randint(0, 255, size=(28, 28, 3)), np.ones((28, 28, 1)) * 255], axis=-1)
+
+
+@vispipe.block
+def image_plus(x):
+    time.sleep(1)
+    yield np.concatenate([x * np.ones((28, 28, 3)), np.ones((28, 28, 1)) * 255], axis=-1)
+
+
+@vispipe.block
+def test_plus100(x):
+    yield x + 100
+
+
+@vispipe.block
+def multiply100(x):
+    yield x * 100
+
+
+@vispipe.block
 def rand():
     yield np.random.randn()
+
+@vispipe.block
+def randint():
+    yield np.random.randint(0, 255)
 
 
 @vispipe.block
@@ -89,6 +117,11 @@ def print_test(input1):
     yield None
 
 
+@vispipe.block(tag='vis', data_type='image')
+def test_vis(input1):
+    yield input1
+
+
 @vispipe.block
 class classex:
     def __init__(self):
@@ -118,29 +151,36 @@ class testempty:
             self.count += 1
             yield vispipe.pipeline._empty
 
-
 # Pipeline Test
-#custom_add = vispipe.pipeline._blocks['test_addition']
-#custom_sin = vispipe.pipeline._blocks['sin']
-#custom_noinp = vispipe.pipeline._blocks['no_input']
-#custom_rand = vispipe.pipeline._blocks['rand_range']
-#two_out = vispipe.pipeline._blocks['test_identity_2_out']
-#out_test = vispipe.pipeline._blocks['print_test']
-#out_test_class = vispipe.pipeline._blocks['classex']
-#classempty = vispipe.pipeline._blocks['testempty']
+custom_add = vispipe.pipeline._blocks['test_addition']
+custom_sin = vispipe.pipeline._blocks['sin']
+custom_noinp = vispipe.pipeline._blocks['no_input']
+custom_rand = vispipe.pipeline._blocks['rand_range']
+two_out = vispipe.pipeline._blocks['test_identity_2_out']
+out_test = vispipe.pipeline._blocks['print_test']
+out_test_class = vispipe.pipeline._blocks['classex']
+classempty = vispipe.pipeline._blocks['testempty']
+testvis = vispipe.pipeline._blocks['test_vis']
 
-#rand = vispipe.pipeline.add_node(custom_rand, min=0, max=np.pi / 2)
+#randid = vispipe.pipeline.add_node(custom_rand, min=0, max=np.pi / 2)
 #output_print = vispipe.pipeline.add_node(out_test)
-#sin = vispipe.pipeline.add_node(custom_sin)
+#sinidx = vispipe.pipeline.add_node(custom_sin)
+#vis = vispipe.pipeline.add_node(testvis)
 #empty = vispipe.pipeline.add_node(classempty)
-
+#
 ## Constant input are attached to sum which returns 2
-#vispipe.pipeline.add_conn(custom_rand, rand, 0, custom_sin, sin, 0)
-#vispipe.pipeline.add_conn(custom_sin, sin, 0, classempty, empty, 0)
-#vispipe.pipeline.add_conn(classempty, empty, 0, out_test, output_print, 0)
+#vispipe.pipeline.add_conn(custom_rand, randid, 0, custom_sin, sinidx, 0)
+#vispipe.pipeline.add_conn(custom_sin, sinidx, 0, classempty, empty, 0)
+##vispipe.pipeline.add_conn(classempty, empty, 0, out_test, output_print, 0)
+#vispipe.pipeline.add_conn(custom_sin, sinidx, 0, testvis, vis, 0)
 
 #vispipe.pipeline.build()
-
+#vispipe.pipeline.run()
+#
+#vispipe.pipeline.unbuild()
+#vispipe.pipeline.build()
 #vispipe.pipeline.run()
 
-print(0)
+print(42)
+#while True:
+#    continue

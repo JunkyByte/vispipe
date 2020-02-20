@@ -4,14 +4,14 @@ function onDragStart(event)
     // the reason for this is because of multitouch
     // we want to track the movement of this particular touch
     var i;
-    var child;
+    var obj;
 
     this.target = event.target;
     this.ischild = false;
     for (i=0; i<event.target.children.length; i++){
         this.child = event.target.children[i];
-        if (this.child.text === undefined && this.child.containsPoint(event.data.global)) { // TODO: Find better way than checking text
-            var obj = new PIXI.Graphics();
+        if (this.child.type !== undefined && this.child.containsPoint(event.data.global)) {
+            obj = new PIXI.Graphics();
             this.ischild = obj;
             app.stage.addChildAt(this.ischild, app.stage.children.length);
             break;
@@ -41,7 +41,6 @@ function onDragEnd(event)
     if (this.ischild){
         var target_conn = point_to_conn(event.data.global); // The connection we arrived to
         if (target_conn && target_conn.type !== this.child.type){
-            console.log('Compatible connection');
             var input = (this.child.type === 'input') ? this.child : target_conn;
             var output = (this.child.type === 'output') ? this.child : target_conn;
             var input_node = input.parent.node;
@@ -51,7 +50,6 @@ function onDragEnd(event)
             // If we connect a output node which is already connected we need to APPEND
             // its new connection
             if (input.connection){
-                console.log('Remapping connected input');
                 input.connection.connection.splice(input.connection.connection.indexOf(input), 1);
                 input.connection.conn_line.splice(input.connection.conn_line.indexOf(input.conn_line), 1);
                 input.conn_line.destroy();
@@ -83,7 +81,7 @@ function point_to_conn(point){
     if (root_obj){
         for (i=0; i<root_obj.children.length; i++){
             child = root_obj.children[i];
-            if (child.text === undefined && child.containsPoint(point)) { // TODO: Find bw than text
+            if (child.type !== undefined && child.containsPoint(point)) {
                 return child;
             }
         }
@@ -168,13 +166,13 @@ function name_to_size(name){
     return [w, h];
 }
 
-function draw_rect(width, height, color, scale=1){
+function draw_rect(width, height, color, scale){
     var obj = new PIXI.Graphics();
     obj.lineStyle(2, 0x000000, 1);
     obj.beginFill(color);
     obj.drawRect(0, 0, width * scale, height * scale);
     obj.endFill();
-    return obj
+    return obj;
 }
 
 function draw_block(name){
@@ -184,18 +182,18 @@ function draw_block(name){
     text.anchor.set(0.5, 0.5);
     text.position.set(obj.width / 2, obj.height / 2);
     obj.addChild(text);
-    return [obj, text]
+    return [obj, text];
 }
 
 function draw_text(text, scale=1){
     text = new PIXI.Text(text,
         {
-            fontFamily : FONT,
+            fontFamily: FONT,
             fontSize: FONT_SIZE * scale,
-            fill : TEXT_COLOR,
-            align : 'right'
+            fill: TEXT_COLOR,
+            align: 'right'
         });
-    return text
+    return text;
 }
 
 function draw_conn(inputs, outputs, rect){
@@ -218,7 +216,7 @@ function draw_conn(inputs, outputs, rect){
         obj.beginFill(INPUT_COLOR);
         obj.drawCircle(0, 0, radius);
         obj.endFill();
-        return obj
+        return obj;
     }
 
     var x = rect.position.x + width / 2 - 1;
@@ -250,10 +248,10 @@ function draw_conn(inputs, outputs, rect){
         } else if (x.position.x > y.position.x){
             return 1;
         }
-        return 0
+        return 0;
     }
 
     input_conn.sort(sort_logic);
     output_conn.sort(sort_logic);
-    return [input_conn, output_conn]
+    return [input_conn, output_conn];
 }
