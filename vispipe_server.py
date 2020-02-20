@@ -55,8 +55,8 @@ def send_vis():
             if block.data_type == 'image':
                 value = np.array(value, dtype=np.int)
                 shape = value.shape
-                value = np.reshape(value, (-1,)).tolist()  # TODO: Here automatically manage non alpha images (concatenate internally) + find a way for grayscale images
-
+                value = np.reshape(value, (-1,)).tolist()  # TODO: Automatically manage non alpha images (concatenate internally) + find a way for grayscale images
+            # TODO: MANAGE OTHER TYPES OF DATA (RAW)
             if not len(shape) == 3:
                 socketio.emit('message', 'The value is not an image and will not be visualized')
             else:

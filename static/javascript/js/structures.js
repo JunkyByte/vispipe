@@ -60,7 +60,7 @@ class VisNode extends Node {
         super(block, id);
 
         if (this.block.data_type === 'raw'){
-            console.log('TODO ME'); // TODO
+            console.log('TODO ME'); // TODO: Implement
         } else if (this.block.data_type === 'image'){
             this.visrect = draw_rect(VIS_IMAGE_SIZE + 4, VIS_IMAGE_SIZE + 4, BLOCK_COLOR, 1);
             var delta = this.rect.width - this.visrect.width;
