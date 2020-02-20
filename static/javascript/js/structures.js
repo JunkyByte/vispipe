@@ -109,6 +109,14 @@ class Button {
         this.rect.button = this;
         app.stage.addChild(this.rect)
     }
+
+    disable_button(){
+        this.rect.interactive = false;
+    }
+
+    enable_button(){
+        this.rect.interactive = true;
+    }
 }
 
 
@@ -128,8 +136,8 @@ class Pipeline {
     }
 
     spawn_node(block){
-        socket.emit('new_node', block, function(response) {
-            if (!(response instanceof String)){
+        socket.emit('new_node', block, function(response, status) {
+            if (status === 200){
                 var block = new Block(response.name, response.input_args, response.custom_args, response.output_names, response.tag, response.data_type);
                 var instance;
                 if (block.tag == 'vis') { // This should be passed as a bool so that is not hardcoded
@@ -147,8 +155,8 @@ class Pipeline {
     add_connection(from_block, from_idx, out_idx, to_block, to_idx, inp_idx){
         socket.emit('new_conn',
             {'from_block': from_block, 'from_idx': from_idx, 'out_idx': out_idx, 'to_block': to_block, 'to_idx': to_idx, 'inp_idx': inp_idx},
-            function(response){
-                if (! response === 200){
+            function(response, status){
+                if (status !== 200){
                     console.log(response);
                 }
             }); 
@@ -156,25 +164,27 @@ class Pipeline {
 
     run_pipeline(){
         var self = this;
-        socket.emit('run_pipeline', function(response) {
-            if (response === 200) {
+        socket.emit('run_pipeline', function(response, status) {
+            if (status === 200) {
                 self.state = RunState.RUNNING;
                 runmenu.update_state();
             } else {
                 console.log(response);
             }
+            runmenu.start_button.enable_button()
         });
     }
 
     stop_pipeline(){
         var self = this;
-        socket.emit('stop_pipeline', function(response) {
-        if (response === 200) {
+        socket.emit('stop_pipeline', function(response, status) {
+        if (status === 200) {
             self.state = RunState.IDLE;
             runmenu.update_state();
         } else {
             console.log(response);
         }
+        runmenu.stop_button.enable_button()
         });
     }
 }
@@ -184,10 +194,12 @@ class RunMenu {
     constructor() {
         this.start_button = new Button('  RUN  ');
         this.start_button.rect.on('mousedown', ev => pipeline.run_pipeline(), false);
+        this.start_button.rect.on('mousedown', ev => this.start_button.disable_button(), false);
         this.start_button.rect.position.set(0, HEIGHT - this.start_button.rect.height + 3);
 
         this.stop_button = new Button('  STOP  ');
         this.stop_button.rect.on('mousedown', ev => pipeline.stop_pipeline(), false);
+        this.stop_button.rect.on('mousedown', ev => this.stop_button.disable_button(), false);
         this.stop_button.rect.position.set(this.start_button.rect.width - 2, HEIGHT - this.stop_button.rect.height + 3);
 
         this.state_text = new PIXI.Text('State: ' + pipeline.state, {fontFamily: FONT, fill: TEXT_COLOR});
@@ -197,7 +209,6 @@ class RunMenu {
 
     update_state(){
         this.state_text.text = 'State: ' + pipeline.state;
-
     }
 
     resize_menu(){

@@ -1,8 +1,7 @@
 from vispipe import vispipe
 from flask_socketio import SocketIO
 from threading import Thread, Event
-from flask import Flask, render_template
-from flask import session
+from flask import Flask, render_template, Response, session, json, make_response
 import usage
 import numpy as np
 
@@ -25,11 +24,12 @@ def share_blocks():
 @socketio.on('new_node')
 def new_node(block):
     try:
+        print('New node')
         block = vispipe.pipeline._blocks[block['name']]
         id = vispipe.pipeline.add_node(block)
-        return {**{'id': id}, **block.serialize()}
+        return {**{'id': id}, **block.serialize()}, 200
     except Exception as e:
-        return str(e)
+        return str(e), 500
 
 
 @socketio.on('new_conn')
@@ -38,12 +38,13 @@ def new_conn(x):
         from_block = vispipe.pipeline._blocks[x['from_block']['name']]
         to_block = vispipe.pipeline._blocks[x['to_block']['name']]
         vispipe.pipeline.add_conn(from_block, x['from_idx'], x['out_idx'], to_block, x['to_idx'], x['inp_idx'])
-        return 200
+        return {}, 200
     except Exception as e:
-        return str(e)
+        return str(e), 500
 
 
 thread = Thread()
+thread.daemon = True
 thread_stop_event = Event()
 
 
@@ -61,7 +62,7 @@ def send_vis():
                 socketio.emit('message', 'The value is not an image and will not be visualized')
             else:
                 socketio.emit('send_vis', {**{'id': id, 'value': value}, **block.serialize()})
-        socketio.sleep(1)
+        socketio.sleep(1)  # TODO: Check that during this delay if gets stopped the process breaks
 
 
 @socketio.on('run_pipeline')
@@ -76,22 +77,23 @@ def run_pipeline():
         if len(vispipe.pipeline.runner.vis_source):
             thread_stop_event.clear()
             thread = socketio.start_background_task(send_vis)
-        return 200
+        return {}, 200
     except Exception as e:
-        return str(e)
-
-    assert False  # TODO get here sometimes
+        return str(e), 500
+    return 'Invalid State Encountered', 500
 
 
 @socketio.on('stop_pipeline')
 def stop_pipeline():
     try:
-        vispipe.pipeline.stop()
-        vispipe.pipeline.unbuild()
+        global thread
         thread_stop_event.set()
-        return 200
+        vispipe.pipeline.unbuild()
+        if thread.isAlive():
+            thread.join()
+        return {}, 200
     except Exception as e:
-        return str(e)
+        return str(e), 500
 
 
 @app.route('/')

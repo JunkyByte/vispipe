@@ -186,6 +186,9 @@ class PipelineRunner:
             if thr.is_alive():
                 thr.kill()
             del thr
+        
+        self.out_queues = {}
+        self.vis = {}
         self.built = False
 
     def run(self):
