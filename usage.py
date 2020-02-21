@@ -23,6 +23,13 @@ def image_plus(x):
 
 
 @vispipe.block
+def image_rgb(r, g, b):
+    time.sleep(1)
+    ones = np.ones((28, 28, 1))
+    yield np.concatenate([r * ones, g * ones, b * ones, ones * 255], axis=-1)
+
+
+@vispipe.block
 def test_plus100(x):
     yield x + 100
 
@@ -35,6 +42,7 @@ def multiply100(x):
 @vispipe.block
 def rand():
     yield np.random.randn()
+
 
 @vispipe.block
 def randint():
@@ -122,6 +130,11 @@ def test_vis(input1):
     yield input1
 
 
+@vispipe.block(tag='vis', data_type='raw')
+def test_vis_raw(input1):
+    yield input1
+
+
 @vispipe.block
 class classex:
     def __init__(self):
@@ -150,6 +163,7 @@ class testempty:
             self.sum += input1
             self.count += 1
             yield vispipe.pipeline._empty
+
 
 # Pipeline Test
 custom_add = vispipe.pipeline._blocks['test_addition']

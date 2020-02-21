@@ -10,8 +10,10 @@ document.body.appendChild(app.view);
 var WIDTH = app.renderer.width / app.renderer.resolution;
 var HEIGHT = app.renderer.height / app.renderer.resolution;
 var VIS_IMAGE_SIZE = 128;
+var VIS_RAW_SIZE = 128;
 var FONT = 'Arial';
 var FONT_SIZE = 18;
+var VIS_FONT_SIZE = 18;
 var TEXT_COLOR = 'white';
 var BUTTON_COLOR = 0x5DBCD2;
 var BLOCK_COLOR = 0x5DBCD2;
@@ -53,13 +55,18 @@ $(document).ready(function(){
     socket.on('send_vis', function(msg) {
         var id = msg.id;
         var name = msg.name;
+        var data_type = msg.data_type;
+        var vis_node = pipeline.vis[id + '-' + name]
 
-        value = new Uint8Array(msg.value);
-        var size = value.length / 4;
-        var s = Math.sqrt(size);
-
-        let texture = PIXI.Texture.fromBuffer(value, s, s);
-        pipeline.vis[id + '-' + name].update_texture(texture);
+        if (data_type == 'image') {
+            value = new Uint8Array(msg.value);
+            var size = value.length / 4;
+            var s = Math.sqrt(size);
+            var texture = PIXI.Texture.fromBuffer(value, s, s);
+            vis_node.update_texture(texture);
+        } else if (data_type == 'raw') {
+            vis_node.update_text(msg.value);
+        }
     });
 
     socket.on('message', function(msg) {

@@ -59,21 +59,29 @@ class VisNode extends Node {
     constructor(block, id) {
         super(block, id);
 
+        function setpos(rect, visrect){
+            var delta = rect.width - visrect.width;
+            visrect.position.set(delta / 2, 40);
+        }
+
         if (this.block.data_type === 'raw'){
-            console.log('TODO ME'); // TODO: Implement
+            this.visrect = draw_rect(VIS_RAW_SIZE + 8, Number(VIS_RAW_SIZE * 2 / 4) + 4, BLOCK_COLOR, 1);
+            setpos(this.rect, this.visrect);
+            this.vissprite = new PIXI.Text('', new PIXI.TextStyle());
         } else if (this.block.data_type === 'image'){
-            this.visrect = draw_rect(VIS_IMAGE_SIZE + 4, VIS_IMAGE_SIZE + 4, BLOCK_COLOR, 1);
-            var delta = this.rect.width - this.visrect.width;
-            this.visrect.position.set(delta / 2, 40); // TODO: I'm hardcoded
-            // Add the actual vis space
-            let texture = PIXI.Texture.EMPTY
+            this.visrect = draw_rect(VIS_IMAGE_SIZE + 8, VIS_IMAGE_SIZE + 8, BLOCK_COLOR, 1);
+            setpos(this.rect, this.visrect);
+
+            let texture = PIXI.Texture.EMPTY  // Temporary texture
             this.vissprite = PIXI.Sprite.from(texture);
             this.update_texture(texture);
 
-            this.visrect.addChild(this.vissprite)
-            this.vissprite.position.set(2, 2);
-            pipeline.vis[this.id + '-' + this.block.name] = this;  // TODO: If node remove is added we need to change this
         }
+        if (this.vissprite !== undefined) {
+            this.visrect.addChild(this.vissprite)
+            this.vissprite.position.set(4, 4);
+        }
+        pipeline.vis[this.id + '-' + this.block.name] = this;  // TODO: If node remove is added we need to change this
         this.rect.addChild(this.visrect);
     }
 
@@ -81,6 +89,36 @@ class VisNode extends Node {
         this.vissprite.texture = texture;
         let ratio = VIS_IMAGE_SIZE / texture.width;
         this.vissprite.scale.set(ratio);
+    }
+
+    update_text(text) {
+        var height = this.visrect.height;
+
+        // TODO: This is temporary solution to a complex problem
+        // TODO: Fallback if font becomes negative this will crash
+        var k = 0;
+        var style;
+        while (true) {
+            style = new PIXI.TextStyle({
+                fontFamily: FONT,
+                breakWords: true,
+                fontSize: VIS_FONT_SIZE - k,
+                wordWrap: true,
+                align: 'left',
+                fill: TEXT_COLOR,
+                wordWrapWidth: this.visrect.width - 8,
+            });
+
+            var currentHeight = PIXI.TextMetrics.measureText(text, style).height;
+            if (height <= currentHeight) {
+                k += 1;
+            } else {
+                this.vissprite.style = style;
+                this.vissprite.text = text;
+                return
+            }
+        }
+
     }
 }
 
@@ -97,7 +135,7 @@ class Block {
 }
 
 class Button {
-    constructor(name) {
+    constructor(name, hidden=false) {
         var [width, height] = name_to_size(name);
         this.rect = draw_rect(width, height, BUTTON_COLOR, 0.8);
         this.text = draw_text(name, 0.9);
@@ -171,35 +209,41 @@ class Pipeline {
             } else {
                 console.log(response);
             }
-            runmenu.start_button.enable_button()
+            runmenu.start_button.enable_button();
         });
     }
 
     stop_pipeline(){
         var self = this;
         socket.emit('stop_pipeline', function(response, status) {
-        if (status === 200) {
-            self.state = RunState.IDLE;
-            runmenu.update_state();
-        } else {
-            console.log(response);
-        }
-        runmenu.stop_button.enable_button()
+            if (status === 200) {
+                self.state = RunState.IDLE;
+                runmenu.update_state();
+            } else {
+                console.log(response);
+            }
+            runmenu.stop_button.enable_button();
         });
     }
 }
 
 
+class PopupMenu { // TODO
+    constructor() {
+        this.delete_button = new Button('  DELETE  ', true);
+    }
+}
+
 class RunMenu {
     constructor() {
         this.start_button = new Button('  RUN  ');
-        this.start_button.rect.on('mousedown', ev => pipeline.run_pipeline(), false);
         this.start_button.rect.on('mousedown', ev => this.start_button.disable_button(), false);
+        this.start_button.rect.on('mousedown', ev => pipeline.run_pipeline(), false);
         this.start_button.rect.position.set(0, HEIGHT - this.start_button.rect.height + 3);
 
         this.stop_button = new Button('  STOP  ');
-        this.stop_button.rect.on('mousedown', ev => pipeline.stop_pipeline(), false);
         this.stop_button.rect.on('mousedown', ev => this.stop_button.disable_button(), false);
+        this.stop_button.rect.on('mousedown', ev => pipeline.stop_pipeline(), false);
         this.stop_button.rect.position.set(this.start_button.rect.width - 2, HEIGHT - this.stop_button.rect.height + 3);
 
         this.state_text = new PIXI.Text('State: ' + pipeline.state, {fontFamily: FONT, fill: TEXT_COLOR});

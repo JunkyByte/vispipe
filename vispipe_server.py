@@ -4,6 +4,7 @@ from threading import Thread, Event
 from flask import Flask, render_template, Response, session, json, make_response
 import usage
 import numpy as np
+import cv2
 
 app = Flask(__name__)
 SESSION_TYPE = 'redis'
@@ -48,29 +49,45 @@ thread.daemon = True
 thread_stop_event = Event()
 
 
+def process_image(x):
+    x = np.array(x, dtype=np.int)  # Cast to int
+    if x.ndim in [0, 1, 4]:
+        raise Exception('The format image you passed is not visualizable')
+
+    if x.ndim == 2:  # Add channel dim
+        x = x.reshape((*x.shape, 1))
+    if x.shape[-1] == 1:  # Convert to rgb a grayscale
+        x = cv2.cvtColor(x, cv2.COLOR_GRAY2RGB)
+    if x.shape[-1] == 3:  # Add alpha channel
+        x = np.concatenate([x, np.ones((x.shape[0], x.shape[1], 1))], axis=-1)
+    shape = x.shape
+    return np.reshape(x, (-1,)).tolist(), shape
+
+
 def send_vis():
     while not thread_stop_event.isSet():
-        for key, consumer in vispipe.pipeline.runner.vis_source.items():  # TODO: This access can be improved
-            value = consumer.read()
-            block, id = key
-            if block.data_type == 'image':
-                value = np.array(value, dtype=np.int)
-                shape = value.shape
-                value = np.reshape(value, (-1,)).tolist()  # TODO: Automatically manage non alpha images (concatenate internally) + find a way for grayscale images
-            # TODO: MANAGE OTHER TYPES OF DATA (RAW)
-            if not len(shape) == 3:
-                socketio.emit('message', 'The value is not an image and will not be visualized')
-            else:
+        try:
+            vis = vispipe.pipeline.runner.read_vis()
+            for key, value in vis.items():
+                block, id = key
+                if block.data_type == 'image':
+                    value, shape = process_image(value)
+                elif block.data_type == 'raw':
+                    value = str(value)
+
                 socketio.emit('send_vis', {**{'id': id, 'value': value}, **block.serialize()})
-        socketio.sleep(1)  # TODO: Check that during this delay if gets stopped the process breaks
+        except Exception as e:
+            socketio.emit('message', str(e))
+
+        socketio.sleep(1)
 
 
 @socketio.on('run_pipeline')
 def run_pipeline():
-    if not vispipe.pipeline.runner.built:
-        vispipe.pipeline.build()
-
     try:
+        if not vispipe.pipeline.runner.built:
+            vispipe.pipeline.build()
+
         vispipe.pipeline.run()
         global thread
         assert not thread.isAlive()

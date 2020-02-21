@@ -80,6 +80,20 @@ class PipelineRunner:
         self.out_queues = {}
         self.vis_source = {}
 
+    def read_vis(self):
+        vis = {}
+        idx = self.__vis_index()
+
+        i = 0
+        for key, consumer in self.vis_source.items():
+            vis[key] = consumer.read(idx)
+            i += 1
+
+        return vis
+
+    def __vis_index(self):
+        return min([vis.size() for vis in self.vis_source.values()]) - 1
+
     def build_pipeline(self, pipeline):
         assert not self.built
         if len(pipeline.ids.keys()) == 0:
@@ -186,9 +200,9 @@ class PipelineRunner:
             if thr.is_alive():
                 thr.kill()
             del thr
-        
+
         self.out_queues = {}
-        self.vis = {}
+        self.vis_source = {}
         self.built = False
 
     def run(self):
@@ -207,12 +221,6 @@ class PipelineRunner:
             else:
                 thr.start()
 
-        # Join all threads TODO
-        #for thr in self.threads:
-        #    thr.join()
-        #for k, thr in self.vis_source.items():
-        #    thr.join()
-
     def stop(self):
         if not self.built:
             raise Exception('The pipeline has not been built')
@@ -226,7 +234,7 @@ class PipelineRunner:
 class QueueConsumer:
     def __init__(self, q):
         self.in_q = q
-        self.out_q = Queue()
+        self.out = []
         self._t = TerminableThread(self._reader)
         self._t.daemon = True
 
@@ -251,19 +259,20 @@ class QueueConsumer:
     def resume(self):
         self._t.resume()
 
-    # read from queue as soon as possible, keeping only most recent result
     def _reader(self):
         while True:
             x = self.in_q.get()
-            if not self.out_q.empty():
-                try:
-                    self.out_q.get_nowait()
-                except Empty:
-                    pass
-            self.out_q.put(x)
+            self.out.append(x)
 
-    def read(self):
-        return self.out_q.get()
+    def size(self):
+        return len(self.out)
+    
+    def read(self, idx):
+        value = None
+        if len(self.out) > idx:
+            value = self.out[idx]
+            del self.out[:idx]
+        return value
 
 
 class PipelineGraph:
