@@ -2,7 +2,7 @@ from functools import partial
 from inspect import signature, isgeneratorfunction, _empty
 from typing import List, Callable
 from threading import Thread, Event
-from queue import Queue, Empty
+from queue import Queue
 import os
 import types
 import pickle
@@ -33,7 +33,8 @@ class Pipeline:
             blocks.append(block)
         return blocks
 
-    def register_block(self, func: Callable, is_class: bool, max_queue: int, output_names=None, tag: str = 'None', data_type: str = 'raw') -> None:
+    def register_block(self, func: Callable, is_class: bool, max_queue: int, output_names=None,
+            tag: str = 'None', data_type: str = 'raw') -> None:
         block = Block(func, is_class, max_queue, output_names, tag, data_type)
         assert block.name not in self._blocks.keys(), 'The name %s is already registered as a pipeline block' % block.name
         self._blocks[block.name] = block
@@ -84,10 +85,8 @@ class PipelineRunner:
         vis = {}
         idx = self.__vis_index()
 
-        i = 0
         for key, consumer in self.vis_source.items():
             vis[key] = consumer.read(idx)
-            i += 1
 
         return vis
 
@@ -116,8 +115,6 @@ class PipelineRunner:
 
             node = nodes[idx]
             is_vis = True if node.tag == Pipeline.vis_tag else False
-            if is_vis:
-                data_type = node.data_type
 
             custom_arg = custom_args[idx]
             out_conn = np.array(list(nodes_conn[idx]))

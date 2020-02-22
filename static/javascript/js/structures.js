@@ -145,7 +145,9 @@ class Button {
         this.rect.interactive = true;
         this.rect.buttonMode = true;
         this.rect.button = this;
-        app.stage.addChild(this.rect)
+        if (! hidden) {
+            app.stage.addChild(this.rect)
+        }
     }
 
     disable_button(){
@@ -228,9 +230,98 @@ class Pipeline {
 }
 
 
-class PopupMenu { // TODO
+class PopupMenu {
     constructor() {
-        this.delete_button = new Button('  DELETE  ', true);
+        this.flag_over = false;
+        this.pane_height = 100;
+        this.pane = draw_rect(CUSTOM_ARG_SIZE, this.pane_height, BLOCK_COLOR, 1);
+        this.input_container = new PIXI.Container();
+        this.delete_button = new Button(' DELETE ', true);
+        this.pane.addChild(this.input_container);
+        this.pane.buttonMode = true;
+        this.pane.interactive = false;
+        this.pane.on('mouseover', ev => this.over_menu(ev), false);
+        this.pane.on('mouseout', ev => this.out_menu(ev), false);
+    }
+
+    show_menu(ev) {
+        if (ev.target === undefined){
+            return;
+        }
+
+        if (this.pane.parent) {  // TODO: Can be refactored
+            this.flag_over = true;
+            this.out_menu();
+        }
+
+        this.target = ev.target;
+        var block = this.target.node.block;
+        var custom_args = block.custom_args;
+        
+        var value, height;
+        var x = CUSTOM_ARG_SIZE - 215;
+        var y = 15;
+
+        // Draw the menu
+        var length = Object.keys(custom_args).length
+        for (var key in custom_args) {
+            if (custom_args.hasOwnProperty(key)) {
+                value = custom_args[key];
+                console.log(key, value); // TODO: Add type hinting
+                var input_text = draw_text_input(String(value), 1);  // TODO: Add events
+                var key_text = draw_text(key, 1);
+                height = input_text.height;
+                input_text.position.set(x, y);
+                key_text.position.set(7, y + 2);
+                y += height + 5;
+                this.input_container.addChild(input_text);
+                this.input_container.addChild(key_text);
+            }
+        }
+
+        this.delete_button.rect.position.set(CUSTOM_ARG_SIZE / 2, y);
+        this.input_container.addChild(this.delete_button.rect);
+
+        this.pane.scale.y = (y + 40) / this.pane_height;
+        for (var i=0; i<this.pane.children.length; i++){
+            var obj = this.pane.children[i]
+            obj.scale.y = 1 / this.pane.scale.y;
+        }
+
+        this.pane.interactive = true;
+        this.pane.position.set(this.target.width + 5, 0);
+        this.target.addChild(this.pane);
+    }
+
+    over_menu(event) {
+        this.flag_over = true;
+    }
+
+    out_menu(event) {
+        console.log(event);
+        // Check if is a child of the pane, in that case do not close
+        if (event && event.data) {
+            var hit_obj = app.renderer.plugins.interaction.hitTest(event.data.global);
+        }
+
+        if (hit_obj) {
+            for (var i=0; i<event.currentTarget.children.length; i++){
+                var child = event.currentTarget.children[i];
+                if(child === hit_obj.parent.parent){
+                    return;
+                }
+            }
+        }
+
+        if (this.flag_over) {
+            this.flag_over = false;
+            this.input_container.destroy();
+            this.input_container = new PIXI.Container();
+            this.pane.scale.y = 1;
+            this.pane.addChild(this.input_container);
+            this.target.removeChild(this.pane);
+            this.target = undefined;
+        }
     }
 }
 

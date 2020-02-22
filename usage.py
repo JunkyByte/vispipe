@@ -1,8 +1,17 @@
 from vispipe import vispipe
 import numpy as np
 import math
-
 import time
+
+
+@vispipe.block
+def three_args(arg1=5, arg2='ciao', arglonglong='7x7'):
+    yield 1
+
+
+@vispipe.block
+def five_args(arg1=5, arg2='ciao', arglong='7x7', longveryarg=1023, onemore=-100.3):
+    yield 1
 
 
 @vispipe.block

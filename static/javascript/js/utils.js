@@ -1,8 +1,5 @@
-function onDragStart(event)
+function onDragStart(event)  // TODO: This function can be refactored with better logic
 {
-    // store a reference to the data
-    // the reason for this is because of multitouch
-    // we want to track the movement of this particular touch
     var i;
     var obj;
 
@@ -18,11 +15,22 @@ function onDragStart(event)
         }
     }
 
+    if (this._clicked && !this.ischild && this.target.node !== undefined) {
+        console.log('is a double click');
+        this.alpha = 0.5;
+        popupmenu.show_menu(event);
+    }
+    this._clicked = false;
+    clearTimeout(this.__double);
+
     this.start_pos = new PIXI.Point(event.data.global.x, event.data.global.y);
     this.data = event.data;
-    this.dragging = this.data.getLocalPosition(this.parent);
 
-    if (!this.ischild){
+    if (this.target.node !== undefined){
+        this.dragging = this.data.getLocalPosition(this.parent);
+    }
+
+    if (!this.ischild && this.target.node !== undefined){
         this.alpha = 0.5;
         app.stage.setChildIndex(this, app.stage.children.length-1);
     } else {
@@ -32,6 +40,9 @@ function onDragStart(event)
 
 function onDragEnd(event)
 {
+    this._clicked = true;
+    this.__double = setTimeout(() => { this._clicked = false; }, 200);
+
     // Close drag logic
     this.alpha = 1;
     this.dragging = false;
@@ -194,6 +205,26 @@ function draw_text(text, scale=1){
             align: 'right'
         });
     return text;
+}
+
+function draw_text_input(default_value, scale=1){
+    var obj = new PIXI.TextInput({
+        input: {
+            fontFamily: FONT,
+            fontSize: FONT_SIZE * scale,
+            padding: '12px',
+            width: '200px',
+            height: '30px',
+            color: '#26272E'
+        },
+        box: {
+            default: {fill: 0xE8E9F3, rounded: 16, stroke: {color: 0xCBCEE0, width: 4}},
+            focused: {fill: 0xE1E3EE, rounded: 16, stroke: {color: 0xABAFC6, width: 4}},
+            disabled: {fill: 0xDBDBDB, rounded: 16}
+        }
+    });
+    obj.placeholder = default_value;
+    return obj;
 }
 
 function draw_conn(inputs, outputs, rect){
