@@ -33,12 +33,36 @@ def new_node(block):
         return str(e), 500
 
 
+@socketio.on('remove_node')
+def remove_node(data):
+    try:
+        print('Removing node')
+        block_dict = data['block']
+        index = data['index']
+        block = vispipe.pipeline._blocks[block_dict['name']]
+        vispipe.pipeline.remove_node(block, index)
+        return {}, 200
+    except Exception as e:
+        return str(e), 500
+
+
 @socketio.on('new_conn')
 def new_conn(x):
     try:
         from_block = vispipe.pipeline._blocks[x['from_block']['name']]
         to_block = vispipe.pipeline._blocks[x['to_block']['name']]
         vispipe.pipeline.add_conn(from_block, x['from_idx'], x['out_idx'], to_block, x['to_idx'], x['inp_idx'])
+        return {}, 200
+    except Exception as e:
+        return str(e), 500
+
+
+@socketio.on('set_custom_arg')
+def set_custom_arg(data):
+    try:
+        block_dict = data['block']
+        block = vispipe.pipeline._blocks[block_dict['name']]
+        vispipe.pipeline.set_custom_arg(block, data['id'], data['key'], data['value'])
         return {}, 200
     except Exception as e:
         return str(e), 500

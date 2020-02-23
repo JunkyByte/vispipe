@@ -124,10 +124,11 @@ class VisNode extends Node {
 
 
 class Block {
-    constructor(name, input_args, custom_args, output_names, tag, data_type) {
+    constructor(name, input_args, custom_args, custom_args_type, output_names, tag, data_type) {
         this.name = name;
         this.input_args = input_args;
         this.custom_args = custom_args;
+        this.custom_args_type = custom_args_type;
         this.output_names = output_names;
         this.tag = tag;
         this.data_type = data_type;
@@ -138,6 +139,8 @@ class Button {
     constructor(name, hidden=false) {
         var [width, height] = name_to_size(name);
         this.rect = draw_rect(width, height, BUTTON_COLOR, 0.8);
+        this.rect.on('mouseover', ev => { this.rect.alpha = 0.9 }, false);
+        this.rect.on('mouseout', ev => { this.rect.alpha = 1 }, false);
         this.text = draw_text(name, 0.9);
         this.text.anchor.set(0.5, 0.5);
         this.text.position.set(this.rect.width / 2, this.rect.height / 2);
@@ -178,7 +181,9 @@ class Pipeline {
     spawn_node(block){
         socket.emit('new_node', block, function(response, status) {
             if (status === 200){
-                var block = new Block(response.name, response.input_args, response.custom_args, response.output_names, response.tag, response.data_type);
+                var block = new Block(response.name, response.input_args, response.custom_args,
+                                      response.custom_args_type, response.output_names,
+                                      response.tag, response.data_type);
                 var instance;
                 if (block.tag == 'vis') { // This should be passed as a bool so that is not hardcoded
                     instance = new VisNode(block, response.id);
@@ -186,6 +191,30 @@ class Pipeline {
                     instance = new Node(block, response.id);
                 }
                 pipeline.DYNAMIC_NODES.push(instance);
+            } else {
+                console.log(response);
+            }
+        });
+    }
+
+    remove_node(node){
+        var self = this;
+        socket.emit('remove_node', {'block': node.block, 'index': node.id}, function(response, status){
+            if (status === 200){
+                var index = self.DYNAMIC_NODES.indexOf(node);
+                var node = self.DYNAMIC_NODES.splice(node, 1)[0];
+                app.stage.removeChild(node.rect);
+            } else {
+                console.log(response);
+            }
+        });
+    }
+
+    set_custom_arg(node, key, value){
+        socket.emit('set_custom_arg', {'block': node.block, 'id': node.id, 'key': key, 'value': value}, function(response, status){
+            if (status === 200){
+                console.log('The custom arg has been set');
+                node.block.custom_args[key] = value;
             } else {
                 console.log(response);
             }
@@ -233,10 +262,12 @@ class Pipeline {
 class PopupMenu {
     constructor() {
         this.flag_over = false;
+        this.currentNode = null;
         this.pane_height = 100;
         this.pane = draw_rect(CUSTOM_ARG_SIZE, this.pane_height, BLOCK_COLOR, 1);
         this.input_container = new PIXI.Container();
         this.delete_button = new Button(' DELETE ', true);
+        this.delete_button.rect.on('mousedown', ev => pipeline.remove_node(this.currentNode), false);
         this.pane.addChild(this.input_container);
         this.pane.buttonMode = true;
         this.pane.interactive = false;
@@ -255,21 +286,35 @@ class PopupMenu {
         }
 
         this.target = ev.target;
+        this.currentNode = this.target.node;
         var block = this.target.node.block;
         var custom_args = block.custom_args;
+        var custom_args_type = block.custom_args_type;
         
-        var value, height;
+        var value, type, height;
         var x = CUSTOM_ARG_SIZE - 215;
         var y = 15;
+
+        var self = this;
 
         // Draw the menu
         var length = Object.keys(custom_args).length
         for (var key in custom_args) {
             if (custom_args.hasOwnProperty(key)) {
                 value = custom_args[key];
-                console.log(key, value); // TODO: Add type hinting
-                var input_text = draw_text_input(String(value), 1);  // TODO: Add events
-                var key_text = draw_text(key, 1);
+                type = custom_args_type[key];
+                var input_text = draw_text_input(String(value), 1);
+                if (type === 'int' || type === 'float'){
+                    input_text.restrict = '0123456789.';
+                }
+                input_text.on('input', function(input_text, key) {
+                    return function() {
+                        if (input_text.text && String(input_text.text) !== input_text.placeholder){
+                            pipeline.set_custom_arg(self.currentNode, key, input_text.text);
+                        }
+                    }
+                }(input_text, key), false);
+                var key_text = draw_text(key + ': ' + type, 1);
                 height = input_text.height;
                 input_text.position.set(x, y);
                 key_text.position.set(7, y + 2);
@@ -298,7 +343,6 @@ class PopupMenu {
     }
 
     out_menu(event) {
-        console.log(event);
         // Check if is a child of the pane, in that case do not close
         if (event && event.data) {
             var hit_obj = app.renderer.plugins.interaction.hitTest(event.data.global);

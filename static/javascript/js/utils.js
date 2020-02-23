@@ -215,7 +215,7 @@ function draw_text_input(default_value, scale=1){
             padding: '12px',
             width: '200px',
             height: '30px',
-            color: '#26272E'
+            color: INPUT_TEXT_COLOR,
         },
         box: {
             default: {fill: 0xE8E9F3, rounded: 16, stroke: {color: 0xCBCEE0, width: 4}},

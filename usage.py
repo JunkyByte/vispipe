@@ -6,7 +6,7 @@ import time
 
 @vispipe.block
 def three_args(arg1=5, arg2='ciao', arglonglong='7x7'):
-    yield 1
+    yield arg1
 
 
 @vispipe.block

@@ -19,6 +19,8 @@ var TEXT_COLOR = 'white';
 var BUTTON_COLOR = 0x5DBCD2;
 var BLOCK_COLOR = 0x5DBCD2;
 var INPUT_COLOR = 0x5DBCD2;  // TODO: Add me
+var INPUT_WRONG_COLOR = 0xED1909;
+var INPUT_TEXT_COLOR = 0x26272E;
 var OUTPUT_COLOR = 0x5DBCD2;
 
 // Listen for window resize events
@@ -46,7 +48,8 @@ $(document).ready(function(){
     socket = io.connect('http://' + document.domain + ':' + location.port);
 
     socket.on('new_block', function(msg) {
-        var block = new Block(msg.name, msg.input_args, msg.custom_args, msg.output_names, msg.tag, msg.data_type);
+        var block = new Block(msg.name, msg.input_args, msg.custom_args, msg.custom_args_type,
+                              msg.output_names, msg.tag, msg.data_type);
         pipeline.STATIC_NODES.push(new StaticNode(block));
     });
 

@@ -53,6 +53,9 @@ class Pipeline:
         self.pipeline.add_connection(
             from_block, from_idx, out_idx, to_block, to_idx, inp_idx)
 
+    def set_custom_arg(self, block, index, key, value):
+        self.pipeline.set_custom_arg(block, index, key, value)
+
     def build(self) -> None:
         self.runner.build_pipeline(self.pipeline)
 
@@ -163,7 +166,7 @@ class PipelineRunner:
 
             # Populate the output queue dictionary
             if is_vis:  # Visualization blocks have an hardcoded single queue as output
-                instance_idx = pipeline.index_to_id(node, used_ids[idx])
+                instance_idx = pipeline.id_to_index(node, used_ids[idx])
                 q = Queue(node.max_queue)
                 out_q = [[q]]
             else:
@@ -283,9 +286,9 @@ class PipelineGraph:
         self.instances = {}  # Free ids for instances of same block
         self.free_idx = set([i for i in range(MAXSIZE)])  # Free ids for blocks
 
-    def index_to_id(self, block, index):
+    def id_to_index(self, block, id):
         for k, v in self.ids.items():
-            if v == index:
+            if v == id:
                 hash_block = self.get_hash(block, index=0)[1]
                 return k - hash_block * MAXSIZE
         assert False, 'The index has not been found'
@@ -349,6 +352,12 @@ class PipelineGraph:
 
         self.matrix[from_id][to_id] = np.array([inp_idx + 1])
 
+    def set_custom_arg(self, block, index, key, value):
+        hash_index, _ = self.get_hash(block, index)
+        id = self.ids[hash_index]
+        arg_type = self.nodes[id].custom_args_type[key]
+        self.custom_args[id][key] = arg_type(value)
+
 
 class Block:
     def __init__(self, f: Callable, is_class: bool, max_queue: int, output_names: List[str], tag: str, data_type: str):
@@ -365,6 +374,7 @@ class Block:
         args = [(k, val.default) for k, val in input_args.items()]
         self.input_args = dict([(k, val) for k, val in args if val == _empty])
         self.custom_args = dict([(k, val) for k, val in args if val != _empty])
+        self.custom_args_type = dict([(k, type(val)) for k, val in self.custom_args.items()])
         self.max_queue = max_queue
         self.output_names = output_names if output_names is not None else ['y']
 
@@ -381,6 +391,7 @@ class Block:
         # TODO: Support np array by casting to nested lists
         x['input_args'] = dict([(k, v if v != _empty else None)
                                 for k, v in x['input_args'].items()])
+        x['custom_args_type'] = dict([(k, str(v.__name__)) for k, v in x['custom_args_type'].items()])
         return x
 
     def __iter__(self):
@@ -388,6 +399,7 @@ class Block:
         yield 'name', self.name
         yield 'input_args', self.input_args
         yield 'custom_args', self.custom_args
+        yield 'custom_args_type', self.custom_args_type
         yield 'max_queue', self.max_queue
         yield 'output_names', self.output_names
         yield 'tag', self.tag
