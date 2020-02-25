@@ -10,6 +10,11 @@ def three_args(arg1=5, arg2='ciao', arglonglong='7x7'):
 
 
 @vispipe.block
+def some_list():
+    yield [0, 1, 2, 3, 4, 5, 42]
+
+
+@vispipe.block
 def five_args(arg1=5, arg2='ciao', arglong='7x7', longveryarg=1023, onemore=-100.3):
     yield 1
 
@@ -172,6 +177,23 @@ class testempty:
             self.sum += input1
             self.count += 1
             yield vispipe.pipeline._empty
+
+
+@vispipe.block
+class testfull:
+    def __init__(self):
+        self.iterator = None
+
+    def run(self, input1):
+        if self.iterator is None:
+            self.iterator = iter(input1)
+
+        try:
+            x = vispipe.pipeline._skip(next(self.iterator))
+        except StopIteration:
+            self.iterator = None
+            x = StopIteration
+        yield x
 
 
 # Pipeline Test
