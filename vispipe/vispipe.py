@@ -19,7 +19,7 @@ class Pipeline:
     """
     class _skip_class:
         def __call__(self, x):
-            self.x = [x]
+            self.x = x
             return self
 
     _empty = object()
