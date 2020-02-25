@@ -97,7 +97,7 @@ def send_vis():
                 if block.data_type == 'image':
                     value, shape = process_image(value)
                 elif block.data_type == 'raw':
-                    if isinstance(value, (np.array, list)):
+                    if isinstance(value, (np.ndarray, list)):
                         value = np.around(value, 2)
                     elif isinstance(value, float):
                         value = round(value, 2)

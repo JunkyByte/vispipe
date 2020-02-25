@@ -487,7 +487,6 @@ class BlockRunner:
         if len(ret) == 1 and ret[0] == Pipeline._skip:
             self.skip = True
             ret = [re.x for re in ret]
-            print('ret', ret)
         for i, out in enumerate(self.out_q):
             for q in out:
                 v = ret[i]
