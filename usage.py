@@ -135,7 +135,7 @@ def in_3(input1, input2, input3):
 
 @vispipe.block
 def print_test(input1):
-    print('I am a print block and my value is %s' % input1)
+    print('Value: %s' % input1)
     yield None
 
 
@@ -196,6 +196,28 @@ class testfull:
         yield x
 
 
+@vispipe.block
+class timer:
+    def __init__(self):  #TODO: once implemented init params set n here
+        self.n = 1000
+        self.start_n = self.n
+        self.started = False
+        self.last_result = 'Still counting'
+
+    def run(self, x):
+        if not self.started:
+            self.started = True
+            self.start_time = time.time()
+        self.n -= 1
+        if self.n == -1:
+            end_time = time.time()
+            delta = end_time - self.start_time
+            self.last_result = 'Benchmark - %s runs | time: %s | r/s: %s' % (self.start_n, delta, round(self.start_n / delta, 4))
+            self.n = self.start_n
+            self.start_time = time.time()
+        yield self.last_result
+
+
 # Pipeline Test
 custom_add = vispipe.pipeline._blocks['test_addition']
 custom_sin = vispipe.pipeline._blocks['sin']
@@ -206,26 +228,29 @@ out_test = vispipe.pipeline._blocks['print_test']
 out_test_class = vispipe.pipeline._blocks['classex']
 classempty = vispipe.pipeline._blocks['testempty']
 testvis = vispipe.pipeline._blocks['test_vis']
+twoout = vispipe.pipeline._blocks['test_identity_2_out']
+lister = vispipe.pipeline._blocks['some_list']
+timerb = vispipe.pipeline._blocks['timer']
 
-#randid = vispipe.pipeline.add_node(custom_rand, min=0, max=np.pi / 2)
-#output_print = vispipe.pipeline.add_node(out_test)
-#sinidx = vispipe.pipeline.add_node(custom_sin)
-#vis = vispipe.pipeline.add_node(testvis)
-#empty = vispipe.pipeline.add_node(classempty)
-#
-## Constant input are attached to sum which returns 2
-#vispipe.pipeline.add_conn(custom_rand, randid, 0, custom_sin, sinidx, 0)
-#vispipe.pipeline.add_conn(custom_sin, sinidx, 0, classempty, empty, 0)
-##vispipe.pipeline.add_conn(classempty, empty, 0, out_test, output_print, 0)
-#vispipe.pipeline.add_conn(custom_sin, sinidx, 0, testvis, vis, 0)
+from vispipe.ops import flows
+iterator = vispipe.pipeline._blocks['iterator']
+#iterator = vispipe.pipeline._blocks['testfull']
+iterator_add = vispipe.pipeline.add_node(iterator)
+listid = vispipe.pipeline.add_node(lister)
+timerbid = vispipe.pipeline.add_node(timerb)
+out_test_id = vispipe.pipeline.add_node(out_test)
 
-#vispipe.pipeline.build()
-#vispipe.pipeline.run()
+vispipe.pipeline.add_conn(lister, listid, 0, iterator, iterator_add, 0)
+vispipe.pipeline.add_conn(iterator, iterator_add, 0, timerb, timerbid, 0)
+vispipe.pipeline.add_conn(timerb, timerbid, 0, out_test, out_test_id, 0)
+
+vispipe.pipeline.build()
+vispipe.pipeline.run()
 #
 #vispipe.pipeline.unbuild()
 #vispipe.pipeline.build()
 #vispipe.pipeline.run()
 
 print(42)
-#while True:
-#    continue
+while True:
+    continue

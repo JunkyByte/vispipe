@@ -97,14 +97,14 @@ class PipelineRunner:
 
     def read_vis(self):
         vis = {}
-        idx = self.__vis_index()
+        idx = self._vis_index()
 
         for key, consumer in self.vis_source.items():
             vis[key] = consumer.read(idx)
 
         return vis
 
-    def __vis_index(self):
+    def _vis_index(self):
         return min([vis.size() for vis in self.vis_source.values()]) - 1
 
     def build_pipeline(self, pipeline):
@@ -277,7 +277,7 @@ class QueueConsumer:
 
     def size(self):
         return len(self.out)
-    
+
     def read(self, idx):
         value = None
         if len(self.out) > idx:
@@ -361,7 +361,9 @@ class PipelineGraph:
         from_id = self.ids[hash_from]
         to_id = self.ids[hash_to]
 
-        self.matrix[from_id][to_id] = np.array([inp_idx + 1])
+        value = np.array(self.matrix[from_id, to_id])
+        value[out_idx] = inp_idx + 1
+        self.matrix[from_id, to_id] = value
 
     def set_custom_arg(self, block, index, key, value):
         hash_index, _ = self.get_hash(block, index)
@@ -461,6 +463,10 @@ def block(f: Callable = None, max_queue: int = 2, output_names: str = None, tag:
     return f
 
 
+def forced_tuple(x):
+    return x if isinstance(x, tuple) else (x,)
+
+
 class BlockRunner:
     def __init__(self, node, in_q, out_q, custom_arg):
         self.node = node
@@ -483,7 +489,8 @@ class BlockRunner:
         else:
             x = [q.get() for q in self.in_q]
 
-        ret = list(self.f(*x, **self.custom_arg))
+        ret = forced_tuple(next(self.f(*x, **self.custom_arg)))
+
         if len(ret) == 1 and ret[0] == Pipeline._skip:
             self.skip = True
             ret = [re.x for re in ret]
