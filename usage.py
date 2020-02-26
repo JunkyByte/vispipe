@@ -218,6 +218,33 @@ class timer:
         yield self.last_result
 
 
+@vispipe.block(tag='vis', data_type='raw')
+class iterme:
+    instance = None
+
+    def __new__(cls):
+        if iterme.instance is None:
+            iterme.instance = object.__new__(cls)
+        return iterme.instance
+
+    def __init__(self):
+        self.last = None
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        while self.last == self.x:
+            continue
+
+        self.last = self.x
+        return self.x
+
+    def run(self, x):
+        self.x = x
+        yield None
+
+
 # Pipeline Test
 custom_add = vispipe.pipeline._blocks['test_addition']
 custom_sin = vispipe.pipeline._blocks['sin']
@@ -232,17 +259,23 @@ twoout = vispipe.pipeline._blocks['test_identity_2_out']
 lister = vispipe.pipeline._blocks['some_list']
 timerb = vispipe.pipeline._blocks['timer']
 
-from vispipe.ops import flows
-iterator = vispipe.pipeline._blocks['iterator']
+#from vispipe.ops import flows
+#iterator = vispipe.pipeline._blocks['iterator']
 #iterator = vispipe.pipeline._blocks['testfull']
-iterator_add = vispipe.pipeline.add_node(iterator)
-listid = vispipe.pipeline.add_node(lister)
-timerbid = vispipe.pipeline.add_node(timerb)
-out_test_id = vispipe.pipeline.add_node(out_test)
+#iterator_add = vispipe.pipeline.add_node(iterator)
+#listid = vispipe.pipeline.add_node(lister)
+#timerbid = vispipe.pipeline.add_node(timerb)
+#out_test_id = vispipe.pipeline.add_node(out_test)
 
-vispipe.pipeline.add_conn(lister, listid, 0, iterator, iterator_add, 0)
-vispipe.pipeline.add_conn(iterator, iterator_add, 0, timerb, timerbid, 0)
-vispipe.pipeline.add_conn(timerb, timerbid, 0, out_test, out_test_id, 0)
+#vispipe.pipeline.add_conn(lister, listid, 0, iterator, iterator_add, 0)
+#vispipe.pipeline.add_conn(iterator, iterator_add, 0, timerb, timerbid, 0)
+#vispipe.pipeline.add_conn(timerb, timerbid, 0, out_test, out_test_id, 0)
+itermeb = vispipe.pipeline._blocks['iterme']
+
+rand_n = vispipe.pipeline.add_node(custom_rand)
+iterme_n = vispipe.pipeline.add_node(itermeb)
+
+vispipe.pipeline.add_conn(custom_rand, rand_n, 0, itermeb, iterme_n, 0)
 
 vispipe.pipeline.build()
 vispipe.pipeline.run()
@@ -252,5 +285,6 @@ vispipe.pipeline.run()
 #vispipe.pipeline.run()
 
 print(42)
-while True:
-    continue
+
+for x in iterme.instance:
+    print('Iterating on an instance', x)
