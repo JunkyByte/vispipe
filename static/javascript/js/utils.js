@@ -41,7 +41,7 @@ function onDragStart(event)  // TODO: This function can be refactored with bette
 function onDragEnd(event)
 {
     this._clicked = true;
-    this.__double = setTimeout(() => { this._clicked = false; }, 200);
+    this.__double = setTimeout(() => { this._clicked = false; }, 150);
 
     // Close drag logic
     this.alpha = 1;

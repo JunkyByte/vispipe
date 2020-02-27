@@ -14,6 +14,7 @@ app.config['DEBUG'] = True
 
 # turn the flask app into a socketio app
 socketio = SocketIO(app, async_mode=None, logger=False, engineio_logger=False)
+PATH_CKPT = './scratch_test.pickle'
 
 
 def share_blocks():
@@ -106,8 +107,7 @@ def send_vis():
                 socketio.emit('send_vis', {**{'id': id, 'value': value}, **block.serialize()})
         except Exception as e:
             socketio.emit('message', str(e))
-
-        socketio.sleep(1)
+        socketio.sleep(0.1)
 
 
 @socketio.on('run_pipeline')
@@ -116,7 +116,7 @@ def run_pipeline():
         if not vispipe.pipeline.runner.built:
             vispipe.pipeline.build()
 
-        vispipe.pipeline.run()
+        vispipe.pipeline.run(slow=True)  # TODO: This becomes a parameter passed to the server (once wrapped)
         global thread
         assert not thread.isAlive()
         if len(vispipe.pipeline.runner.vis_source):
@@ -141,6 +141,24 @@ def stop_pipeline():
         return str(e), 500
 
 
+@socketio.on('save_nodes')
+def save_nodes(msg):
+    try:
+        vis_data = []
+        for id, block, x, y in zip(msg):
+            block = vispipe.pipeline._blocks[block.name]
+            vis_data.append([block, index, x, y])
+        vispipe.pipeline.save(PATH_CKPT, vis_data)
+        return {}, 200
+    except Exception as e:
+        return str(e), 500
+
+
+def load_checkpoint():
+    vis_data = vispipe.pipeline.load(PATH_CKPT)
+    #socketio.emit('load_checkpoint', {'vis_data': vis_data, 'pipeline': })
+
+
 @app.route('/')
 def index():
     session['test_session'] = 42
@@ -162,10 +180,11 @@ def test_connect():
     print('Sharing blocks')
     share_blocks()
 
-    #
-    #import numpy as np
-    #arr = (np.ones((100 * 100 * 4), dtype=np.int) * 255).tolist()
-    #socketio.emit('test_send', {'x': arr})
+    # TODO: Here you should reload from PATH the pickle (if valid)
+    load_checkpoint()
+
+    # TODO: This becomes a flag passed to server (if enabled)
+    socketio.emit('auto_save', None)
 
 
 @socketio.on('disconnect')

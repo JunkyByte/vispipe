@@ -73,19 +73,20 @@ class Pipeline:
     def unbuild(self) -> None:
         self.runner.unbuild()
 
-    def run(self) -> None:
-        self.runner.run()
+    def run(self, slow=False) -> None:
+        self.runner.run(slow)
 
     def stop(self) -> None:
         self.runner.stop()
 
-    def save(self, path) -> None:
-        with open(os.path.join(path, 'pipeline.pickle'), 'wb') as f:
-            pickle.dump(self.pipeline, f)
+    def save(self, path, vis_data={}) -> None:
+        with open(path, 'wb') as f:
+            pickle.dump((self.pipeline. vis_data), f)
 
-    def load(self, path) -> None:
-        with open(os.path.join(path, 'pipeline.pickle'), 'rb') as f:
-            self.pipeline = pickle.load(f)
+    def load(self, path) -> dict:
+        with open(path) as f:
+            self.pipeline, vis_data = pickle.load(f)
+        return vis_data
 
 
 class PipelineRunner:
@@ -216,12 +217,14 @@ class PipelineRunner:
         self.vis_source = {}
         self.built = False
 
-    def run(self):
+    def run(self, slow=False):
         if not self.built:
             raise Exception('The pipeline has not been built')
 
         # Start all threads
         for thr in self.threads:
+            thr.slow = slow
+
             if thr.is_stopped():
                 thr.resume()
             else:
@@ -302,7 +305,7 @@ class PipelineGraph:
             if v == id:
                 hash_block = self.get_hash(block, index=0)[1]
                 return k - hash_block * MAXSIZE
-        assert False, 'The index has not been found'
+        raise Exception('The index has not been found')
 
     def get_hash(self, block, index=None):
         hash_block = hash(block)
@@ -380,7 +383,10 @@ class Block:
         self.tag = tag
         self.data_type = data_type
         if self.is_class:
-            input_args = dict(signature(self.f.run).parameters)
+            init_params = signature(self.f).parameters
+            if any([v.default == _empty for v in init_params.values()]):
+                raise Exception('Some custom arguments of node <%s> have no default value set' % self.name)
+            input_args = {**init_params, **signature(self.f.run).parameters}
             del input_args['self']
         else:
             input_args = dict(signature(self.f).parameters)
@@ -463,7 +469,7 @@ def block(f: Callable = None, max_queue: int = 2, output_names: str = None, tag:
     return f
 
 
-def forced_tuple(x):
+def force_tuple(x):
     return x if isinstance(x, tuple) else (x,)
 
 
@@ -476,9 +482,9 @@ class BlockRunner:
         self.skip = False
 
         if node.is_class:
-            self.f = node.f().run
+            self.f = node.f(**self.custom_arg).run
         else:
-            self.f = node.f
+            self.f = partial(node.f, **self.custom_arg)
 
     def run(self):
         # Pipeline.empty -> The function is not ready to return anything and you should skip its output
@@ -489,7 +495,7 @@ class BlockRunner:
         else:
             x = [q.get() for q in self.in_q]
 
-        ret = forced_tuple(next(self.f(*x, **self.custom_arg)))
+        ret = force_tuple(next(self.f(*x)))
 
         if len(ret) == 1 and ret[0] == Pipeline._skip:
             self.skip = True
@@ -513,6 +519,7 @@ class TerminableThread(Thread):
         self._pause = Event()
         self.name = f.__name__
         self.target = lambda: f(*args, **kwargs)
+        self.slow = False
 
     def __del__(self):
         print('Deleted Thread Successfully')  # TODO: Remove me
@@ -541,10 +548,12 @@ class TerminableThread(Thread):
                 return
 
             if self._stopped():
-                time.sleep(0.5)
+                time.sleep(0.25)
                 continue
 
             self.target()
+            if self.slow:
+                time.sleep(0.5)
 
 
 pipeline = Pipeline()

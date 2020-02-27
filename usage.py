@@ -192,14 +192,14 @@ class testfull:
             x = vispipe.pipeline._skip(next(self.iterator))
         except StopIteration:
             self.iterator = None
-            x = StopIteration
+            x = vispipe.pipeline._empty
         yield x
 
 
 @vispipe.block
 class timer:
-    def __init__(self):  #TODO: once implemented init params set n here
-        self.n = 1000
+    def __init__(self, n=1000):
+        self.n = n
         self.start_n = self.n
         self.started = False
         self.last_result = 'Still counting'
@@ -246,18 +246,18 @@ class iterme:
 
 
 # Pipeline Test
-custom_add = vispipe.pipeline._blocks['test_addition']
-custom_sin = vispipe.pipeline._blocks['sin']
-custom_noinp = vispipe.pipeline._blocks['no_input']
-custom_rand = vispipe.pipeline._blocks['rand_range']
-two_out = vispipe.pipeline._blocks['test_identity_2_out']
-out_test = vispipe.pipeline._blocks['print_test']
-out_test_class = vispipe.pipeline._blocks['classex']
-classempty = vispipe.pipeline._blocks['testempty']
-testvis = vispipe.pipeline._blocks['test_vis']
-twoout = vispipe.pipeline._blocks['test_identity_2_out']
-lister = vispipe.pipeline._blocks['some_list']
-timerb = vispipe.pipeline._blocks['timer']
+#custom_add = vispipe.pipeline._blocks['test_addition']
+#custom_sin = vispipe.pipeline._blocks['sin']
+#custom_noinp = vispipe.pipeline._blocks['no_input']
+#custom_rand = vispipe.pipeline._blocks['rand_range']
+#two_out = vispipe.pipeline._blocks['test_identity_2_out']
+#out_test = vispipe.pipeline._blocks['print_test']
+#out_test_class = vispipe.pipeline._blocks['classex']
+#classempty = vispipe.pipeline._blocks['testempty']
+#testvis = vispipe.pipeline._blocks['test_vis']
+#twoout = vispipe.pipeline._blocks['test_identity_2_out']
+#lister = vispipe.pipeline._blocks['some_list']
+#timerb = vispipe.pipeline._blocks['timer']
 
 #from vispipe.ops import flows
 #iterator = vispipe.pipeline._blocks['iterator']
@@ -270,21 +270,21 @@ timerb = vispipe.pipeline._blocks['timer']
 #vispipe.pipeline.add_conn(lister, listid, 0, iterator, iterator_add, 0)
 #vispipe.pipeline.add_conn(iterator, iterator_add, 0, timerb, timerbid, 0)
 #vispipe.pipeline.add_conn(timerb, timerbid, 0, out_test, out_test_id, 0)
-itermeb = vispipe.pipeline._blocks['iterme']
+#itermeb = vispipe.pipeline._blocks['iterme']
 
-rand_n = vispipe.pipeline.add_node(custom_rand)
-iterme_n = vispipe.pipeline.add_node(itermeb)
+#rand_n = vispipe.pipeline.add_node(custom_rand)
+#iterme_n = vispipe.pipeline.add_node(itermeb)
 
-vispipe.pipeline.add_conn(custom_rand, rand_n, 0, itermeb, iterme_n, 0)
+#vispipe.pipeline.add_conn(custom_rand, rand_n, 0, itermeb, iterme_n, 0)
 
-vispipe.pipeline.build()
-vispipe.pipeline.run()
-#
+#vispipe.pipeline.build()
+#vispipe.pipeline.run()
+
 #vispipe.pipeline.unbuild()
 #vispipe.pipeline.build()
 #vispipe.pipeline.run()
 
-print(42)
+#for v in iterme.instance:
+#    print('Iterating on an instance', v)
 
-for x in iterme.instance:
-    print('Iterating on an instance', x)
+print(42)

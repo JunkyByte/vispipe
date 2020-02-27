@@ -11,9 +11,13 @@ class iterator:
     Yields each element of its input, will take care of not accepting new inputs
     until it reaches a StopIteration.
     It will return StopIteration after the last element of its input.
+
+    Yields
+    ------
+        Elements of the iterator you passed as input
     """
 
-    def __init__(self):
+    def __init__(self):  # TODO: Yielding a empty instead of the StopIteration allows to skip it (maybe with flag)
         self.iterator = None
         self.next = StopIteration
 

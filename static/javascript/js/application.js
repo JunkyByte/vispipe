@@ -10,7 +10,7 @@ document.body.appendChild(app.view);
 var WIDTH = app.renderer.width / app.renderer.resolution;
 var HEIGHT = app.renderer.height / app.renderer.resolution;
 var VIS_IMAGE_SIZE = 128;
-var VIS_RAW_SIZE = 128;
+var VIS_RAW_SIZE = 256;
 var CUSTOM_ARG_SIZE = 350;
 var FONT = 'Arial';
 var FONT_SIZE = 18;
@@ -77,6 +77,29 @@ $(document).ready(function(){
     socket.on('message', function(msg) {
         console.log(msg);
     });
+
+    socket.on('auto_save', function(msg){
+        var obj, pos, positions;
+        var save_checkpoint = setInterval(() => {
+            positions = [];
+            for (var i=0; i<pipeline.DYNAMIC_NODES.length; i++){
+                obj = pipeline.DYNAMIC_NODES[i];
+                pos = obj.rect.position;
+                positions.push([obj.id, obj.block, pos.x, pos.y]);
+            }
+            socket.emit('save_nodes', positions, function(response, status){
+                if (status !== 200){
+                    console.log(response);
+                }
+            });
+        }, 2000);
+    });
+
+    socket.on('load_checkpoint', function(msg){
+        // First create all the nodes specified by the pipeline
+        // Then move each node to its corresponding position
+
+    }
 
     //socket.emit('test_receive', 'test_send_see_me_python')
 });

@@ -41,5 +41,9 @@ class numpy_file:
 def numpy_flow(path):
     """
     Yields the raw buffer from the path provided as input.
+
+    Yields
+    ------
+        The full content of the path you provided
     """
     yield np.load(path)

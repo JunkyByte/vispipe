@@ -65,7 +65,7 @@ class VisNode extends Node {
         }
 
         if (this.block.data_type === 'raw'){
-            this.visrect = draw_rect(VIS_RAW_SIZE + 8, Number(VIS_RAW_SIZE * 2 / 4) + 4, BLOCK_COLOR, 1);
+            this.visrect = draw_rect(VIS_RAW_SIZE + 8, Number(VIS_RAW_SIZE * 1 / 4) + 4, BLOCK_COLOR, 1);
             setpos(this.rect, this.visrect);
             this.vissprite = new PIXI.Text('', new PIXI.TextStyle());
         } else if (this.block.data_type === 'image'){
@@ -304,9 +304,12 @@ class PopupMenu {
                 value = custom_args[key];
                 type = custom_args_type[key];
                 var input_text = draw_text_input(String(value), 1);
-                if (type === 'int' || type === 'float'){
+                if (type === 'int'){
+                    input_text.restrict = '0123456789';
+                } else if (type === 'float'){
                     input_text.restrict = '0123456789.';
                 }
+
                 input_text.on('input', function(input_text, key) {
                     return function() {
                         if (input_text.text && String(input_text.text) !== input_text.placeholder){
