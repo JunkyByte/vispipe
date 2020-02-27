@@ -1,4 +1,4 @@
-from hash import Hash
+from vispipe.hash import Hash
 
 class Graph():
 
@@ -13,6 +13,9 @@ class Graph():
         for i in range(num_vertices):
             self.available_ids.add(i)
             self.adj_list.append(set())
+    
+    def lookup(self, node):
+        return self.node_ids.lookup(str(hash(node)))
 
     def insertNode(self, node):
         if not bool(self.available_ids) or node in self.vertices:
@@ -65,11 +68,16 @@ class Graph():
         self.adj_list[node_a_id].remove(node_a_tuple)
         self.adj_list[node_b_id].remove(node_b_tuple)
 
-    def adj(self, node):
+    def adj(self, node, out: bool=None):
         if node not in self.vertices:
             raise Exception("error: node not in the graph")
         node_id = self.node_ids.lookup(str(hash(node)))
-        return self.adj_list[node_id]
+        if out is None:
+            return self.adj_list[node_id]
+        elif out:
+            return [adj for adj in self.adj_list[node_id] if adj[-1]]
+        elif not out:
+            return [adj for adj in self.adj_list[node_id] if not adj[-1]]
 
     def v(self):
         return list(self.vertices)
@@ -78,7 +86,7 @@ class Graph():
         for el in self.vertices:
             if node_hash == hash(el):
                 return el
-        raise Exception("get_node : node not in graph")
+        raise Exception("Node not in graph")
 
     def resetGraph(self):
         vertices_copy = self.vertices.copy()  # cant change set size during iteration

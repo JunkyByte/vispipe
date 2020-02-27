@@ -5,10 +5,11 @@ from threading import Thread, Event
 from queue import Queue, Empty
 import os
 import types
+import copy
 import pickle
 import numpy as np
 import time
-from Graph import Graph
+from vispipe.Graph import Graph
 MAXSIZE = 100
 assert np.log10(MAXSIZE) == int(np.log10(MAXSIZE))
 
@@ -21,7 +22,7 @@ class Pipeline:
 
     def __init__(self):
         self._blocks = {}
-        self.pipeline = Graph()
+        self.pipeline = Graph(MAXSIZE)
         self.runner = PipelineRunner()
         self.nodes = []
 
@@ -42,7 +43,7 @@ class Pipeline:
 
     def add_node(self, block, **kwargs):
         #return self.pipeline.add_node(block, **kwargs)
-        node = Block(block, kwargs)
+        node = Node(block, **kwargs)
         self.nodes.append(node)
         return self.pipeline.insertNode(node)
 
@@ -89,30 +90,64 @@ class PipelineRunner:
 
     def build_pipeline(self, pipeline):
         assert not self.built
-        if len(pipeline.ids.keys()) == 0:
+        if len(pipeline.v()) == 0:
             return
-        # Collect each block arguments, create connections between each other using separated threads
-        # use queues to pass data between the threads.
-        used_ids = np.array(list(pipeline.ids.values()))
-        used_ids.sort()
-        nodes = pipeline.nodes[used_ids]
-        custom_args = pipeline.custom_args[used_ids]
-        nodes_conn = np.array([x[used_ids] for x in pipeline.matrix[used_ids]])
-        gain = np.array([n.num_outputs() / (n.num_inputs() + 1e-16)
-                         for n in nodes])
-        to_process = list(np.arange(len(used_ids))[(-gain).argsort()])
-        trash = []
 
-        i = 0
-        while to_process != []:
-            idx = to_process[i]
+        """
+        ----- Kahn's algorithm for topologic sorting. -----
+        L ← Empty list that will contain the sorted elements
+        S ← Set of all nodes with no incoming edge
 
-            node = nodes[idx]
-            is_vis = True if node.tag == Pipeline.vis_tag else False
+        while S is non-empty do
+            remove a node n from S
+            add n to tail of L
+            for each node m with an edge e from n to m do
+                remove edge e from the graph
+                if m has no other incoming edges then
+                    insert m into S
+
+        if graph has edges then
+            return error   (graph has at least one cycle)
+        else
+            return L   (a topologically sorted order)
+        """
+        print(pipeline.__dict__)
+
+        nodes = pipeline.v()
+        adj_copy = [copy.copy(el) for el in pipeline.adj_list]
+        adj_in = []
+        adj_out = []
+        for adj in adj_copy:
+            adj_out.append([adj_out for adj_out in adj if adj_out[-1]])
+            adj_in.append([adj_out for adj_out in adj if not adj_out[-1]])
+
+        l = []
+        s = [node for node in nodes if node.block.num_inputs() == 0]
+        while s:
+            n = s.pop()
+            id_n = pipeline.lookup(n)
+            l.append(n)
+            for adj in adj_out[id_n]:
+                m = adj[0]
+                id_m = pipeline.lookup(m)
+                adj_out[id_n].remove(adj)  # Remove the adj
+                adj_in[id_m].remove((n, adj[1], adj[2], False))  # Remove the opposite adj
+                if not adj_in[id_m]:
+                    s.append(m)
+
+        if any([adj for adj in adj_out]):
+            raise Exception('The graph has at least one cycle')
+        else:
+            nodes = l
+
+        for node in l:
+            block = node.block
+            is_vis = True if block.tag == Pipeline.vis_tag else False
             if is_vis:
-                data_type = node.data_type
+                data_type = block.data_type
 
-            custom_arg = custom_args[idx]
+            custom_arg = node.custom_args
+            print(pipeline.adj(node, out=True))
             out_conn = np.array(list(nodes_conn[idx]))
             in_conn = nodes_conn[:, idx]
             # out_conn_total = np.count_nonzero(out_conn)
