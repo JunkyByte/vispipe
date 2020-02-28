@@ -36,13 +36,12 @@ class Pipeline:
             blocks.append(block)
         return blocks
 
-    def register_block(self, func: Callable, is_class: bool, max_queue: int, output_names=None, tag: str = 'None', data_type: str = 'raw') -> None:
+    def register_block(self, func: Callable, is_class: bool,max_queue: int, output_names = None, tag: str = 'None', data_type: str = 'raw'):
         block = Block(func, is_class, max_queue, output_names, tag, data_type)
         assert block.name not in self._blocks.keys(), 'The name %s is already registered as a pipeline block' % block.name
         self._blocks[block.name] = block
 
     def add_node(self, block, **kwargs):
-        #return self.pipeline.add_node(block, **kwargs)
         node = Node(block, **kwargs)
         self.nodes.append(node)
         return self.pipeline.insertNode(node)
@@ -53,7 +52,7 @@ class Pipeline:
 
     def clear_pipeline(self):
         self.pipeline.resetGraph()
-        self.runner.unbuild()  # todo refactor
+        self.runner.unbuild()
 
     def add_conn(self, from_hash, out_index, to_hash, inp_index):
         from_node = self.pipeline.get_node(from_hash)
@@ -70,7 +69,6 @@ class Pipeline:
 
     def run(self) -> None:
         self.runner.run()
-        print([node.out_queues for node in self.nodes])
 
     def stop(self) -> None:
         self.runner.stop()
@@ -165,7 +163,7 @@ class PipelineRunner:
             if is_vis:  # Visualization blocks have an hardcoded single queue as output
                 node.out_queues = Queue(node.block.max_queue)
                 out_q = [[node.out_queues]]
-            else:  # TODO: Refactor the following two lines
+            else:
                 for adj in pipeline_def.adj(node, out=True):
                     node.out_queues[adj[1]].append([Queue(node.block.max_queue), False])
                 out_q = [[x[0] for x in out] for out in node.out_queues]
