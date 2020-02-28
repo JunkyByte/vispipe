@@ -1,9 +1,10 @@
 from vispipe.hash import Hash
+import copy
+
 
 class Graph():
-
     def __init__(self, num_vertices: int):
-        self.adj_list = []  # adj[i] is populated with a tuple (node, out_idx, in_idx, bool) where bool is true if the connection is to the node, false if is from the node
+        self.adj_list = [] # list of (node, out_idx, in_idx, bool) where bool True -> to node. False -> from node
         self.vertices = set()
         self.available_ids = set()
         self.node_ids = Hash(num_vertices)
@@ -13,7 +14,34 @@ class Graph():
         for i in range(num_vertices):
             self.available_ids.add(i)
             self.adj_list.append(set())
-    
+
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        for k, v in self.__dict__.items():
+            if k == 'adj_list':
+                v = [copy.copy(adj) for adj in v]
+            else:
+                v = copy.copy(v)
+            setattr(result, k, v)
+        return result
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        hash_map = [(node, hash(node)) for node in self.v()]
+        state['hash_map'] = hash_map
+        state['vertices'] = list(self.vertices)
+        state['adj_list'] = [list(adj) for adj in self.adj_list]
+        return state
+
+    def __setstate__(self, state):
+        for node, old_hash in state['hash_map']:
+            node._hash = int(old_hash)
+
+        state['vertices'] = set(state['vertices'])
+        state['adj_list'] = [set(adj) for adj in state['adj_list']]
+        self.__dict__.update(state)
+
     def lookup(self, node):
         return self.node_ids.lookup(str(hash(node)))
 
@@ -34,14 +62,13 @@ class Graph():
             raise Exception("error: one of the two nodes is not in the graph or trying to connect the same node")
         adj_b = self.adj(node_b).copy()
         for el in adj_b:
-            direction = el[3] # get the direction : true if b->node, False if node->b
-            if direction == False:
+            direction = el[3]  # get the direction : true if b->node, False if node->b
+            if direction is False:
                 node_in_idx = el[2]
                 if node_in_idx == in_idx:
                     self.deleteEdge(el[0], node_b, el[1], el[2])
         self.adj_list[id_a].add((node_b, out_idx, in_idx, True))
         self.adj_list[id_b].add((node_a, out_idx, in_idx, False))
-        #print(self.adj_list[id_a])
 
     def deleteNode(self, node):
         node_id = self.node_ids.lookup(str(hash(node)))
@@ -68,7 +95,7 @@ class Graph():
         self.adj_list[node_a_id].remove(node_a_tuple)
         self.adj_list[node_b_id].remove(node_b_tuple)
 
-    def adj(self, node, out: bool=None):
+    def adj(self, node, out: bool = None):
         if node not in self.vertices:
             raise Exception("error: node not in the graph")
         node_id = self.node_ids.lookup(str(hash(node)))

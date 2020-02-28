@@ -64,10 +64,13 @@ class Pipeline:
         self.runner.build_pipeline(self.pipeline)
 
     def unbuild(self) -> None:
+        for node in self.nodes:
+            node.out_queues = []
         self.runner.unbuild()
 
     def run(self) -> None:
         self.runner.run()
+        print([node.out_queues for node in self.nodes])
 
     def stop(self) -> None:
         self.runner.stop()
@@ -88,9 +91,9 @@ class PipelineRunner:
         self.out_queues = {}
         self.vis_source = {}
 
-    def build_pipeline(self, pipeline):
+    def build_pipeline(self, pipeline_def):
         assert not self.built
-        if len(pipeline.v()) == 0:
+        if len(pipeline_def.v()) == 0:
             return
 
         """
@@ -111,109 +114,71 @@ class PipelineRunner:
         else
             return L   (a topologically sorted order)
         """
-        print(pipeline.__dict__)
+        pipeline = copy.deepcopy(pipeline_def)
+        for node in pipeline.v():  # TODO: This can be checked inside the algo
+            if node.block.num_inputs() != len(pipeline.adj(node, out=False)):
+                pipeline.deleteNode(node)
+                print('%s has been removed as its input were not satisfied' % node.block.name)
 
-        nodes = pipeline.v()
-        adj_copy = [copy.copy(el) for el in pipeline.adj_list]
-        adj_in = []
-        adj_out = []
-        for adj in adj_copy:
-            adj_out.append([adj_out for adj_out in adj if adj_out[-1]])
-            adj_in.append([adj_out for adj_out in adj if not adj_out[-1]])
-
-        l = []
-        s = [node for node in nodes if node.block.num_inputs() == 0]
+        ord_graph = []
+        s = [node for node in pipeline.v() if node.block.num_inputs() == 0]
         while s:
             n = s.pop()
-            id_n = pipeline.lookup(n)
-            l.append(n)
-            for adj in adj_out[id_n]:
+            ord_graph.append(n)
+            for adj in pipeline.adj(n, out=True):
                 m = adj[0]
-                id_m = pipeline.lookup(m)
-                adj_out[id_n].remove(adj)  # Remove the adj
-                adj_in[id_m].remove((n, adj[1], adj[2], False))  # Remove the opposite adj
-                if not adj_in[id_m]:
+                pipeline.deleteEdge(n, m, adj[1], adj[2])
+                if not pipeline.adj(m, out=False):
                     s.append(m)
 
-        if any([adj for adj in adj_out]):
+        if any([adj for adj in pipeline.adj_list]):
             raise Exception('The graph has at least one cycle')
-        else:
-            nodes = l
 
-        for node in l:
+        for node in ord_graph:
             block = node.block
             is_vis = True if block.tag == Pipeline.vis_tag else False
-            if is_vis:
-                data_type = block.data_type
-
-            custom_arg = node.custom_args
-            print(pipeline.adj(node, out=True))
-            out_conn = np.array(list(nodes_conn[idx]))
-            in_conn = nodes_conn[:, idx]
-            # out_conn_total = np.count_nonzero(out_conn)
-            out_conn_split = np.count_nonzero(out_conn, axis=0)
-            in_conn_count = np.count_nonzero(np.concatenate(in_conn))
-
-            # If inputs are not satisfied we trash the node and continue the processing
-            if in_conn_count < node.num_inputs():
-                trash.append(idx)
-                to_process.pop(i)
-                continue
 
             # Helper to get free queues
-            def get_free_out_q(conn_id, out_idx):
-                for i, cand in enumerate(self.out_queues[conn_id][out_idx]):
+            def get_free_out_q(node_out, out_idx):
+                for i, cand in enumerate(node_out.out_queues[out_idx]):
                     q, state = cand
                     if state is False:
-                        self.out_queues[conn_id][out_idx][i][1] = True
+                        node_out.out_queues[out_idx][i][1] = True
                         return q
                 raise AssertionError
 
             # Helper to create input queues
-            def get_input_queues(conn):
-                in_q = [FakeQueue() for _ in range(node.num_inputs())]
-                for conn_id, value in conn:
-                    for out_idx, inp_idx in enumerate(value):
-                        if inp_idx == 0:
-                            continue
-
-                        free_q = get_free_out_q(conn_id, out_idx)
-                        in_q[inp_idx - 1] = free_q
+            def get_input_queues(node):
+                adj_out = pipeline_def.adj(node, out=False)
+                in_q = [FakeQueue() for _ in range(node.block.num_inputs())]
+                for node_out, out_idx, inp_idx, _  in adj_out:
+                    free_q = get_free_out_q(node_out, out_idx)
+                    in_q[inp_idx] = free_q
                 return in_q
 
             # Create input and output queues
             in_q = []
-            if node.num_inputs() != 0:  # If there are inputs
-                conn = [(k, value)
-                        for k, value in enumerate(in_conn) if value.any() != 0]
-                try:  # Try to build dependencies (they can not exist at this time)
-                    in_q = get_input_queues(conn)
-                except KeyError:
-                    i = i + 1 % len(to_process)
-                    continue
+            if block.num_inputs() != 0:  # If there are inputs
+                in_q = get_input_queues(node)
 
             # Populate the output queue dictionary
             if is_vis:  # Visualization blocks have an hardcoded single queue as output
-                instance_idx = pipeline.index_to_id(node, used_ids[idx])
-                q = Queue(node.max_queue)
-                out_q = [[q]]
-            else:
-                self.out_queues[idx] = [[[Queue(node.max_queue), False] for _ in range(out)]
-                                        for out in out_conn_split]
-                out_q = [[x[0] for x in out] for out in self.out_queues[idx]]
+                node.out_queues = Queue(node.block.max_queue)
+                out_q = [[node.out_queues]]
+            else:  # TODO: Refactor the following two lines
+                for adj in pipeline_def.adj(node, out=True):
+                    node.out_queues[adj[1]].append([Queue(node.block.max_queue), False])
+                out_q = [[x[0] for x in out] for out in node.out_queues]
 
             # Create the thread
-            runner = BlockRunner(node, in_q, out_q, custom_arg)
+            runner = BlockRunner(node.block, in_q, out_q, node.custom_args)
             thr = TerminableThread(runner.run)
             thr.daemon = True
             self.threads.append(thr)
 
             # Create the thread consumer of the visualization
             if is_vis:
-                self.vis_source[(node, instance_idx)] = QueueConsumer(q)
-
-            to_process.pop(i)
-            i = 0  # If we successfully processed a node we go back to the highest priority
+                self.vis_source[str(hash(node))] = QueueConsumer(node.out_queues)
         self.built = True
 
     def unbuild(self):
@@ -228,9 +193,8 @@ class PipelineRunner:
             if thr.is_alive():
                 thr.kill()
             del thr
-        
-        self.out_queues = {}
-        self.vis = {}
+
+        self.vis_source = {}
         self.built = False
 
     def run(self):
@@ -391,8 +355,16 @@ class Node:
         self.block = node_block
         self.custom_args = kwargs
         self.out_queues = []
+        self._hash = None
         for _ in range(self.block.num_outputs()):
             self.out_queues.append([])
+
+    def __hash__(self):
+        if self._hash is None:
+            return id(self)
+        else:
+            return self._hash
+
 
 class Block:
     def __init__(self, f: Callable, is_class: bool, max_queue: int, output_names: List[str], tag: str, data_type: str):

@@ -165,22 +165,32 @@ testvis = vispipe.pipeline._blocks['test_vis']
 randonode = vispipe.pipeline.add_node(custom_rand, min=0, max=np.pi / 2)
 #output_print = vispipe.pipeline.add_node(out_test)
 sinnode = vispipe.pipeline.add_node(custom_sin)
-visnode = vispipe.pipeline.add_node(testvis)
+printnode = vispipe.pipeline.add_node(out_test)
 #empty = vispipe.pipeline.add_node(classempty)
 
 # Constant input are attached to sum which returns 2
 vispipe.pipeline.add_conn(randonode, 0, sinnode, 0)
 #vispipe.pipeline.add_conn(custom_sin, sinidx, 0, classempty, empty, 0)
 #vispipe.pipeline.add_conn(classempty, empty, 0, out_test, output_print, 0)
-vispipe.pipeline.add_conn(sinnode, 0, visnode, 0)
+vispipe.pipeline.add_conn(sinnode, 0, printnode, 0)
 
-vispipe.pipeline.build()
+#print(vispipe.pipeline.pipeline.adj_list)
+#vispipe.pipeline.build()
 #vispipe.pipeline.run()
+#vispipe.pipeline.unbuild()
+
+#vispipe.pipeline.save('./')
+#vispipe.pipeline.build()
+#vispipe.pipeline.clear_pipeline()
+
+#vispipe.pipeline.load('./')
+vispipe.pipeline.build()
+vispipe.pipeline.run()
 
 #vispipe.pipeline.unbuild()
 #vispipe.pipeline.build()
 #vispipe.pipeline.run()
 
 print(42)
-#while True:
-#    continue
+while True:
+    continue
