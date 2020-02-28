@@ -59,21 +59,29 @@ class VisNode extends Node {
     constructor(block, id) {
         super(block, id);
 
+        function setpos(rect, visrect){
+            var delta = rect.width - visrect.width;
+            visrect.position.set(delta / 2, 40);
+        }
+
         if (this.block.data_type === 'raw'){
-            console.log('TODO ME'); // TODO: Implement
+            this.visrect = draw_rect(VIS_RAW_SIZE + 8, Number(VIS_RAW_SIZE * 1 / 4) + 4, BLOCK_COLOR, 1);
+            setpos(this.rect, this.visrect);
+            this.vissprite = new PIXI.Text('', new PIXI.TextStyle());
         } else if (this.block.data_type === 'image'){
-            this.visrect = draw_rect(VIS_IMAGE_SIZE + 4, VIS_IMAGE_SIZE + 4, BLOCK_COLOR, 1);
-            var delta = this.rect.width - this.visrect.width;
-            this.visrect.position.set(delta / 2, 40); // TODO: I'm hardcoded
-            // Add the actual vis space
-            let texture = PIXI.Texture.EMPTY
+            this.visrect = draw_rect(VIS_IMAGE_SIZE + 8, VIS_IMAGE_SIZE + 8, BLOCK_COLOR, 1);
+            setpos(this.rect, this.visrect);
+
+            let texture = PIXI.Texture.EMPTY  // Temporary texture
             this.vissprite = PIXI.Sprite.from(texture);
             this.update_texture(texture);
 
-            this.visrect.addChild(this.vissprite)
-            this.vissprite.position.set(2, 2);
-            pipeline.vis[this.id + '-' + this.block.name] = this;  // TODO: If node remove is added we need to change this
         }
+        if (this.vissprite !== undefined) {
+            this.visrect.addChild(this.vissprite)
+            this.vissprite.position.set(4, 4);
+        }
+        pipeline.vis[this.id + '-' + this.block.name] = this;  // TODO: If node remove is added we need to change this
         this.rect.addChild(this.visrect);
     }
 
@@ -82,14 +90,45 @@ class VisNode extends Node {
         let ratio = VIS_IMAGE_SIZE / texture.width;
         this.vissprite.scale.set(ratio);
     }
+
+    update_text(text) {
+        var height = this.visrect.height;
+
+        // TODO: This is temporary solution to a complex problem
+        // TODO: Fallback if font becomes negative this will crash
+        var k = 0;
+        var style;
+        while (true) {
+            style = new PIXI.TextStyle({
+                fontFamily: FONT,
+                breakWords: true,
+                fontSize: VIS_FONT_SIZE - k,
+                wordWrap: true,
+                align: 'left',
+                fill: TEXT_COLOR,
+                wordWrapWidth: this.visrect.width - 8,
+            });
+
+            var currentHeight = PIXI.TextMetrics.measureText(text, style).height;
+            if (height <= currentHeight) {
+                k += 1;
+            } else {
+                this.vissprite.style = style;
+                this.vissprite.text = text;
+                return
+            }
+        }
+
+    }
 }
 
 
 class Block {
-    constructor(name, input_args, custom_args, output_names, tag, data_type) {
+    constructor(name, input_args, custom_args, custom_args_type, output_names, tag, data_type) {
         this.name = name;
         this.input_args = input_args;
         this.custom_args = custom_args;
+        this.custom_args_type = custom_args_type;
         this.output_names = output_names;
         this.tag = tag;
         this.data_type = data_type;
@@ -97,9 +136,11 @@ class Block {
 }
 
 class Button {
-    constructor(name) {
+    constructor(name, hidden=false) {
         var [width, height] = name_to_size(name);
         this.rect = draw_rect(width, height, BUTTON_COLOR, 0.8);
+        this.rect.on('mouseover', ev => { this.rect.alpha = 0.9 }, false);
+        this.rect.on('mouseout', ev => { this.rect.alpha = 1 }, false);
         this.text = draw_text(name, 0.9);
         this.text.anchor.set(0.5, 0.5);
         this.text.position.set(this.rect.width / 2, this.rect.height / 2);
@@ -107,7 +148,9 @@ class Button {
         this.rect.interactive = true;
         this.rect.buttonMode = true;
         this.rect.button = this;
-        app.stage.addChild(this.rect)
+        if (! hidden) {
+            app.stage.addChild(this.rect)
+        }
     }
 
     disable_button(){
@@ -138,7 +181,9 @@ class Pipeline {
     spawn_node(block){
         socket.emit('new_node', block, function(response, status) {
             if (status === 200){
-                var block = new Block(response.name, response.input_args, response.custom_args, response.output_names, response.tag, response.data_type);
+                var block = new Block(response.name, response.input_args, response.custom_args,
+                                      response.custom_args_type, response.output_names,
+                                      response.tag, response.data_type);
                 var instance;
                 if (block.tag == 'vis') { // This should be passed as a bool so that is not hardcoded
                     instance = new VisNode(block, response.id);
@@ -146,6 +191,30 @@ class Pipeline {
                     instance = new Node(block, response.id);
                 }
                 pipeline.DYNAMIC_NODES.push(instance);
+            } else {
+                console.log(response);
+            }
+        });
+    }
+
+    remove_node(node){
+        var self = this;
+        socket.emit('remove_node', {'block': node.block, 'index': node.id}, function(response, status){
+            if (status === 200){
+                var index = self.DYNAMIC_NODES.indexOf(node);
+                var node = self.DYNAMIC_NODES.splice(node, 1)[0];
+                app.stage.removeChild(node.rect);
+            } else {
+                console.log(response);
+            }
+        });
+    }
+
+    set_custom_arg(node, key, value){
+        socket.emit('set_custom_arg', {'block': node.block, 'id': node.id, 'key': key, 'value': value}, function(response, status){
+            if (status === 200){
+                console.log('The custom arg has been set');
+                node.block.custom_args[key] = value;
             } else {
                 console.log(response);
             }
@@ -171,35 +240,148 @@ class Pipeline {
             } else {
                 console.log(response);
             }
-            runmenu.start_button.enable_button()
+            runmenu.start_button.enable_button();
         });
     }
 
     stop_pipeline(){
         var self = this;
         socket.emit('stop_pipeline', function(response, status) {
-        if (status === 200) {
-            self.state = RunState.IDLE;
-            runmenu.update_state();
-        } else {
-            console.log(response);
-        }
-        runmenu.stop_button.enable_button()
+            if (status === 200) {
+                self.state = RunState.IDLE;
+                runmenu.update_state();
+            } else {
+                console.log(response);
+            }
+            runmenu.stop_button.enable_button();
         });
     }
 }
 
 
+class PopupMenu {
+    constructor() {
+        this.flag_over = false;
+        this.currentNode = null;
+        this.pane_height = 100;
+        this.pane = draw_rect(CUSTOM_ARG_SIZE, this.pane_height, BLOCK_COLOR, 1);
+        this.input_container = new PIXI.Container();
+        this.delete_button = new Button(' DELETE ', true);
+        this.delete_button.rect.on('mousedown', ev => pipeline.remove_node(this.currentNode), false);
+        this.pane.addChild(this.input_container);
+        this.pane.buttonMode = true;
+        this.pane.interactive = false;
+        this.pane.on('mouseover', ev => this.over_menu(ev), false);
+        this.pane.on('mouseout', ev => this.out_menu(ev), false);
+    }
+
+    show_menu(ev) {
+        if (ev.target === undefined){
+            return;
+        }
+
+        if (this.pane.parent) {  // TODO: Can be refactored
+            this.flag_over = true;
+            this.out_menu();
+        }
+
+        this.target = ev.target;
+        this.currentNode = this.target.node;
+        var block = this.target.node.block;
+        var custom_args = block.custom_args;
+        var custom_args_type = block.custom_args_type;
+        
+        var value, type, height;
+        var x = CUSTOM_ARG_SIZE - 215;
+        var y = 15;
+
+        var self = this;
+
+        // Draw the menu
+        var length = Object.keys(custom_args).length
+        for (var key in custom_args) {
+            if (custom_args.hasOwnProperty(key)) {
+                value = custom_args[key];
+                type = custom_args_type[key];
+                var input_text = draw_text_input(String(value), 1);
+                if (type === 'int'){
+                    input_text.restrict = '0123456789';
+                } else if (type === 'float'){
+                    input_text.restrict = '0123456789.';
+                }
+
+                input_text.on('input', function(input_text, key) {
+                    return function() {
+                        if (input_text.text && String(input_text.text) !== input_text.placeholder){
+                            pipeline.set_custom_arg(self.currentNode, key, input_text.text);
+                        }
+                    }
+                }(input_text, key), false);
+                var key_text = draw_text(key + ': ' + type, 1);
+                height = input_text.height;
+                input_text.position.set(x, y);
+                key_text.position.set(7, y + 2);
+                y += height + 5;
+                this.input_container.addChild(input_text);
+                this.input_container.addChild(key_text);
+            }
+        }
+
+        this.delete_button.rect.position.set(CUSTOM_ARG_SIZE / 2, y);
+        this.input_container.addChild(this.delete_button.rect);
+
+        this.pane.scale.y = (y + 40) / this.pane_height;
+        for (var i=0; i<this.pane.children.length; i++){
+            var obj = this.pane.children[i]
+            obj.scale.y = 1 / this.pane.scale.y;
+        }
+
+        this.pane.interactive = true;
+        this.pane.position.set(this.target.width + 5, 0);
+        this.target.addChild(this.pane);
+    }
+
+    over_menu(event) {
+        this.flag_over = true;
+    }
+
+    out_menu(event) {
+        // Check if is a child of the pane, in that case do not close
+        if (event && event.data) {
+            var hit_obj = app.renderer.plugins.interaction.hitTest(event.data.global);
+        }
+
+        if (hit_obj) {
+            for (var i=0; i<event.currentTarget.children.length; i++){
+                var child = event.currentTarget.children[i];
+                if(child === hit_obj.parent.parent){
+                    return;
+                }
+            }
+        }
+
+        if (this.flag_over) {
+            this.flag_over = false;
+            this.input_container.destroy();
+            this.input_container = new PIXI.Container();
+            this.pane.scale.y = 1;
+            this.pane.addChild(this.input_container);
+            this.target.removeChild(this.pane);
+            this.target = undefined;
+        }
+    }
+}
+
 class RunMenu {
     constructor() {
         this.start_button = new Button('  RUN  ');
-        this.start_button.rect.on('mousedown', ev => pipeline.run_pipeline(), false);
         this.start_button.rect.on('mousedown', ev => this.start_button.disable_button(), false);
+        this.start_button.rect.on('mousedown', ev => pipeline.run_pipeline(), false);
         this.start_button.rect.position.set(0, HEIGHT - this.start_button.rect.height + 3);
 
         this.stop_button = new Button('  STOP  ');
-        this.stop_button.rect.on('mousedown', ev => pipeline.stop_pipeline(), false);
         this.stop_button.rect.on('mousedown', ev => this.stop_button.disable_button(), false);
+        this.stop_button.rect.on('mousedown', ev => pipeline.stop_pipeline(), false);
         this.stop_button.rect.position.set(this.start_button.rect.width - 2, HEIGHT - this.stop_button.rect.height + 3);
 
         this.state_text = new PIXI.Text('State: ' + pipeline.state, {fontFamily: FONT, fill: TEXT_COLOR});

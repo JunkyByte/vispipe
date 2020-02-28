@@ -2,8 +2,7 @@ from functools import partial
 from inspect import signature, isgeneratorfunction, _empty
 from typing import List, Callable
 from threading import Thread, Event
-from queue import Queue, Empty
-import os
+from queue import Queue
 import types
 import copy
 import pickle
@@ -15,7 +14,18 @@ assert np.log10(MAXSIZE) == int(np.log10(MAXSIZE))
 
 
 class Pipeline:
+    """
+    The Pipeline object you will interact with.
+    You should not instantiate your own Pipeline, use the one provided by vispipe.
+    """
+    class _skip_class:
+        def __call__(self, x):
+            self.x = x
+            return self
+
     _empty = object()
+    _skip = _skip_class()
+
     # TODO: Plot? Should be converted internally to an image
     data_type = ['raw', 'image', 'plot']
     vis_tag = 'vis'
@@ -36,7 +46,9 @@ class Pipeline:
             blocks.append(block)
         return blocks
 
-    def register_block(self, func: Callable, is_class: bool,max_queue: int, output_names = None, tag: str = 'None', data_type: str = 'raw'):
+
+    def register_block(self, func: Callable, is_class: bool, max_queue: int, output_names=None,
+            tag: str = 'None', data_type: str = 'raw') -> None:
         block = Block(func, is_class, max_queue, output_names, tag, data_type)
         assert block.name not in self._blocks.keys(), 'The name %s is already registered as a pipeline block' % block.name
         self._blocks[block.name] = block
@@ -59,6 +71,9 @@ class Pipeline:
         to_node = self.pipeline.get_node(to_hash)
         self.pipeline.insertEdge(from_node, to_node, out_index, inp_index)
 
+    def set_custom_arg(self, block, index, key, value):
+        self.pipeline.set_custom_arg(block, index, key, value)
+
     def build(self) -> None:
         self.runner.build_pipeline(self.pipeline)
 
@@ -67,29 +82,41 @@ class Pipeline:
             node.out_queues = []
         self.runner.unbuild()
 
-    def run(self) -> None:
-        self.runner.run()
+    def run(self, slow=False) -> None:
+        self.runner.run(slow)
 
     def stop(self) -> None:
         self.runner.stop()
 
-    def save(self, path) -> None:
-        with open(os.path.join(path, 'pipeline.pickle'), 'wb') as f:
-            pickle.dump(self.pipeline, f)
+    def save(self, path, vis_data={}) -> None:
+        with open(path, 'wb') as f:
+            pickle.dump((self.pipeline. vis_data), f)
 
-    def load(self, path) -> None:
-        with open(os.path.join(path, 'pipeline.pickle'), 'rb') as f:
-            self.pipeline = pickle.load(f)
+    def load(self, path) -> dict:
+        with open(path) as f:
+            self.pipeline, vis_data = pickle.load(f)
+        return vis_data
 
 
 class PipelineRunner:
     def __init__(self):
         self.built = False
         self.threads = []
-        self.out_queues = {}
         self.vis_source = {}
+    
+    def read_vis(self):
+        vis = {}
+        idx = self._vis_index()
 
-    def build_pipeline(self, pipeline_def):
+        for key, consumer in self.vis_source.items():
+            vis[key] = consumer.read(idx)
+
+        return vis
+
+    def _vis_index(self):
+        return min([vis.size() for vis in self.vis_source.values()]) - 1
+
+      def build_pipeline(self, pipeline_def):
         assert not self.built
         if len(pipeline_def.v()) == 0:
             return
@@ -195,12 +222,14 @@ class PipelineRunner:
         self.vis_source = {}
         self.built = False
 
-    def run(self):
+    def run(self, slow=False):
         if not self.built:
             raise Exception('The pipeline has not been built')
 
         # Start all threads
         for thr in self.threads:
+            thr.slow = slow
+
             if thr.is_stopped():
                 thr.resume()
             else:
@@ -210,12 +239,6 @@ class PipelineRunner:
                 thr.resume()
             else:
                 thr.start()
-
-        # Join all threads TODO
-        #for thr in self.threads:
-        #    thr.join()
-        #for k, thr in self.vis_source.items():
-        #    thr.join()
 
     def stop(self):
         if not self.built:
@@ -230,7 +253,7 @@ class PipelineRunner:
 class QueueConsumer:
     def __init__(self, q):
         self.in_q = q
-        self.out_q = Queue()
+        self.out = []
         self._t = TerminableThread(self._reader)
         self._t.daemon = True
 
@@ -255,21 +278,22 @@ class QueueConsumer:
     def resume(self):
         self._t.resume()
 
-    # read from queue as soon as possible, keeping only most recent result
     def _reader(self):
         while True:
             x = self.in_q.get()
-            if not self.out_q.empty():
-                try:
-                    self.out_q.get_nowait()
-                except Empty:
-                    pass
-            self.out_q.put(x)
+            self.out.append(x)
 
-    def read(self):
-        return self.out_q.get()
+    def size(self):
+        return len(self.out)
 
+    def read(self, idx):
+        value = None
+        if len(self.out) > idx:
+            value = self.out[idx]
+            del self.out[:idx]
+        return value
 
+      
 class Node:
     def __init__(self, node_block, **kwargs):
         self.block = node_block
@@ -285,7 +309,6 @@ class Node:
         else:
             return self._hash
 
-
 class Block:
     def __init__(self, f: Callable, is_class: bool, max_queue: int, output_names: List[str], tag: str, data_type: str):
         self.f = f
@@ -294,15 +317,19 @@ class Block:
         self.tag = tag
         self.data_type = data_type
         if self.is_class:
-            input_args = dict(signature(self.f.run).parameters)
+            init_params = signature(self.f).parameters
+            if any([v.default == _empty for v in init_params.values()]):
+                raise Exception('Some custom arguments of node <%s> have no default value set' % self.name)
+            input_args = {**init_params, **signature(self.f.run).parameters}
             del input_args['self']
         else:
             input_args = dict(signature(self.f).parameters)
         args = [(k, val.default) for k, val in input_args.items()]
         self.input_args = dict([(k, val) for k, val in args if val == _empty])
         self.custom_args = dict([(k, val) for k, val in args if val != _empty])
+        self.custom_args_type = dict([(k, type(val)) for k, val in self.custom_args.items()])
         self.max_queue = max_queue
-        self.output_names = output_names if output_names is not None else ['y']
+        self.output_names = output_names if output_names is not None else ['y']  # Not a mistake, it has to catch empty list
 
     def num_inputs(self):
         return len(self.input_args)
@@ -317,6 +344,7 @@ class Block:
         # TODO: Support np array by casting to nested lists
         x['input_args'] = dict([(k, v if v != _empty else None)
                                 for k, v in x['input_args'].items()])
+        x['custom_args_type'] = dict([(k, str(v.__name__)) for k, v in x['custom_args_type'].items()])
         return x
 
     def __iter__(self):
@@ -324,20 +352,29 @@ class Block:
         yield 'name', self.name
         yield 'input_args', self.input_args
         yield 'custom_args', self.custom_args
+        yield 'custom_args_type', self.custom_args_type
         yield 'max_queue', self.max_queue
         yield 'output_names', self.output_names
         yield 'tag', self.tag
         yield 'data_type', self.data_type
 
 
-def block(f=None, max_queue=2, output_names=None, tag='None', data_type='raw'):
+def block(f: Callable = None, max_queue: int = 2, output_names: str = None, tag: str = 'None', data_type: str = 'raw'):
     """
     Decorator function to tag custom blocks to be added to pipeline
-    :param f: The function to tag (as a decorator it will be automatically passed)
-    :param max_queue: Max queue length for the output of the block
-    :param output_names: List of names for each output
-    :param tag: Tag to organize decorated blocks
-    :return:
+
+    Parameters
+    ----------
+    f : Callable
+        The function generator (or class) you are decorating (will be populated by the decorator)
+    max_queue : int
+        Max queue length for the output of the block
+    output_names : str
+        List of names for each output
+    tag : str
+        Tag to organize decorated blocks
+    data_type : str
+        For visualization blocks you have to specify the format of data you want to visualize
     """
     if f is None:  # Correctly manage decorator duality
         return partial(block, max_queue=max_queue, output_names=output_names, tag=tag, data_type=data_type)
@@ -366,25 +403,41 @@ def block(f=None, max_queue=2, output_names=None, tag='None', data_type='raw'):
     return f
 
 
+def force_tuple(x):
+    return x if isinstance(x, tuple) else (x,)
+
+
 class BlockRunner:
     def __init__(self, node, in_q, out_q, custom_arg):
         self.node = node
         self.in_q = in_q
         self.out_q = out_q
         self.custom_arg = custom_arg
+        self.skip = False
 
         if node.is_class:
-            self.f = node.f().run
+            self.f = node.f(**self.custom_arg).run
         else:
-            self.f = node.f
+            self.f = partial(node.f, **self.custom_arg)
 
     def run(self):
-        x = [q.get() for q in self.in_q]
-        ret = list(self.f(*x, **self.custom_arg))
+        # Pipeline.empty -> The function is not ready to return anything and you should skip its output
+        # Pipeline._skip -> The function is still busy processing old input, do not pass another
+        if self.skip:
+            x = [Pipeline._empty for _ in range(len(self.in_q))]
+            self.skip = False
+        else:
+            x = [q.get() for q in self.in_q]
+
+        ret = force_tuple(next(self.f(*x)))
+
+        if len(ret) == 1 and ret[0] == Pipeline._skip:
+            self.skip = True
+            ret = [re.x for re in ret]
         for i, out in enumerate(self.out_q):
             for q in out:
                 v = ret[i]
-                if v is not pipeline._empty:
+                if v is not Pipeline._empty:
                     q.put(v)
 
 
@@ -394,15 +447,13 @@ class FakeQueue:
 
 
 class TerminableThread(Thread):
-    # Thread class with a _stop() method.
-    # The thread itself has to check
-    # regularly for the stopped() condition.
     def __init__(self, f, thread_args=(), thread_kwargs={}, *args, **kwargs):
         super(TerminableThread, self).__init__(*thread_args, **thread_kwargs)
         self._killer = Event()
         self._pause = Event()
         self.name = f.__name__
         self.target = lambda: f(*args, **kwargs)
+        self.slow = False
 
     def __del__(self):
         print('Deleted Thread Successfully')  # TODO: Remove me
@@ -431,10 +482,12 @@ class TerminableThread(Thread):
                 return
 
             if self._stopped():
-                time.sleep(0.5)
+                time.sleep(0.25)
                 continue
 
             self.target()
+            if self.slow:
+                time.sleep(0.5)
 
 
 pipeline = Pipeline()

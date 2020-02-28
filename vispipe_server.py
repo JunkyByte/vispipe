@@ -1,9 +1,10 @@
 from vispipe import vispipe
 from flask_socketio import SocketIO
 from threading import Thread, Event
-from flask import Flask, render_template, Response, session, json, make_response
+from flask import Flask, render_template, session
 import usage
 import numpy as np
+import cv2
 
 app = Flask(__name__)
 SESSION_TYPE = 'redis'
@@ -13,6 +14,7 @@ app.config['DEBUG'] = True
 
 # turn the flask app into a socketio app
 socketio = SocketIO(app, async_mode=None, logger=False, engineio_logger=False)
+PATH_CKPT = './scratch_test.pickle'
 
 
 def share_blocks():
@@ -32,6 +34,19 @@ def new_node(block):
         return str(e), 500
 
 
+@socketio.on('remove_node')
+def remove_node(data):
+    try:
+        print('Removing node')
+        block_dict = data['block']
+        index = data['index']
+        block = vispipe.pipeline._blocks[block_dict['name']]
+        vispipe.pipeline.remove_node(block, index)
+        return {}, 200
+    except Exception as e:
+        return str(e), 500
+
+
 @socketio.on('new_conn')
 def new_conn(x):
     try:
@@ -43,35 +58,65 @@ def new_conn(x):
         return str(e), 500
 
 
+@socketio.on('set_custom_arg')
+def set_custom_arg(data):
+    try:
+        block_dict = data['block']
+        block = vispipe.pipeline._blocks[block_dict['name']]
+        vispipe.pipeline.set_custom_arg(block, data['id'], data['key'], data['value'])
+        return {}, 200
+    except Exception as e:
+        return str(e), 500
+
+
 thread = Thread()
 thread.daemon = True
 thread_stop_event = Event()
 
 
+def process_image(x):
+    x = np.array(x, dtype=np.int)  # Cast to int
+    if x.ndim in [0, 1, 4]:
+        raise Exception('The format image you passed is not visualizable')
+
+    if x.ndim == 2:  # Add channel dim
+        x = x.reshape((*x.shape, 1))
+    if x.shape[-1] == 1:  # Convert to rgb a grayscale
+        x = cv2.cvtColor(x, cv2.COLOR_GRAY2RGB)
+    if x.shape[-1] == 3:  # Add alpha channel
+        x = np.concatenate([x, np.ones((x.shape[0], x.shape[1], 1))], axis=-1)
+    shape = x.shape
+    return np.reshape(x, (-1,)).tolist(), shape
+
+
 def send_vis():
     while not thread_stop_event.isSet():
-        for key, consumer in vispipe.pipeline.runner.vis_source.items():  # TODO: This access can be improved
-            value = consumer.read()
-            block, id = key
-            if block.data_type == 'image':
-                value = np.array(value, dtype=np.int)
-                shape = value.shape
-                value = np.reshape(value, (-1,)).tolist()  # TODO: Automatically manage non alpha images (concatenate internally) + find a way for grayscale images
-            # TODO: MANAGE OTHER TYPES OF DATA (RAW)
-            if not len(shape) == 3:
-                socketio.emit('message', 'The value is not an image and will not be visualized')
-            else:
+        try:
+            vis = vispipe.pipeline.runner.read_vis()
+            for key, value in vis.items():
+                block, id = key
+                if block.data_type == 'image':
+                    value, shape = process_image(value)
+                elif block.data_type == 'raw':
+                    if isinstance(value, (np.ndarray, list)):
+                        value = np.around(value, 2)
+                    elif isinstance(value, float):
+                        value = round(value, 2)
+                    value = str(value)
+
                 socketio.emit('send_vis', {**{'id': id, 'value': value}, **block.serialize()})
-        socketio.sleep(1)  # TODO: Check that during this delay if gets stopped the process breaks
+        except Exception as e:
+            socketio.emit('message', str(e))
+        socketio.sleep(0.1)
 
 
 @socketio.on('run_pipeline')
 def run_pipeline():
-    if not vispipe.pipeline.runner.built:
-        vispipe.pipeline.build()
-
     try:
-        vispipe.pipeline.run()
+        if not vispipe.pipeline.runner.built:
+            vispipe.pipeline.build()
+
+        vispipe.pipeline.run(slow=True)  # TODO: This becomes a parameter passed to the server (once wrapped)
         global thread
         assert not thread.isAlive()
         if len(vispipe.pipeline.runner.vis_source):
@@ -96,6 +141,24 @@ def stop_pipeline():
         return str(e), 500
 
 
+@socketio.on('save_nodes')
+def save_nodes(msg):
+    try:
+        vis_data = []
+        for id, block, x, y in zip(msg):
+            block = vispipe.pipeline._blocks[block.name]
+            vis_data.append([block, index, x, y])
+        vispipe.pipeline.save(PATH_CKPT, vis_data)
+        return {}, 200
+    except Exception as e:
+        return str(e), 500
+
+
+def load_checkpoint():
+    vis_data = vispipe.pipeline.load(PATH_CKPT)
+    #socketio.emit('load_checkpoint', {'vis_data': vis_data, 'pipeline': })
+
+
 @app.route('/')
 def index():
     session['test_session'] = 42
@@ -117,10 +180,11 @@ def test_connect():
     print('Sharing blocks')
     share_blocks()
 
-    #
-    #import numpy as np
-    #arr = (np.ones((100 * 100 * 4), dtype=np.int) * 255).tolist()
-    #socketio.emit('test_send', {'x': arr})
+    # TODO: Here you should reload from PATH the pickle (if valid)
+    load_checkpoint()
+
+    # TODO: This becomes a flag passed to server (if enabled)
+    socketio.emit('auto_save', None)
 
 
 @socketio.on('disconnect')

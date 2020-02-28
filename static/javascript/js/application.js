@@ -10,12 +10,17 @@ document.body.appendChild(app.view);
 var WIDTH = app.renderer.width / app.renderer.resolution;
 var HEIGHT = app.renderer.height / app.renderer.resolution;
 var VIS_IMAGE_SIZE = 128;
+var VIS_RAW_SIZE = 256;
+var CUSTOM_ARG_SIZE = 350;
 var FONT = 'Arial';
 var FONT_SIZE = 18;
+var VIS_FONT_SIZE = 18;
 var TEXT_COLOR = 'white';
 var BUTTON_COLOR = 0x5DBCD2;
 var BLOCK_COLOR = 0x5DBCD2;
 var INPUT_COLOR = 0x5DBCD2;  // TODO: Add me
+var INPUT_WRONG_COLOR = 0xED1909;
+var INPUT_TEXT_COLOR = 0x26272E;
 var OUTPUT_COLOR = 0x5DBCD2;
 
 // Listen for window resize events
@@ -33,6 +38,7 @@ resize();
 var pipeline = new Pipeline();
 var sidemenu = new SideMenu();
 var runmenu = new RunMenu();
+var popupmenu = new PopupMenu();
 window.addEventListener('resize', function() {runmenu.resize_menu()}, false);
 window.addEventListener('resize', function() {sidemenu.resize_menu()}, false);
 window.addEventListener('mousewheel', function(ev){sidemenu.scroll_blocks(ev)}, false);
@@ -42,7 +48,8 @@ $(document).ready(function(){
     socket = io.connect('http://' + document.domain + ':' + location.port);
 
     socket.on('new_block', function(msg) {
-        var block = new Block(msg.name, msg.input_args, msg.custom_args, msg.output_names, msg.tag, msg.data_type);
+        var block = new Block(msg.name, msg.input_args, msg.custom_args, msg.custom_args_type,
+                              msg.output_names, msg.tag, msg.data_type);
         pipeline.STATIC_NODES.push(new StaticNode(block));
     });
 
@@ -53,18 +60,46 @@ $(document).ready(function(){
     socket.on('send_vis', function(msg) {
         var id = msg.id;
         var name = msg.name;
+        var data_type = msg.data_type;
+        var vis_node = pipeline.vis[id + '-' + name]
 
-        value = new Uint8Array(msg.value);
-        var size = value.length / 4;
-        var s = Math.sqrt(size);
-
-        let texture = PIXI.Texture.fromBuffer(value, s, s);
-        pipeline.vis[id + '-' + name].update_texture(texture);
+        if (data_type == 'image') {
+            value = new Uint8Array(msg.value);
+            var size = value.length / 4;
+            var s = Math.sqrt(size);
+            var texture = PIXI.Texture.fromBuffer(value, s, s);
+            vis_node.update_texture(texture);
+        } else if (data_type == 'raw') {
+            vis_node.update_text(msg.value);
+        }
     });
 
     socket.on('message', function(msg) {
         console.log(msg);
     });
+
+    socket.on('auto_save', function(msg){
+        var obj, pos, positions;
+        var save_checkpoint = setInterval(() => {
+            positions = [];
+            for (var i=0; i<pipeline.DYNAMIC_NODES.length; i++){
+                obj = pipeline.DYNAMIC_NODES[i];
+                pos = obj.rect.position;
+                positions.push([obj.id, obj.block, pos.x, pos.y]);
+            }
+            socket.emit('save_nodes', positions, function(response, status){
+                if (status !== 200){
+                    console.log(response);
+                }
+            });
+        }, 2000);
+    });
+
+    socket.on('load_checkpoint', function(msg){
+        // First create all the nodes specified by the pipeline
+        // Then move each node to its corresponding position
+
+    }
 
     //socket.emit('test_receive', 'test_send_see_me_python')
 });

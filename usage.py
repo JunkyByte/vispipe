@@ -1,8 +1,22 @@
 from vispipe import vispipe
 import numpy as np
 import math
-
 import time
+
+
+@vispipe.block
+def three_args(arg1=5, arg2='ciao', arglonglong='7x7'):
+    yield arg1
+
+
+@vispipe.block
+def some_list():
+    yield [0, 1, 2, 3, 4, 5, 42]
+
+
+@vispipe.block
+def five_args(arg1=5, arg2='ciao', arglong='7x7', longveryarg=1023, onemore=-100.3):
+    yield 1
 
 
 @vispipe.block
@@ -23,6 +37,13 @@ def image_plus(x):
 
 
 @vispipe.block
+def image_rgb(r, g, b):
+    time.sleep(1)
+    ones = np.ones((28, 28, 1))
+    yield np.concatenate([r * ones, g * ones, b * ones, ones * 255], axis=-1)
+
+
+@vispipe.block
 def test_plus100(x):
     yield x + 100
 
@@ -35,6 +56,7 @@ def multiply100(x):
 @vispipe.block
 def rand():
     yield np.random.randn()
+
 
 @vispipe.block
 def randint():
@@ -113,12 +135,17 @@ def in_3(input1, input2, input3):
 
 @vispipe.block
 def print_test(input1):
-    print('I am a print block and my value is %s' % input1)
+    print('Value: %s' % input1)
     yield None
 
 
 @vispipe.block(tag='vis', data_type='image')
 def test_vis(input1):
+    yield input1
+
+
+@vispipe.block(tag='vis', data_type='raw')
+def test_vis_raw(input1):
     yield input1
 
 
@@ -151,6 +178,73 @@ class testempty:
             self.count += 1
             yield vispipe.pipeline._empty
 
+
+@vispipe.block
+class testfull:
+    def __init__(self):
+        self.iterator = None
+
+    def run(self, input1):
+        if self.iterator is None:
+            self.iterator = iter(input1)
+
+        try:
+            x = vispipe.pipeline._skip(next(self.iterator))
+        except StopIteration:
+            self.iterator = None
+            x = vispipe.pipeline._empty
+        yield x
+
+
+@vispipe.block
+class timer:
+    def __init__(self, n=1000):
+        self.n = n
+        self.start_n = self.n
+        self.started = False
+        self.last_result = 'Still counting'
+
+    def run(self, x):
+        if not self.started:
+            self.started = True
+            self.start_time = time.time()
+        self.n -= 1
+        if self.n == -1:
+            end_time = time.time()
+            delta = end_time - self.start_time
+            self.last_result = 'Benchmark - %s runs | time: %s | r/s: %s' % (self.start_n, delta, round(self.start_n / delta, 4))
+            self.n = self.start_n
+            self.start_time = time.time()
+        yield self.last_result
+
+
+@vispipe.block(tag='vis', data_type='raw')
+class iterme:
+    instance = None
+
+    def __new__(cls):
+        if iterme.instance is None:
+            iterme.instance = object.__new__(cls)
+        return iterme.instance
+
+    def __init__(self):
+        self.last = None
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        while self.last == self.x:
+            continue
+
+        self.last = self.x
+        return self.x
+
+    def run(self, x):
+        self.x = x
+        yield None
+
+
 # Pipeline Test
 custom_add = vispipe.pipeline._blocks['test_addition']
 custom_sin = vispipe.pipeline._blocks['sin']
@@ -174,22 +268,16 @@ vispipe.pipeline.add_conn(randonode, 0, sinnode, 0)
 #vispipe.pipeline.add_conn(classempty, empty, 0, out_test, output_print, 0)
 vispipe.pipeline.add_conn(sinnode, 0, printnode, 0)
 
-#print(vispipe.pipeline.pipeline.adj_list)
-#vispipe.pipeline.build()
-#vispipe.pipeline.run()
-#vispipe.pipeline.unbuild()
-
 #vispipe.pipeline.save('./')
 #vispipe.pipeline.build()
 #vispipe.pipeline.clear_pipeline()
-
 #vispipe.pipeline.load('./')
+
 vispipe.pipeline.build()
 vispipe.pipeline.run()
 
-#vispipe.pipeline.unbuild()
-#vispipe.pipeline.build()
-#vispipe.pipeline.run()
+#for v in iterme.instance:
+#    print('Iterating on an instance', v)
 
 print(42)
 while True:
