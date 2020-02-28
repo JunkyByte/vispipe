@@ -246,45 +246,39 @@ class iterme:
 
 
 # Pipeline Test
-#custom_add = vispipe.pipeline._blocks['test_addition']
-#custom_sin = vispipe.pipeline._blocks['sin']
-#custom_noinp = vispipe.pipeline._blocks['no_input']
-#custom_rand = vispipe.pipeline._blocks['rand_range']
-#two_out = vispipe.pipeline._blocks['test_identity_2_out']
-#out_test = vispipe.pipeline._blocks['print_test']
-#out_test_class = vispipe.pipeline._blocks['classex']
-#classempty = vispipe.pipeline._blocks['testempty']
-#testvis = vispipe.pipeline._blocks['test_vis']
-#twoout = vispipe.pipeline._blocks['test_identity_2_out']
-#lister = vispipe.pipeline._blocks['some_list']
-#timerb = vispipe.pipeline._blocks['timer']
+custom_add = vispipe.pipeline._blocks['test_addition']
+custom_sin = vispipe.pipeline._blocks['sin']
+custom_noinp = vispipe.pipeline._blocks['no_input']
+custom_rand = vispipe.pipeline._blocks['rand_range']
+two_out = vispipe.pipeline._blocks['test_identity_2_out']
+out_test = vispipe.pipeline._blocks['print_test']
+out_test_class = vispipe.pipeline._blocks['classex']
+classempty = vispipe.pipeline._blocks['testempty']
+testvis = vispipe.pipeline._blocks['test_vis']
 
-#from vispipe.ops import flows
-#iterator = vispipe.pipeline._blocks['iterator']
-#iterator = vispipe.pipeline._blocks['testfull']
-#iterator_add = vispipe.pipeline.add_node(iterator)
-#listid = vispipe.pipeline.add_node(lister)
-#timerbid = vispipe.pipeline.add_node(timerb)
-#out_test_id = vispipe.pipeline.add_node(out_test)
+randonode = vispipe.pipeline.add_node(custom_rand, min=0, max=np.pi / 2)
+#output_print = vispipe.pipeline.add_node(out_test)
+sinnode = vispipe.pipeline.add_node(custom_sin)
+printnode = vispipe.pipeline.add_node(out_test)
+#empty = vispipe.pipeline.add_node(classempty)
 
-#vispipe.pipeline.add_conn(lister, listid, 0, iterator, iterator_add, 0)
-#vispipe.pipeline.add_conn(iterator, iterator_add, 0, timerb, timerbid, 0)
-#vispipe.pipeline.add_conn(timerb, timerbid, 0, out_test, out_test_id, 0)
-#itermeb = vispipe.pipeline._blocks['iterme']
+# Constant input are attached to sum which returns 2
+vispipe.pipeline.add_conn(randonode, 0, sinnode, 0)
+#vispipe.pipeline.add_conn(custom_sin, sinidx, 0, classempty, empty, 0)
+#vispipe.pipeline.add_conn(classempty, empty, 0, out_test, output_print, 0)
+vispipe.pipeline.add_conn(sinnode, 0, printnode, 0)
 
-#rand_n = vispipe.pipeline.add_node(custom_rand)
-#iterme_n = vispipe.pipeline.add_node(itermeb)
-
-#vispipe.pipeline.add_conn(custom_rand, rand_n, 0, itermeb, iterme_n, 0)
-
+#vispipe.pipeline.save('./')
 #vispipe.pipeline.build()
-#vispipe.pipeline.run()
+#vispipe.pipeline.clear_pipeline()
+#vispipe.pipeline.load('./')
 
-#vispipe.pipeline.unbuild()
-#vispipe.pipeline.build()
-#vispipe.pipeline.run()
+vispipe.pipeline.build()
+vispipe.pipeline.run()
 
 #for v in iterme.instance:
 #    print('Iterating on an instance', v)
 
 print(42)
+while True:
+    continue
