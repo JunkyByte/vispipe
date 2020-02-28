@@ -3,7 +3,6 @@ from inspect import signature, isgeneratorfunction, _empty
 from typing import List, Callable
 from threading import Thread, Event
 from queue import Queue
-import os
 import types
 import pickle
 import numpy as np
