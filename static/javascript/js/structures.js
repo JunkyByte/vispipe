@@ -364,7 +364,7 @@ class PopupMenu {
                     input_text.restrict = '0123456789.';
                 }
 
-                input_text.on('input', function(input_text, key) {  // TODO: Can this be refactore with arrow function?
+                input_text.on('input', function(input_text, key) {  // TODO: Can this be refactored with arrow function?
                     return function() {
                         if (input_text.text && String(input_text.text) !== input_text.placeholder){
                             pipeline.set_custom_arg(self.currentNode, key, input_text.text);

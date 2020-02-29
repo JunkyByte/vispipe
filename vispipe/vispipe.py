@@ -70,7 +70,7 @@ class Pipeline:
 
     def clear_pipeline(self):
         self.pipeline.resetGraph()
-        self.runner.unbuild()
+        self.unbuild()
 
     def add_conn(self, from_hash: int, out_index: int, to_hash: int, inp_index: int):
         from_node = self.get_node(from_hash)
@@ -101,7 +101,7 @@ class Pipeline:
             pickle.dump((self.pipeline, vis_data), f)
 
     def load(self, path) -> dict:
-        self.unbuild()
+        self.clear_pipeline()
         with open(path, 'rb') as f:
             self.pipeline, vis_data = pickle.load(f)
         return self.pipeline, vis_data
