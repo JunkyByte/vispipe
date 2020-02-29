@@ -127,7 +127,7 @@ $(document).ready(function(){
         }
 
         var obj;
-        var block, block_dict;
+        var block, block_dict, arg, j;
         for (i=0; i<nodes.length; i++){
             // Create blocks
             block_dict = blocks[i];
@@ -137,7 +137,11 @@ $(document).ready(function(){
             obj = pipeline.spawn_node_visual(block, nodes[i]);
             obj.rect.position.set(pos_dict[nodes[i]][0], pos_dict[nodes[i]][1]);
 
-            // Set custom args
+            for (j=0; j<Object.keys(custom_args[i]).length; j++){
+                key = Object.keys(custom_args[i])[j];
+                arg = Object.values(custom_args[i])[j];
+                pipeline.set_custom_arg(obj, key, arg);
+            }
         }
 
         // Create actual connections
@@ -162,9 +166,6 @@ $(document).ready(function(){
             }
 
         }
-            
-        // First create all the nodes specified by the pipeline
-        // Then move each node to its corresponding position
     });
 
     //socket.emit('test_receive', 'test_send_see_me_python')

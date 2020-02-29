@@ -80,7 +80,7 @@ class Pipeline:
     def set_custom_arg(self, node_hash: str, key: str, value):
         node = self.get_node(node_hash)
         arg_type = node.block.custom_args_type[key]
-        node.block.custom_args[key] = arg_type(value)
+        node.custom_args[key] = arg_type(value)
 
     def build(self) -> None:
         self.runner.build_pipeline(self.pipeline)

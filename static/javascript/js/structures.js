@@ -217,7 +217,7 @@ class Pipeline {
         socket.emit('remove_node', node.id, function(response, status){
             if (status === 200){
                 var index = self.DYNAMIC_NODES.indexOf(node);
-                var node = self.DYNAMIC_NODES.splice(node, 1)[0];
+                var node = self.DYNAMIC_NODES.splice(node, index)[0];
                 app.stage.removeChild(node.rect);
             } else {
                 console.log(response);
