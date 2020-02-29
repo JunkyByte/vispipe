@@ -1,3 +1,5 @@
+from vispipe.node import Node
+from vispipe.graph import Graph
 from functools import partial
 from inspect import signature, isgeneratorfunction, _empty
 from typing import List, Callable
@@ -6,11 +8,8 @@ from queue import Queue
 import types
 import copy
 import pickle
-import numpy as np
 import time
-from vispipe.Graph import Graph
 MAXSIZE = 100
-assert np.log10(MAXSIZE) == int(np.log10(MAXSIZE))
 
 
 class Pipeline:
@@ -34,7 +33,6 @@ class Pipeline:
         self._blocks = {}
         self.pipeline = Graph(MAXSIZE)
         self.runner = PipelineRunner()
-        self.nodes = []
 
     def get_blocks(self, serializable=False):
         blocks = []
@@ -46,40 +44,50 @@ class Pipeline:
             blocks.append(block)
         return blocks
 
-
     def register_block(self, func: Callable, is_class: bool, max_queue: int, output_names=None,
             tag: str = 'None', data_type: str = 'raw') -> None:
         block = Block(func, is_class, max_queue, output_names, tag, data_type)
         assert block.name not in self._blocks.keys(), 'The name %s is already registered as a pipeline block' % block.name
         self._blocks[block.name] = block
 
-    def add_node(self, block, **kwargs):
+    def nodes(self):
+        return self.pipeline.v()
+
+    def connections(self, node_hash: int, out=None):
+        node = self.get_node(node_hash)
+        return self.pipeline.adj(node, out)
+
+    def add_node(self, block, **kwargs) -> Node:
         node = Node(block, **kwargs)
-        self.nodes.append(node)
         return self.pipeline.insertNode(node)
 
-    def remove_node(self, node_hash):
-        node = self.pipeline.get_node(node_hash)
+    def get_node(self, node_hash: int):
+        return self.pipeline.get_node(node_hash)
+
+    def remove_node(self, node_hash: int):
+        node = self.get_node(node_hash)
         self.pipeline.deleteNode(node)
 
     def clear_pipeline(self):
         self.pipeline.resetGraph()
         self.runner.unbuild()
 
-    def add_conn(self, from_hash, out_index, to_hash, inp_index):
-        from_node = self.pipeline.get_node(from_hash)
-        to_node = self.pipeline.get_node(to_hash)
+    def add_conn(self, from_hash: int, out_index: int, to_hash: int, inp_index: int):
+        from_node = self.get_node(from_hash)
+        to_node = self.get_node(to_hash)
         self.pipeline.insertEdge(from_node, to_node, out_index, inp_index)
 
-    def set_custom_arg(self, block, index, key, value):
-        self.pipeline.set_custom_arg(block, index, key, value)
+    def set_custom_arg(self, node_hash: str, key: str, value):
+        node = self.get_node(node_hash)
+        arg_type = node.block.custom_args_type[key]
+        node.block.custom_args[key] = arg_type(value)
 
     def build(self) -> None:
         self.runner.build_pipeline(self.pipeline)
 
     def unbuild(self) -> None:
-        for node in self.nodes:
-            node.out_queues = []
+        for node in self.pipeline.v():
+            node.clear_out_queues()
         self.runner.unbuild()
 
     def run(self, slow=False) -> None:
@@ -90,12 +98,12 @@ class Pipeline:
 
     def save(self, path, vis_data={}) -> None:
         with open(path, 'wb') as f:
-            pickle.dump((self.pipeline. vis_data), f)
+            pickle.dump((self.pipeline, vis_data), f)
 
     def load(self, path) -> dict:
-        with open(path) as f:
+        with open(path, 'rb') as f:
             self.pipeline, vis_data = pickle.load(f)
-        return vis_data
+        return self.pipeline, vis_data
 
 
 class PipelineRunner:
@@ -103,10 +111,12 @@ class PipelineRunner:
         self.built = False
         self.threads = []
         self.vis_source = {}
-    
+
     def read_vis(self):
         vis = {}
         idx = self._vis_index()
+        if idx < 0:
+            return {}  # This will prevent a crash while waiting for queues to be ready
 
         for key, consumer in self.vis_source.items():
             vis[key] = consumer.read(idx)
@@ -116,7 +126,7 @@ class PipelineRunner:
     def _vis_index(self):
         return min([vis.size() for vis in self.vis_source.values()]) - 1
 
-      def build_pipeline(self, pipeline_def):
+    def build_pipeline(self, pipeline_def):
         assert not self.built
         if len(pipeline_def.v()) == 0:
             return
@@ -176,7 +186,7 @@ class PipelineRunner:
             def get_input_queues(node):
                 adj_out = pipeline_def.adj(node, out=False)
                 in_q = [FakeQueue() for _ in range(node.block.num_inputs())]
-                for node_out, out_idx, inp_idx, _  in adj_out:
+                for node_out, out_idx, inp_idx, _ in adj_out:
                     free_q = get_free_out_q(node_out, out_idx)
                     in_q[inp_idx] = free_q
                 return in_q
@@ -293,21 +303,6 @@ class QueueConsumer:
             del self.out[:idx]
         return value
 
-      
-class Node:
-    def __init__(self, node_block, **kwargs):
-        self.block = node_block
-        self.custom_args = kwargs
-        self.out_queues = []
-        self._hash = None
-        for _ in range(self.block.num_outputs()):
-            self.out_queues.append([])
-
-    def __hash__(self):
-        if self._hash is None:
-            return id(self)
-        else:
-            return self._hash
 
 class Block:
     def __init__(self, f: Callable, is_class: bool, max_queue: int, output_names: List[str], tag: str, data_type: str):
@@ -395,7 +390,7 @@ def block(f: Callable = None, max_queue: int = 2, output_names: str = None, tag:
         is_class = True
 
     assert data_type in pipeline.data_type
-    if tag == pipeline.vis_tag:  # TODO: Is this a good idea?
+    if tag == pipeline.vis_tag:
         output_names = []
 
     pipeline.register_block(f, is_class, max_queue,
@@ -431,7 +426,7 @@ class BlockRunner:
 
         ret = force_tuple(next(self.f(*x)))
 
-        if len(ret) == 1 and ret[0] == Pipeline._skip:
+        if len(ret) == 1 and isinstance(ret[0], Pipeline._skip_class):
             self.skip = True
             ret = [re.x for re in ret]
         for i, out in enumerate(self.out_q):

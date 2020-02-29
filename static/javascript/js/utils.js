@@ -60,21 +60,12 @@ function onDragEnd(event)
             // its connection to the new output
             // If we connect a output node which is already connected we need to APPEND
             // its new connection
-            if (input.connection){
-                input.connection.connection.splice(input.connection.connection.indexOf(input), 1);
-                input.connection.conn_line.splice(input.connection.conn_line.indexOf(input.conn_line), 1);
-                input.conn_line.destroy();
-                input.conn_line = [];
-                input.connection = null;
-            }
-            input.connection = output;
-            output.connection.push(input);
-            this.ischild.from = input;
-            this.ischild.to = output;
-            input.conn_line = this.ischild;
-            output.conn_line.push(this.ischild);
-            pipeline.add_connection(output_node.block, output_node.id, output.index,
-                                    input_node.block, input_node.id, input.index);
+            var line = create_connection(input, output)  // Create the visual connection
+            app.stage.addChildAt(line, app.stage.children.length);
+            update_line(line, this.start_pos, event.data.global);
+            app.stage.removeChild(this.ischild)  // Delete temp line
+            pipeline.add_connection(output_node.id, output.index,  // TODO: This is not checked server side but client side
+                                    input_node.id, input.index);
         } else {
             this.ischild.destroy();
         }
@@ -83,6 +74,28 @@ function onDragEnd(event)
     this.ischild = false;
     this.child = null;
     this.target = null;
+}
+
+function create_connection(input, output){
+    var obj = new PIXI.Graphics();
+    clear_connection(input);
+    input.connection = output;
+    output.connection.push(input);
+    obj.from = input;
+    obj.to = output;
+    input.conn_line = obj;
+    output.conn_line.push(obj);
+    return obj
+}
+
+function clear_connection(input){
+    if (input.connection){
+        input.connection.connection.splice(input.connection.connection.indexOf(input), 1);
+        input.connection.conn_line.splice(input.connection.conn_line.indexOf(input.conn_line), 1);
+        input.conn_line.destroy();
+        input.conn_line = [];
+        input.connection = null;
+    }
 }
 
 function point_to_conn(point){

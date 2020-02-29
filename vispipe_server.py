@@ -5,6 +5,8 @@ from flask import Flask, render_template, session
 import usage
 import numpy as np
 import cv2
+import traceback
+import os
 
 app = Flask(__name__)
 SESSION_TYPE = 'redis'
@@ -28,44 +30,41 @@ def new_node(block):
     try:
         print('New node')
         block = vispipe.pipeline._blocks[block['name']]
-        id = vispipe.pipeline.add_node(block)
-        return {**{'id': id}, **block.serialize()}, 200
+        node_hash = hash(vispipe.pipeline.add_node(block))
+        return {**{'id': node_hash}, **block.serialize()}, 200
     except Exception as e:
+        print(traceback.format_exc())
         return str(e), 500
 
 
 @socketio.on('remove_node')
-def remove_node(data):
+def remove_node(id):
     try:
         print('Removing node')
-        block_dict = data['block']
-        index = data['index']
-        block = vispipe.pipeline._blocks[block_dict['name']]
-        vispipe.pipeline.remove_node(block, index)
+        vispipe.pipeline.remove_node(id)
         return {}, 200
     except Exception as e:
+        print(traceback.format_exc())
         return str(e), 500
 
 
 @socketio.on('new_conn')
 def new_conn(x):
     try:
-        from_block = vispipe.pipeline._blocks[x['from_block']['name']]
-        to_block = vispipe.pipeline._blocks[x['to_block']['name']]
-        vispipe.pipeline.add_conn(from_block, x['from_idx'], x['out_idx'], to_block, x['to_idx'], x['inp_idx'])
+        vispipe.pipeline.add_conn(x['from_hash'], x['out_idx'], x['to_hash'], x['inp_idx'])
         return {}, 200
     except Exception as e:
+        print(traceback.format_exc())
         return str(e), 500
 
 
 @socketio.on('set_custom_arg')
 def set_custom_arg(data):
     try:
-        block_dict = data['block']
-        block = vispipe.pipeline._blocks[block_dict['name']]
-        vispipe.pipeline.set_custom_arg(block, data['id'], data['key'], data['value'])
+        vispipe.pipeline.set_custom_arg(data['id'], data['key'], data['value'])
         return {}, 200
     except Exception as e:
+        print(traceback.format_exc())
         return str(e), 500
 
 
@@ -93,19 +92,20 @@ def send_vis():
     while not thread_stop_event.isSet():
         try:
             vis = vispipe.pipeline.runner.read_vis()
-            for key, value in vis.items():
-                block, id = key
-                if block.data_type == 'image':
+            for node_hash, value in vis.items():
+                node = vispipe.pipeline.get_node(int(node_hash))
+                if node.block.data_type == 'image':
                     value, shape = process_image(value)
-                elif block.data_type == 'raw':
+                elif node.block.data_type == 'raw':
                     if isinstance(value, (np.ndarray, list)):
                         value = np.around(value, 2)
                     elif isinstance(value, float):
                         value = round(value, 2)
                     value = str(value)
 
-                socketio.emit('send_vis', {**{'id': id, 'value': value}, **block.serialize()})
+                socketio.emit('send_vis', {**{'id': node_hash, 'value': value}, **node.block.serialize()})
         except Exception as e:
+            print(traceback.format_exc())
             socketio.emit('message', str(e))
         socketio.sleep(0.1)
 
@@ -124,6 +124,7 @@ def run_pipeline():
             thread = socketio.start_background_task(send_vis)
         return {}, 200
     except Exception as e:
+        print(traceback.format_exc())
         return str(e), 500
     return 'Invalid State Encountered', 500
 
@@ -141,22 +142,41 @@ def stop_pipeline():
         return str(e), 500
 
 
-@socketio.on('save_nodes')
-def save_nodes(msg):
+@socketio.on('clear_pipeline')
+def clear_pipeline():
     try:
-        vis_data = []
-        for id, block, x, y in zip(msg):
-            block = vispipe.pipeline._blocks[block.name]
-            vis_data.append([block, index, x, y])
-        vispipe.pipeline.save(PATH_CKPT, vis_data)
+        stop_pipeline()
+        vispipe.pipeline.clear_pipeline()
         return {}, 200
     except Exception as e:
+        print(traceback.format_exc())
         return str(e), 500
 
 
-def load_checkpoint():
-    vis_data = vispipe.pipeline.load(PATH_CKPT)
-    #socketio.emit('load_checkpoint', {'vis_data': vis_data, 'pipeline': })
+@socketio.on('save_nodes')
+def save_nodes(vis_data):
+    try:
+        vispipe.pipeline.save(PATH_CKPT, vis_data)
+        print('Saved checkpoint')
+        return {}, 200
+    except Exception as e:
+        print(traceback.format_exc())
+        return str(e), 500
+
+
+def load_checkpoint(path):
+    if not os.path.isfile(path):
+        return
+
+    _, vis_data = vispipe.pipeline.load(PATH_CKPT)
+    pipeline = {'nodes': [], 'blocks': [], 'connections': [], 'custom_args': []}
+    for node in vispipe.pipeline.nodes():
+        pipeline['nodes'].append(hash(node))
+        conn = vispipe.pipeline.connections(hash(node), out=True)
+        pipeline['connections'].append([(hash(n), i, j) for n, i, j, _ in conn])
+        pipeline['blocks'].append(node.block.serialize())
+        pipeline['custom_args'].append(node.custom_args)
+    socketio.emit('load_checkpoint', {'vis_data': vis_data, 'pipeline': pipeline})
 
 
 @app.route('/')
@@ -181,7 +201,8 @@ def test_connect():
     share_blocks()
 
     # TODO: Here you should reload from PATH the pickle (if valid)
-    load_checkpoint()
+    print('Loading checkpoint from %s' % PATH_CKPT)
+    load_checkpoint(PATH_CKPT)
 
     # TODO: This becomes a flag passed to server (if enabled)
     socketio.emit('auto_save', None)

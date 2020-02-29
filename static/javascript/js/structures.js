@@ -81,7 +81,7 @@ class VisNode extends Node {
             this.visrect.addChild(this.vissprite)
             this.vissprite.position.set(4, 4);
         }
-        pipeline.vis[this.id + '-' + this.block.name] = this;  // TODO: If node remove is added we need to change this
+        pipeline.vis[this.id] = this;  // TODO: If node remove is added we need to change this
         this.rect.addChild(this.visrect);
     }
 
@@ -178,28 +178,43 @@ class Pipeline {
         this.vis = {};
     }
 
+    find_node(id){
+        for (var i=0; i<this.DYNAMIC_NODES.length; i++){
+            if (this.DYNAMIC_NODES[i].id == id){
+                return this.DYNAMIC_NODES[i];
+            }
+        }
+        return undefined
+    }
+
     spawn_node(block){
+        var self = this;
         socket.emit('new_node', block, function(response, status) {
             if (status === 200){
                 var block = new Block(response.name, response.input_args, response.custom_args,
                                       response.custom_args_type, response.output_names,
                                       response.tag, response.data_type);
-                var instance;
-                if (block.tag == 'vis') { // This should be passed as a bool so that is not hardcoded
-                    instance = new VisNode(block, response.id);
-                } else {
-                    instance = new Node(block, response.id);
-                }
-                pipeline.DYNAMIC_NODES.push(instance);
+                self.spawn_node_visual(block, response.id)
             } else {
                 console.log(response);
             }
         });
     }
+    
+    spawn_node_visual(block, id){
+        var instance;
+        if (block.tag == 'vis') { // This should be passed as a bool so that is not hardcoded
+            instance = new VisNode(block, id);
+        } else {
+            instance = new Node(block, id);
+        }
+        this.DYNAMIC_NODES.push(instance);
+        return instance;
+    }
 
     remove_node(node){
         var self = this;
-        socket.emit('remove_node', {'block': node.block, 'index': node.id}, function(response, status){
+        socket.emit('remove_node', node.id, function(response, status){
             if (status === 200){
                 var index = self.DYNAMIC_NODES.indexOf(node);
                 var node = self.DYNAMIC_NODES.splice(node, 1)[0];
@@ -211,7 +226,7 @@ class Pipeline {
     }
 
     set_custom_arg(node, key, value){
-        socket.emit('set_custom_arg', {'block': node.block, 'id': node.id, 'key': key, 'value': value}, function(response, status){
+        socket.emit('set_custom_arg', {'id': node.id, 'key': key, 'value': value}, function(response, status){
             if (status === 200){
                 console.log('The custom arg has been set');
                 node.block.custom_args[key] = value;
@@ -221,9 +236,9 @@ class Pipeline {
         });
     }
 
-    add_connection(from_block, from_idx, out_idx, to_block, to_idx, inp_idx){
+    add_connection(from_hash, out_idx, to_hash, inp_idx){
         socket.emit('new_conn',
-            {'from_block': from_block, 'from_idx': from_idx, 'out_idx': out_idx, 'to_block': to_block, 'to_idx': to_idx, 'inp_idx': inp_idx},
+            {'from_hash': from_hash, 'out_idx': out_idx, 'to_hash': to_hash, 'inp_idx': inp_idx},
             function(response, status){
                 if (status !== 200){
                     console.log(response);
@@ -254,6 +269,29 @@ class Pipeline {
                 console.log(response);
             }
             runmenu.stop_button.enable_button();
+        });
+    }
+
+    clear_pipeline(){
+        var self = this;
+        socket.emit('clear_pipeline', function(response, status) {
+            if (status === 200) {
+                self.state = RunState.IDLE;
+                runmenu.update_state();
+
+                var in_c, obj;
+                for (var i=0; i<pipeline.DYNAMIC_NODES.length; i++){
+                    app.stage.removeChild(pipeline.DYNAMIC_NODES[i].rect);
+                    in_c = pipeline.DYNAMIC_NODES[i].in_c;
+                    for (var j=0; j<in_c.length; j++){
+                        clear_connection(in_c[j]);
+                    }
+                }
+                pipeline.DYNAMIC_NODES = [];
+            } else {
+                console.log(response);
+            }
+            runmenu.clear_button.enable_button();
         });
     }
 }
@@ -374,18 +412,27 @@ class PopupMenu {
 
 class RunMenu {
     constructor() {
+        var x = 0;
         this.start_button = new Button('  RUN  ');
         this.start_button.rect.on('mousedown', ev => this.start_button.disable_button(), false);
         this.start_button.rect.on('mousedown', ev => pipeline.run_pipeline(), false);
-        this.start_button.rect.position.set(0, HEIGHT - this.start_button.rect.height + 3);
+        this.start_button.rect.position.set(x, HEIGHT - this.start_button.rect.height + 3);
+        x += this.start_button.rect.width - 2
 
         this.stop_button = new Button('  STOP  ');
         this.stop_button.rect.on('mousedown', ev => this.stop_button.disable_button(), false);
         this.stop_button.rect.on('mousedown', ev => pipeline.stop_pipeline(), false);
-        this.stop_button.rect.position.set(this.start_button.rect.width - 2, HEIGHT - this.stop_button.rect.height + 3);
+        this.stop_button.rect.position.set(x, HEIGHT - this.stop_button.rect.height + 3);
+        x += this.stop_button.rect.width - 2
+
+        this.clear_button = new Button('  CLEAR  ');
+        this.clear_button.rect.on('mousedown', ev => this.clear_button.disable_button(), false);
+        this.clear_button.rect.on('mousedown', ev => pipeline.clear_pipeline(), false);
+        this.clear_button.rect.position.set(x, HEIGHT - this.clear_button.rect.height + 3);
+        x += this.clear_button.rect.width - 2
 
         this.state_text = new PIXI.Text('State: ' + pipeline.state, {fontFamily: FONT, fill: TEXT_COLOR});
-        this.state_text.position.set(this.stop_button.rect.position.x + this.stop_button.rect.position.x + 20, HEIGHT - this.state_text.height);
+        this.state_text.position.set(x + 20, HEIGHT - this.state_text.height);
         app.stage.addChild(this.state_text);
     }
 
@@ -394,9 +441,17 @@ class RunMenu {
     }
 
     resize_menu(){
-        this.start_button.rect.position.set(0, HEIGHT - this.start_button.rect.height + 3);
-        this.stop_button.rect.position.set(this.start_button.rect.width - 2, HEIGHT - this.stop_button.rect.height + 3);
-        this.state_text.position.set(this.stop_button.rect.position.x + this.stop_button.rect.position.x + 20, HEIGHT - this.state_text.height);
+        var x = 0;
+        this.start_button.rect.position.set(x, HEIGHT - this.start_button.rect.height + 3);
+        x += this.start_button.rect.width - 2
+
+        this.stop_button.rect.position.set(x, HEIGHT - this.stop_button.rect.height + 3);
+        x += this.stop_button.rect.width - 2
+
+        this.clear_button.rect.position.set(x, HEIGHT - this.clear_button.rect.height + 3);
+        x += this.clear_button.rect.width - 2
+
+        this.state_text.position.set(x + 20, HEIGHT - this.state_text.height);
     }
 }
 

@@ -256,29 +256,29 @@ out_test_class = vispipe.pipeline._blocks['classex']
 classempty = vispipe.pipeline._blocks['testempty']
 testvis = vispipe.pipeline._blocks['test_vis']
 
-randonode = vispipe.pipeline.add_node(custom_rand, min=0, max=np.pi / 2)
+#randonode = vispipe.pipeline.add_node(custom_rand, min=0, max=np.pi / 2)
 #output_print = vispipe.pipeline.add_node(out_test)
-sinnode = vispipe.pipeline.add_node(custom_sin)
-printnode = vispipe.pipeline.add_node(out_test)
+#sinnode = vispipe.pipeline.add_node(custom_sin)
+#printnode = vispipe.pipeline.add_node(out_test)
 #empty = vispipe.pipeline.add_node(classempty)
 
 # Constant input are attached to sum which returns 2
-vispipe.pipeline.add_conn(randonode, 0, sinnode, 0)
+#vispipe.pipeline.add_conn(randonode, 0, sinnode, 0)
 #vispipe.pipeline.add_conn(custom_sin, sinidx, 0, classempty, empty, 0)
 #vispipe.pipeline.add_conn(classempty, empty, 0, out_test, output_print, 0)
-vispipe.pipeline.add_conn(sinnode, 0, printnode, 0)
+#vispipe.pipeline.add_conn(sinnode, 0, printnode, 0)
 
-#vispipe.pipeline.save('./')
+#vispipe.pipeline.save('./test.pickle')
 #vispipe.pipeline.build()
 #vispipe.pipeline.clear_pipeline()
-#vispipe.pipeline.load('./')
+#vispipe.pipeline.load('./test.pickle')
 
-vispipe.pipeline.build()
-vispipe.pipeline.run()
+#vispipe.pipeline.build()
+#vispipe.pipeline.run()
 
 #for v in iterme.instance:
 #    print('Iterating on an instance', v)
 
 print(42)
-while True:
-    continue
+#while True:
+#    continue

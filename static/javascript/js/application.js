@@ -58,10 +58,8 @@ $(document).ready(function(){
     });
 
     socket.on('send_vis', function(msg) {
-        var id = msg.id;
-        var name = msg.name;
         var data_type = msg.data_type;
-        var vis_node = pipeline.vis[id + '-' + name]
+        var vis_node = pipeline.vis[msg.id]
 
         if (data_type == 'image') {
             value = new Uint8Array(msg.value);
@@ -82,24 +80,92 @@ $(document).ready(function(){
         var obj, pos, positions;
         var save_checkpoint = setInterval(() => {
             positions = [];
+
             for (var i=0; i<pipeline.DYNAMIC_NODES.length; i++){
                 obj = pipeline.DYNAMIC_NODES[i];
                 pos = obj.rect.position;
-                positions.push([obj.id, obj.block, pos.x, pos.y]);
+                positions.push([obj.id, pos.x, pos.y]);
             }
             socket.emit('save_nodes', positions, function(response, status){
                 if (status !== 200){
                     console.log(response);
                 }
             });
-        }, 2000);
+        }, 10000);
     });
 
     socket.on('load_checkpoint', function(msg){
+        var vis_data = msg.vis_data;
+        var pipeline_def = msg.pipeline;
+        var nodes = pipeline_def.nodes;
+        var blocks = pipeline_def.blocks;
+        var custom_args = pipeline_def.custom_args;
+        var connections = pipeline_def.connections;
+
+        // Create connections dict
+        var conn_dict = {};
+        var conn, hash;
+        for (var i=0; i<connections.length; i++){
+            conn = connections[i];
+            if (conn.length == 0){
+                continue;
+            }
+            hash = nodes[i];
+            conn_dict[hash] = conn;
+        }
+
+        // Create positions dict
+        var pos_dict = {};
+        var pos;
+        for (i=0; i<vis_data.length; i++){
+            pos = vis_data[i];
+            if (pos.length == 0){
+                continue;
+            }
+            hash = pos[0];
+            pos_dict[hash] = [pos[1], pos[2]];
+        }
+
+        var obj;
+        var block, block_dict;
+        for (i=0; i<nodes.length; i++){
+            // Create blocks
+            block_dict = blocks[i];
+            block = new Block(block_dict.name, block_dict.input_args, block_dict.custom_args,
+                              block_dict.custom_args_type, block_dict.output_names,
+                              block_dict.tag, block_dict.data_type);
+            obj = pipeline.spawn_node_visual(block, nodes[i]);
+            obj.rect.position.set(pos_dict[nodes[i]][0], pos_dict[nodes[i]][1]);
+
+            // Set custom args
+        }
+
+        // Create actual connections
+        var conn, to, from, to_pos, from_pos;
+        for (i=0; i<pipeline.DYNAMIC_NODES.length; i++){
+            node = pipeline.DYNAMIC_NODES[i];
+
+            conn = conn_dict[node.id];
+            if (conn !== undefined) {
+                for (j=0; j<conn.length; j++){
+                    to_node = pipeline.find_node(conn[j][0]);
+                    from = node.out_c[conn[j][1]]
+                    to = to_node.in_c[conn[j][2]]
+
+                    conn = create_connection(to, from); 
+                    app.stage.addChildAt(conn, app.stage.children.length);
+
+                    app.renderer.render(node.rect)  // Force rendering of the two objects to update lines correctly
+                    app.renderer.render(to_node.rect)
+                    update_all_lines(node);
+                }
+            }
+
+        }
+            
         // First create all the nodes specified by the pipeline
         // Then move each node to its corresponding position
-
-    }
+    });
 
     //socket.emit('test_receive', 'test_send_see_me_python')
 });

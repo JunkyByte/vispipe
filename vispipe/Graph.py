@@ -73,12 +73,11 @@ class Graph():
     def deleteNode(self, node):
         node_id = self.node_ids.lookup(str(hash(node)))
         if node not in self.vertices:
-            raise Exception("error: node not in the graph")
+            raise Exception("The Node is not in the graph")
         self.adj_list[node_id] = set()
         self.node_ids.remove(str(hash(node)))
         self.vertices.remove(node)
         self.available_ids.add(node_id)
-        sorted(self.available_ids)
         for i in range(self.last_id_used + 1):
             adj = self.adj_list[i].copy()
             for el in adj:
@@ -109,7 +108,9 @@ class Graph():
     def v(self):
         return list(self.vertices)
 
-    def get_node(self, node_hash):
+    def get_node(self, node_hash: int):
+        assert isinstance(node_hash, int)
+
         for el in self.vertices:
             if node_hash == hash(el):
                 return el
@@ -129,6 +130,7 @@ def main():
     class node:
         def __init__(self, value):
             self.x = value
+
         def __repr__(self):
             return str(hash(self))
 
