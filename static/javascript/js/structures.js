@@ -214,15 +214,31 @@ class Pipeline {
 
     remove_node(node){
         var self = this;
-        socket.emit('remove_node', node.id, function(response, status){
-            if (status === 200){
-                var index = self.DYNAMIC_NODES.indexOf(node);
-                var node = self.DYNAMIC_NODES.splice(node, index)[0];
-                app.stage.removeChild(node.rect);
-            } else {
-                console.log(response);
+        socket.emit('remove_node', node.id, function() { // I think this can be simplified by creating node esplicitly
+            var node_closure = node;
+            return function(reponse, status) {
+                if (status === 200){
+                    var index = self.DYNAMIC_NODES.indexOf(node_closure);
+                    node_closure = self.DYNAMIC_NODES.splice(index, 1)[0];
+                    for (var i=0; i<node_closure.in_c.length; i++){
+                        clear_connection(node_closure.in_c[i]);
+                    }
+
+                    var j, out;
+                    for (i=0; i<node_closure.out_c.length; i++){
+                        out = node_closure.out_c[i]; 
+                        for (j=0; j<out.connection.length; j++){
+                            clear_connection(out.connection[j]);
+                        }
+                    }
+                    app.stage.removeChild(node_closure.rect);
+
+                    delete pipeline.vis[node_closure.id];
+                } else {
+                    console.log(response);
+                }
             }
-        });
+        }());
     }
 
     set_custom_arg(node, key, value){
@@ -348,7 +364,7 @@ class PopupMenu {
                     input_text.restrict = '0123456789.';
                 }
 
-                input_text.on('input', function(input_text, key) {
+                input_text.on('input', function(input_text, key) {  // TODO: Can this be refactore with arrow function?
                     return function() {
                         if (input_text.text && String(input_text.text) !== input_text.placeholder){
                             pipeline.set_custom_arg(self.currentNode, key, input_text.text);
@@ -365,17 +381,29 @@ class PopupMenu {
             }
         }
 
-        this.delete_button.rect.position.set(CUSTOM_ARG_SIZE / 2, y);
+        var scale_y, scale_x, delete_pos;
+        if (length === 0){
+            scale_x = this.delete_button.rect.width / CUSTOM_ARG_SIZE;
+            scale_y = this.delete_button.rect.height / this.pane_height;
+            delete_pos = new PIXI.Point(1, 0.5)
+        } else {
+            scale_x = 1
+            scale_y = (y + 40) / this.pane_height;
+            delete_pos = new PIXI.Point(CUSTOM_ARG_SIZE / 2, y - 2)
+        }
+
+        this.delete_button.rect.position.set(delete_pos.x, delete_pos.y);
         this.input_container.addChild(this.delete_button.rect);
 
-        this.pane.scale.y = (y + 40) / this.pane_height;
+        this.pane.scale.set(scale_x, scale_y)
         for (var i=0; i<this.pane.children.length; i++){
             var obj = this.pane.children[i]
             obj.scale.y = 1 / this.pane.scale.y;
+            obj.scale.x = 1 / this.pane.scale.x;
         }
 
         this.pane.interactive = true;
-        this.pane.position.set(this.target.width + 5, 0);
+        this.pane.position.set(this.target.geometry.bounds.maxX + 5, 0);
         this.target.addChild(this.pane);
     }
 

@@ -72,6 +72,7 @@ function onDragEnd(event)
     }
 
     this.ischild = false;
+    this.start_pos = null;
     this.child = null;
     this.target = null;
 }
@@ -90,10 +91,15 @@ function create_connection(input, output){
 
 function clear_connection(input){
     if (input.connection){
-        input.connection.connection.splice(input.connection.connection.indexOf(input), 1);
-        input.connection.conn_line.splice(input.connection.conn_line.indexOf(input.conn_line), 1);
+        // Remove connection and conn_line from output (that is stored in .connection)
+        var index = input.connection.connection.indexOf(input)
+        input.connection.connection.splice(index, 1);
+        index = input.connection.conn_line.indexOf(input.conn_line)
+        input.connection.conn_line.splice(index, 1);
+
+        // Remove connection and conn_line from input
         input.conn_line.destroy();
-        input.conn_line = [];
+        input.conn_line = null;
         input.connection = null;
     }
 }

@@ -118,9 +118,8 @@ def run_pipeline():
 
         vispipe.pipeline.run(slow=True)  # TODO: This becomes a parameter passed to the server (once wrapped)
         global thread
-        assert not thread.isAlive()
-        if len(vispipe.pipeline.runner.vis_source):
-            thread_stop_event.clear()
+        thread_stop_event.clear()
+        if not thread.isAlive():
             thread = socketio.start_background_task(send_vis)
         return {}, 200
     except Exception as e:

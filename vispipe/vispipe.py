@@ -101,6 +101,7 @@ class Pipeline:
             pickle.dump((self.pipeline, vis_data), f)
 
     def load(self, path) -> dict:
+        self.unbuild()
         with open(path, 'rb') as f:
             self.pipeline, vis_data = pickle.load(f)
         return self.pipeline, vis_data
@@ -113,6 +114,9 @@ class PipelineRunner:
         self.vis_source = {}
 
     def read_vis(self):
+        if not self.vis_source:
+            return {}
+
         vis = {}
         idx = self._vis_index()
         if idx < 0:
