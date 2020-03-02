@@ -244,20 +244,20 @@ somelistb = vispipe.pipeline._blocks['some_list']
 #randonode = vispipe.pipeline.add_node(custom_rand, min=0, max=np.pi / 2)
 #output_print = vispipe.pipeline.add_node(out_test)
 #sinnode = vispipe.pipeline.add_node(custom_sin)
-printnode = vispipe.pipeline.add_node(out_test)
+#printnode = vispipe.pipeline.add_node(out_test)
 #empty = vispipe.pipeline.add_node(classempty)
-somelist = vispipe.pipeline.add_node(somelistb)
+#somelist = vispipe.pipeline.add_node(somelistb)
 
-from vispipe.ops.flows import iterator, batchify
-iteratorb = vispipe.pipeline._blocks['iterator']
-batchifyb = vispipe.pipeline._blocks['batchify']
-iterat = vispipe.pipeline.add_node(iteratorb)
-batch = vispipe.pipeline.add_node(batchifyb, size=9)
+#from vispipe.ops.flows import iterator, batchify
+#iteratorb = vispipe.pipeline._blocks['iterator']
+#batchifyb = vispipe.pipeline._blocks['batchify']
+#iterat = vispipe.pipeline.add_node(iteratorb)
+#batch = vispipe.pipeline.add_node(batchifyb, size=9)
 
 
-vispipe.pipeline.add_conn(somelist, 0, iterat, 0)
-vispipe.pipeline.add_conn(iterat, 0, batch, 0)
-vispipe.pipeline.add_conn(batch, 0, printnode, 0)
+#vispipe.pipeline.add_conn(somelist, 0, iterat, 0)
+#vispipe.pipeline.add_conn(iterat, 0, batch, 0)
+#vispipe.pipeline.add_conn(batch, 0, printnode, 0)
 # Constant input are attached to sum which returns 2
 #vispipe.pipeline.add_conn(randonode, 0, sinnode, 0)
 #vispipe.pipeline.add_conn(custom_sin, sinidx, 0, classempty, empty, 0)
@@ -269,11 +269,11 @@ vispipe.pipeline.add_conn(batch, 0, printnode, 0)
 #vispipe.pipeline.clear_pipeline()
 #vispipe.pipeline.load('./test.pickle')
 
-vispipe.pipeline.build()
-vispipe.pipeline.run(slow=True)
+#vispipe.pipeline.build()
+#vispipe.pipeline.run(slow=True)
 
 #for v in iterme.instance:
 #    print('Iterating on an instance', v)
 
-while True:
-    continue
+#while True:
+#    continue
