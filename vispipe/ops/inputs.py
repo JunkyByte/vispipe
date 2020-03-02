@@ -1,5 +1,4 @@
 from vispipe.vispipe import block
-from typing import Union
 import numpy as np
 """
 Input generators for your pipeline.
@@ -17,21 +16,16 @@ class numpy_file:
     path : str
         The path to the file you want to load.
 
+
     Yields
     ------
-        The Content of the loaded array line by line
+        The Content of the loaded array line by line.
     """
 
     def __init__(self):
         self.file = None
 
     def run(self, path: str = ''):
-        """
-        Parameters
-        ----------
-        path : str
-            The path from which you want to load the numpy array.
-        """
         if self.file is None:
             self.file = iter(np.load(path))
         yield next(self.file)
@@ -44,6 +38,6 @@ def numpy_flow(path):
 
     Yields
     ------
-        The full content of the path you provided
+        The full content of the loaded array from the path you provided.
     """
     yield np.load(path)

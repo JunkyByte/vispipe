@@ -1,10 +1,35 @@
-from vispipe.hash import Hash
+from vispipe.hashmap import Hash
 import copy
 
 
 class Graph():
+    """
+    The class used to represent the abstract structure of a pipeline, it's nodes and connections.
+
+    Parameters
+    ----------
+    num_vertices: int
+        The max number of vertices (nodes) we want to represent. It is usually fixed to a large number, it cannot change after
+        instantiation.
+
+    Attributes
+    ----------
+    adj_list: List[set]
+        The adj_list is used to track connections between nodes.
+    vertices: set
+        The vertices (nodes) of the graph.
+    available_ids: set
+        Ids that are free to use for new nodes.
+    node_ids: Hash
+        The hasmap used to track unique identifiers of the nodes.
+    num_vertices: int
+        The max number of vertices (nodes) we want to represent. It is usually fixed to a large number, it cannot change after
+        instantiation.
+    last_id_used: int
+        Used to iterate only over the subset of nodes that are in the pipeline.
+    """
     def __init__(self, num_vertices: int):
-        self.adj_list = [] # list of (node, out_idx, in_idx, bool) where bool True -> to node. False -> from node
+        self.adj_list = []  # list of set of (node, out_idx, in_idx, bool) where bool True -> to node. False -> from node
         self.vertices = set()
         self.available_ids = set()
         self.node_ids = Hash(num_vertices)
@@ -70,7 +95,7 @@ class Graph():
         self.adj_list[id_a].add((node_b, out_idx, in_idx, True))
         self.adj_list[id_b].add((node_a, out_idx, in_idx, False))
 
-    def deleteNode(self, node):
+    def deleteNode(self, node):  # TODO: Add last_id_used processing
         node_id = self.node_ids.lookup(str(hash(node)))
         if node not in self.vertices:
             raise Exception("The Node is not in the graph")

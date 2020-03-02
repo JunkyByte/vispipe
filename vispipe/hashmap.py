@@ -1,6 +1,14 @@
 class Hash:
+    """
+    The class used to assign unique identifiers to the nodes of the pipeline.
 
-    def __init__(self, maxsize):
+    Parameters
+    ----------
+    maxsize: int
+        The maximum number of identifiers that can exist.
+    """
+
+    def __init__(self, maxsize: int):
         self.m = maxsize
         self.A = []
         self.V = []

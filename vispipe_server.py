@@ -199,11 +199,9 @@ def test_connect():
     print('Sharing blocks')
     share_blocks()
 
-    # TODO: Here you should reload from PATH the pickle (if valid)
     print('Loading checkpoint from %s' % PATH_CKPT)
     load_checkpoint(PATH_CKPT)
 
-    # TODO: This becomes a flag passed to server (if enabled)
     socketio.emit('auto_save', None)
 
 

@@ -1,8 +1,8 @@
-from vispipe.node import Node
+from vispipe.node import Node, Block
 from vispipe.graph import Graph
 from functools import partial
 from inspect import signature, isgeneratorfunction, _empty
-from typing import List, Callable
+from typing import Callable
 from threading import Thread, Event
 from queue import Queue
 import types
@@ -11,11 +11,21 @@ import pickle
 import time
 MAXSIZE = 100
 
+# TODO: Macro blocks? to execute multiple nodes subsequently, while it's impractical to run them in a faster way, I suppose that just creating a way to define them can be convenient.
+# TODO: While having a single instance of Pipeline is convenient, having multiple instances could simplify the process of using multiple distinct pipelines at the same time.
+
 
 class Pipeline:
     """
-    The Pipeline object you will interact with.
-    You should not instantiate your own Pipeline, use the one provided by vispipe.
+    Pipeline class that is used to represent pipelines.
+
+    Parameters
+    ----------
+
+    Note
+    ----
+    You should not instantiate this class, use the instance provided by vispipe as a global variable.
+    It can be accessed with vispipe.pipeline
     """
     class _skip_class:
         def __call__(self, x):
@@ -306,56 +316,6 @@ class QueueConsumer:
             value = self.out[idx]
             del self.out[:idx]
         return value
-
-
-class Block:
-    def __init__(self, f: Callable, is_class: bool, max_queue: int, output_names: List[str], tag: str, data_type: str):
-        self.f = f
-        self.name = f.__name__
-        self.is_class = is_class
-        self.tag = tag
-        self.data_type = data_type
-        if self.is_class:
-            init_params = signature(self.f).parameters
-            if any([v.default == _empty for v in init_params.values()]):
-                raise Exception('Some custom arguments of node <%s> have no default value set' % self.name)
-            input_args = {**init_params, **signature(self.f.run).parameters}
-            del input_args['self']
-        else:
-            input_args = dict(signature(self.f).parameters)
-        args = [(k, val.default) for k, val in input_args.items()]
-        self.input_args = dict([(k, val) for k, val in args if val == _empty])
-        self.custom_args = dict([(k, val) for k, val in args if val != _empty])
-        self.custom_args_type = dict([(k, type(val)) for k, val in self.custom_args.items()])
-        self.max_queue = max_queue
-        self.output_names = output_names if output_names is not None else ['y']  # Not a mistake, it has to catch empty list
-
-    def num_inputs(self):
-        return len(self.input_args)
-
-    def num_outputs(self):
-        return len(self.output_names)
-
-    def serialize(self):
-        x = dict(self)
-        del x['f']
-        # TODO: Change me to a custom value, using None can cause problems
-        # TODO: Support np array by casting to nested lists
-        x['input_args'] = dict([(k, v if v != _empty else None)
-                                for k, v in x['input_args'].items()])
-        x['custom_args_type'] = dict([(k, str(v.__name__)) for k, v in x['custom_args_type'].items()])
-        return x
-
-    def __iter__(self):
-        yield 'f', self.f
-        yield 'name', self.name
-        yield 'input_args', self.input_args
-        yield 'custom_args', self.custom_args
-        yield 'custom_args_type', self.custom_args_type
-        yield 'max_queue', self.max_queue
-        yield 'output_names', self.output_names
-        yield 'tag', self.tag
-        yield 'data_type', self.data_type
 
 
 def block(f: Callable = None, max_queue: int = 2, output_names: str = None, tag: str = 'None', data_type: str = 'raw'):

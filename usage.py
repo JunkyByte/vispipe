@@ -135,8 +135,9 @@ def in_3(input1, input2, input3):
 
 @vispipe.block
 def print_test(input1):
-    print('Value: %s' % input1)
-    yield None
+    msg = 'Value: %s' % input1
+    print(msg)
+    yield msg
 
 
 @vispipe.block(tag='vis', data_type='image')
@@ -177,23 +178,6 @@ class testempty:
             self.sum += input1
             self.count += 1
             yield vispipe.pipeline._empty
-
-
-@vispipe.block
-class testfull:
-    def __init__(self):
-        self.iterator = None
-
-    def run(self, input1):
-        if self.iterator is None:
-            self.iterator = iter(input1)
-
-        try:
-            x = vispipe.pipeline._skip(next(self.iterator))
-        except StopIteration:
-            self.iterator = None
-            x = vispipe.pipeline._empty
-        yield x
 
 
 @vispipe.block
@@ -255,13 +239,25 @@ out_test = vispipe.pipeline._blocks['print_test']
 out_test_class = vispipe.pipeline._blocks['classex']
 classempty = vispipe.pipeline._blocks['testempty']
 testvis = vispipe.pipeline._blocks['test_vis']
+somelistb = vispipe.pipeline._blocks['some_list']
 
 #randonode = vispipe.pipeline.add_node(custom_rand, min=0, max=np.pi / 2)
 #output_print = vispipe.pipeline.add_node(out_test)
 #sinnode = vispipe.pipeline.add_node(custom_sin)
-#printnode = vispipe.pipeline.add_node(out_test)
+printnode = vispipe.pipeline.add_node(out_test)
 #empty = vispipe.pipeline.add_node(classempty)
+somelist = vispipe.pipeline.add_node(somelistb)
 
+from vispipe.ops.flows import iterator, batchify
+iteratorb = vispipe.pipeline._blocks['iterator']
+batchifyb = vispipe.pipeline._blocks['batchify']
+iterat = vispipe.pipeline.add_node(iteratorb)
+batch = vispipe.pipeline.add_node(batchifyb, size=9)
+
+
+vispipe.pipeline.add_conn(somelist, 0, iterat, 0)
+vispipe.pipeline.add_conn(iterat, 0, batch, 0)
+vispipe.pipeline.add_conn(batch, 0, printnode, 0)
 # Constant input are attached to sum which returns 2
 #vispipe.pipeline.add_conn(randonode, 0, sinnode, 0)
 #vispipe.pipeline.add_conn(custom_sin, sinidx, 0, classempty, empty, 0)
@@ -273,12 +269,11 @@ testvis = vispipe.pipeline._blocks['test_vis']
 #vispipe.pipeline.clear_pipeline()
 #vispipe.pipeline.load('./test.pickle')
 
-#vispipe.pipeline.build()
-#vispipe.pipeline.run()
+vispipe.pipeline.build()
+vispipe.pipeline.run(slow=True)
 
 #for v in iterme.instance:
 #    print('Iterating on an instance', v)
 
-print(42)
-#while True:
-#    continue
+while True:
+    continue
