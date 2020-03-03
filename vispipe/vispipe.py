@@ -90,7 +90,13 @@ class Pipeline:
     def set_custom_arg(self, node_hash: str, key: str, value):
         node = self.get_node(node_hash)
         arg_type = node.block.custom_args_type[key]
-        node.custom_args[key] = arg_type(value)
+        if arg_type is bool and isinstance(value, str):
+            if value.lower() == 'true':
+                node.custom_args[key] = True
+            elif value.lower() == 'false':
+                node.custom_args[key] = False
+        else:
+            node.custom_args[key] = arg_type(value)
 
     def build(self) -> None:
         self.runner.build_pipeline(self.pipeline)
@@ -446,7 +452,7 @@ class TerminableThread(Thread):
 
             self.target()
             if self.slow:
-                time.sleep(0.5)
+                time.sleep(0.1)
 
 
 pipeline = Pipeline()

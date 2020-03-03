@@ -81,7 +81,7 @@ class VisNode extends Node {
             this.visrect.addChild(this.vissprite)
             this.vissprite.position.set(4, 4);
         }
-        pipeline.vis[this.id] = this;  // TODO: If node remove is added we need to change this
+        pipeline.vis[this.id] = this;
         this.rect.addChild(this.visrect);
     }
 
@@ -110,7 +110,7 @@ class VisNode extends Node {
             });
 
             var currentHeight = PIXI.TextMetrics.measureText(text, style).height;
-            if (height <= currentHeight) {
+            if (height <= currentHeight || VIS_FONT_SIZE - k === 1) {
                 k += 1;
             } else {
                 this.vissprite.style = style;
@@ -189,16 +189,20 @@ class Pipeline {
 
     spawn_node(block){
         var self = this;
-        socket.emit('new_node', block, function(response, status) {
-            if (status === 200){
-                var block = new Block(response.name, response.input_args, response.custom_args,
-                                      response.custom_args_type, response.output_names,
-                                      response.tag, response.data_type);
-                self.spawn_node_visual(block, response.id)
-            } else {
-                console.log(response);
+        socket.emit('new_node', block, function() {
+            var closure = block;  // Creates closure for block
+            return function(response, status) {
+                if (status === 200){
+                    block = closure;
+                    block = new Block(block.name, block.input_args, block.custom_args,
+                                      block.custom_args_type, block.output_names,
+                                      block.tag, block.data_type);
+                    self.spawn_node_visual(block, response.id)
+                } else {
+                    console.log(response);
+                }
             }
-        });
+        }());
     }
     
     spawn_node_visual(block, id){
@@ -528,7 +532,7 @@ class SideMenu {
 
         var app_length = app.stage.children.length;
         for (var i = 0; i < this.tag_button.length; i++){
-            app.stage.setChildIndex(this.tag_button[i].rect, app_length-1)
+            app.stage.setChildIndex(this.tag_button[i].rect, app_length-1);
         }
     }
 
@@ -541,7 +545,7 @@ class SideMenu {
         }
     }
 
-    update_tag_blocks(button){  // TODO: This logic is not connected to anything
+    update_tag_blocks(button){
         let tag = button.text.text;
         this.pane[this.selected_tag].visible = false;
         this.selected_tag = tag;
@@ -551,9 +555,10 @@ class SideMenu {
     scroll_blocks(ev){
         for (var i = 0; i < sidemenu.tags.length; i++){
             if (sidemenu.pane[sidemenu.tags[i]].visible === true){
-                var new_y = sidemenu.pane[sidemenu.tags[i]].y += ev.wheelDelta / 5;
+                var new_y = sidemenu.pane[sidemenu.tags[i]].y += ev.deltaY / 5;
                 new_y = Math.max(new_y, -(50 - HEIGHT + 50 * sidemenu.pane[sidemenu.tags[i]].children.length));
                 sidemenu.pane[sidemenu.tags[i]].y = Math.min(0, new_y);
+                break
             }
         }
     }

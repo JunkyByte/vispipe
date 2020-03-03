@@ -1,4 +1,5 @@
 from vispipe import vispipe
+from vispipe.ops.flows import iterator, batchify
 from flask_socketio import SocketIO
 from threading import Thread, Event
 from flask import Flask, render_template, session
@@ -31,7 +32,7 @@ def new_node(block):
         print('New node')
         block = vispipe.pipeline._blocks[block['name']]
         node_hash = hash(vispipe.pipeline.add_node(block))
-        return {**{'id': node_hash}, **block.serialize()}, 200
+        return {'id': node_hash}, 200
     except Exception as e:
         print(traceback.format_exc())
         return str(e), 500
@@ -98,7 +99,10 @@ def send_vis():
                     value, shape = process_image(value)
                 elif node.block.data_type == 'raw':
                     if isinstance(value, (np.ndarray, list)):
-                        value = np.around(value, 2)
+                        try:
+                            value = np.around(value, 2)
+                        except Exception:
+                            pass
                     elif isinstance(value, float):
                         value = round(value, 2)
                     value = str(value)
@@ -107,7 +111,7 @@ def send_vis():
         except Exception as e:
             print(traceback.format_exc())
             socketio.emit('message', str(e))
-        socketio.sleep(0.1)
+        socketio.sleep(0.3)
 
 
 @socketio.on('run_pipeline')
@@ -175,6 +179,7 @@ def load_checkpoint(path):
         pipeline['connections'].append([(hash(n), i, j) for n, i, j, _ in conn])
         pipeline['blocks'].append(node.block.serialize())
         pipeline['custom_args'].append(node.custom_args)
+    print(pipeline['connections'])
     socketio.emit('load_checkpoint', {'vis_data': vis_data, 'pipeline': pipeline})
 
 
@@ -202,7 +207,7 @@ def test_connect():
     print('Loading checkpoint from %s' % PATH_CKPT)
     load_checkpoint(PATH_CKPT)
 
-    socketio.emit('auto_save', None)
+    socketio.emit('set_auto_save', True)
 
 
 @socketio.on('disconnect')

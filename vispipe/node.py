@@ -1,24 +1,22 @@
-from queue import Queue
 from typing import List, Callable
 from inspect import signature, _empty
 
 
 class Block:
     """
-    The class used to represent one generator function (or class) that has been tagged with the block decorator provided by vispipe.vispipe.Pipeline
-
-    [TODO:description]
+    The class used to represent one generator function (or class) that has been tagged with the block decorator
+    provided by vispipe.vispipe.Pipeline
 
     Parameters
     ----------
     f : Callable
-        [TODO:description]
+        The function this block represent.
     is_class : bool
-        [TODO:description]
+        If the function tagged is actually a class.
     max_queue : int
-        [TODO:description]
+        The maximum size of the queues of this block.
     output_names : List[str]
-        [TODO:description]
+        The names used by the outputs of your function. The length of this list is used as the number of outputs of the function.
     tag : str
         [TODO:description]
     data_type : str

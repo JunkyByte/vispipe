@@ -26,19 +26,16 @@ def no_input():
 
 @vispipe.block
 def image():
-    time.sleep(1)
     yield np.concatenate([np.random.randint(0, 255, size=(28, 28, 3)), np.ones((28, 28, 1)) * 255], axis=-1)
 
 
 @vispipe.block
 def image_plus(x):
-    time.sleep(1)
     yield np.concatenate([x * np.ones((28, 28, 3)), np.ones((28, 28, 1)) * 255], axis=-1)
 
 
 @vispipe.block
 def image_rgb(r, g, b):
-    time.sleep(1)
     ones = np.ones((28, 28, 1))
     yield np.concatenate([r * ones, g * ones, b * ones, ones * 255], axis=-1)
 
@@ -140,12 +137,12 @@ def print_test(input1):
     yield msg
 
 
-@vispipe.block(tag='vis', data_type='image')
+@vispipe.block(tag='vis', max_queue=10, data_type='image')
 def test_vis(input1):
     yield input1
 
 
-@vispipe.block(tag='vis', data_type='raw')
+@vispipe.block(tag='vis', max_queue=100, data_type='raw')
 def test_vis_raw(input1):
     yield input1
 
@@ -264,7 +261,7 @@ somelistb = vispipe.pipeline._blocks['some_list']
 #vispipe.pipeline.add_conn(classempty, empty, 0, out_test, output_print, 0)
 #vispipe.pipeline.add_conn(sinnode, 0, printnode, 0)
 
-#vispipe.pipeline.save('./test.pickle')
+#vispipe.pipeline.save('./scratch_test.pickle')
 #vispipe.pipeline.build()
 #vispipe.pipeline.clear_pipeline()
 #vispipe.pipeline.load('./test.pickle')

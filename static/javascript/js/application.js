@@ -23,6 +23,8 @@ var INPUT_WRONG_COLOR = 0xED1909;
 var INPUT_TEXT_COLOR = 0x26272E;
 var OUTPUT_COLOR = 0x5DBCD2;
 
+var autosave = false;
+
 // Listen for window resize events
 window.addEventListener('resize', resize);
 
@@ -41,7 +43,7 @@ var runmenu = new RunMenu();
 var popupmenu = new PopupMenu();
 window.addEventListener('resize', function() {runmenu.resize_menu()}, false);
 window.addEventListener('resize', function() {sidemenu.resize_menu()}, false);
-window.addEventListener('mousewheel', function(ev){sidemenu.scroll_blocks(ev)}, false);
+window.addEventListener('wheel', function(ev){sidemenu.scroll_blocks(ev)}, false);
 
 var socket;
 $(document).ready(function(){
@@ -54,7 +56,7 @@ $(document).ready(function(){
     });
 
     socket.on('end_block', function(msg) {
-        sidemenu.populate_menu(pipeline, app);
+        sidemenu.populate_menu(pipeline);
     });
 
     socket.on('send_vis', function(msg) {
@@ -62,7 +64,7 @@ $(document).ready(function(){
         var vis_node = pipeline.vis[msg.id]
 
         if (data_type == 'image') {
-            value = new Uint8Array(msg.value);
+            var value = new Uint8Array(msg.value);
             var size = value.length / 4;
             var s = Math.sqrt(size);
             var texture = PIXI.Texture.fromBuffer(value, s, s);
@@ -76,26 +78,31 @@ $(document).ready(function(){
         console.log(msg);
     });
 
-    socket.on('auto_save', function(msg){
-        var obj, pos, positions;
-        var save_checkpoint = setInterval(() => {
-            positions = [];
-
-            for (var i=0; i<pipeline.DYNAMIC_NODES.length; i++){
-                obj = pipeline.DYNAMIC_NODES[i];
-                pos = obj.rect.position;
-                positions.push([obj.id, pos.x, pos.y]);
-            }
-            socket.emit('save_nodes', positions, function(response, status){
-                if (status !== 200){
-                    console.log(response);
-                }
-            });
-        }, 10000);
+    socket.on('set_auto_save', function(msg){
+        autosave = msg;
     });
 
-    socket.on('load_checkpoint', function(msg){
-        var vis_data = msg.vis_data;
+    // Noted this is not in the event
+    autosave = setInterval(() => {
+        if (!autosave){
+            return;
+        }
+
+        positions = [];
+        for (var i=0; i<pipeline.DYNAMIC_NODES.length; i++){
+            obj = pipeline.DYNAMIC_NODES[i];
+            pos = obj.rect.position;
+            positions.push([obj.id, pos.x, pos.y]);
+        }
+        socket.emit('save_nodes', positions, function(response, status){
+            if (status !== 200){
+                console.log(response);
+            }
+        });
+    }, 10000);
+
+    socket.on('load_checkpoint', function(msg){ // TODO: IMPORTANT fix multiple output not connected after reload
+        var vis_data = msg.vis_data;            // TODO: FIX CUSTOM ARG SETTINGS FOR ITERATOR NOT WORKING
         var pipeline_def = msg.pipeline;
         var nodes = pipeline_def.nodes;
         var blocks = pipeline_def.blocks;
@@ -127,7 +134,7 @@ $(document).ready(function(){
         }
 
         var obj;
-        var block, block_dict, arg, j;
+        var block, block_dict, arg, j, key;
         for (i=0; i<nodes.length; i++){
             // Create blocks
             block_dict = blocks[i];
@@ -152,17 +159,18 @@ $(document).ready(function(){
             conn = conn_dict[node.id];
             if (conn !== undefined) {
                 for (j=0; j<conn.length; j++){
+                    console.log(j, conn.length)
                     to_node = pipeline.find_node(conn[j][0]);
                     from = node.out_c[conn[j][1]]
                     to = to_node.in_c[conn[j][2]]
 
-                    conn = create_connection(to, from); 
-                    app.stage.addChildAt(conn, app.stage.children.length);
+                    connection = create_connection(to, from); 
+                    app.stage.addChildAt(connection, app.stage.children.length);
 
-                    app.renderer.render(node.rect)  // Force rendering of the two objects to update lines correctly
+                    app.renderer.render(node.rect)  // Force rendering to update positions
                     app.renderer.render(to_node.rect)
-                    update_all_lines(node);
                 }
+                update_all_lines(node);
             }
 
         }
