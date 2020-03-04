@@ -1,9 +1,12 @@
 from vispipe import vispipe
-from vispipe.ops.flows import iterator, batchify
+from vispipe.ops.flows import *
+from vispipe.ops.inputs import *
+from vispipe.ops.vis import *
+from usage import *
+
 from flask_socketio import SocketIO
 from threading import Thread, Event
 from flask import Flask, render_template, session
-import usage
 import numpy as np
 import cv2
 import traceback
@@ -18,10 +21,11 @@ app.config['DEBUG'] = True
 # turn the flask app into a socketio app
 socketio = SocketIO(app, async_mode=None, logger=False, engineio_logger=False)
 PATH_CKPT = './scratch_test.pickle'
+pipeline = vispipe.Pipeline()
 
 
 def share_blocks():
-    for block in vispipe.pipeline.get_blocks(serializable=True):
+    for block in pipeline.get_blocks(serializable=True):
         socketio.emit('new_block', block)
     socketio.emit('end_block', None)
 
@@ -30,8 +34,7 @@ def share_blocks():
 def new_node(block):
     try:
         print('New node')
-        block = vispipe.pipeline._blocks[block['name']]
-        node_hash = hash(vispipe.pipeline.add_node(block))
+        node_hash = hash(vispipe.pipeline.add_node(block['name']))
         return {'id': node_hash}, 200
     except Exception as e:
         print(traceback.format_exc())
@@ -159,7 +162,7 @@ def clear_pipeline():
 @socketio.on('save_nodes')
 def save_nodes(vis_data):
     try:
-        vispipe.pipeline.save(PATH_CKPT, vis_data)
+        pipeline.save(PATH_CKPT, vis_data)
         print('Saved checkpoint')
         return {}, 200
     except Exception as e:
@@ -171,16 +174,15 @@ def load_checkpoint(path):
     if not os.path.isfile(path):
         return
 
-    _, vis_data = vispipe.pipeline.load(PATH_CKPT)
-    pipeline = {'nodes': [], 'blocks': [], 'connections': [], 'custom_args': []}
-    for node in vispipe.pipeline.nodes():
-        pipeline['nodes'].append(hash(node))
-        conn = vispipe.pipeline.connections(hash(node), out=True)
-        pipeline['connections'].append([(hash(n), i, j) for n, i, j, _ in conn])
-        pipeline['blocks'].append(node.block.serialize())
-        pipeline['custom_args'].append(node.custom_args)
-    print(pipeline['connections'])
-    socketio.emit('load_checkpoint', {'vis_data': vis_data, 'pipeline': pipeline})
+    _, vis_data = pipeline.load(PATH_CKPT)
+    pipeline_def = {'nodes': [], 'blocks': [], 'connections': [], 'custom_args': []}
+    for node in pipeline.nodes():
+        pipeline_def['nodes'].append(hash(node))
+        conn = pipeline.connections(hash(node), out=True)
+        pipeline_def['connections'].append([(hash(n), i, j) for n, i, j, _ in conn])
+        pipeline_def['blocks'].append(node.block.serialize())
+        pipeline_def['custom_args'].append(node.custom_args)
+    socketio.emit('load_checkpoint', {'vis_data': vis_data, 'pipeline': pipeline_def})
 
 
 @app.route('/')
@@ -199,7 +201,7 @@ def show_session():
 def test_connect():
     # need visibility of the global thread object
     print('Client connected')
-    vispipe.pipeline.clear_pipeline()
+    pipeline.clear_pipeline()
 
     print('Sharing blocks')
     share_blocks()

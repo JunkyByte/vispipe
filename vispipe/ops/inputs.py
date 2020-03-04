@@ -5,11 +5,11 @@ Input generators for your pipeline.
 """
 
 
-@block(tag='input_file')
+@block(tag='input')
 class numpy_file:
     """
     Yields the raw buffer, line by line from a numpy file.
-    This is equivalent to stacking a numpy_flow with a constant input into an iterator
+    This is equivalent to stacking a ``numpy_flow`` with a constant input into an ``iterator``
 
     Parameters
     ----------
@@ -31,7 +31,7 @@ class numpy_file:
         yield next(self.file)
 
 
-@block(tag='input_flow', max_queue=1)
+@block(tag='input', max_queue=1)
 def numpy_flow(path):
     """
     Yields the raw buffer from the path provided as input.

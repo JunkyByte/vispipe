@@ -1,10 +1,11 @@
 from vispipe.node import Node, Block
 from vispipe.graph import Graph
 from functools import partial
-from inspect import signature, isgeneratorfunction, _empty
+from inspect import signature, isgeneratorfunction
 from typing import Callable
 from threading import Thread, Event
 from queue import Queue
+from typing import List, Union
 import types
 import copy
 import pickle
@@ -12,41 +13,87 @@ import time
 MAXSIZE = 100
 
 # TODO: Macro blocks? to execute multiple nodes subsequently, while it's impractical to run them in a faster way, I suppose that just creating a way to define them can be convenient.
-# TODO: While having a single instance of Pipeline is convenient, having multiple instances could simplify the process of using multiple distinct pipelines at the same time.
+# TODO: Blocks with inputs undefined? Like tuple together all the inputs, how to?
 
 
 class Pipeline:
     """
     Pipeline class that is used to represent pipelines.
 
-    Parameters
+    Attributes
     ----------
+    pipeline: :class:`.vispipe.graph.Graph`
+    runner: :class:`.PipelineRunner`
 
-    Note
-    ----
-    You should not instantiate this class, use the instance provided by vispipe as a global variable.
-    It can be accessed with vispipe.pipeline
     """
     class _skip_class:
         def __call__(self, x):
             self.x = x
             return self
 
+    #: Yield this to specify that a block is not ready to create a new output.
     _empty = object()
+
+    #: Yield this to specify that a block is busy processing old input, on next call no new data will be passed.
     _skip = _skip_class()
 
     # TODO: Plot? Should be converted internally to an image
-    data_type = ['raw', 'image', 'plot']
-    vis_tag = 'vis'
+    data_type = ['raw', 'image', 'plot']  #: Supported data_type for visualization blocks.
+    vis_tag = 'vis'  #: The tag used for visualization blocks.
 
-    def __init__(self):
-        self._blocks = {}
-        self.pipeline = Graph(MAXSIZE)
-        self.runner = PipelineRunner()
+    _blocks = {}
 
-    def get_blocks(self, serializable=False):
+    @staticmethod
+    def register_block(func: Callable, is_class: bool, max_queue: int, output_names: List[str] = None,
+            tag: str = 'None', data_type: str = 'raw') -> None:
+        """
+        Register a block in the pipeline list of available blocks, this function is called
+        automatically by the decorator.
+
+        Note
+        ----
+        This is a static method, if you want to refer to it you can use ``Pipeline.register_block``
+
+        Parameters
+        ----------
+        func : Callable
+            The function to be registered.
+        is_class : bool
+            Whether it is a class function.
+        max_queue : int
+            The max size of the queues used for the block.
+        output_names : List[str]
+            See :class:`.Block`
+        tag : str
+            See :class:`.Block`
+        data_type : str
+            See :class:`.Block`
+        """
+        block = Block(func, is_class, max_queue, output_names, tag, data_type)
+        assert block.name not in Pipeline._blocks.keys(), 'The name %s is already registered as a pipeline block' % block.name
+        Pipeline._blocks[block.name] = block
+
+    @staticmethod
+    def get_blocks(serializable: bool = False) -> List[dict]:
+        """
+        Returns all the blocks tagged as a dictionary.
+
+        Note
+        ----
+        This is a static method, if you want to refer to it you can use ``Pipeline.get_blocks``
+
+        Parameters
+        ----------
+        serializable : bool
+            Whether if the dictionary returned must be serializable.
+
+        Returns
+        -------
+        List[dict]:
+            A list of dictionaries representing each block.
+        """
         blocks = []
-        for block in self._blocks.values():
+        for block in Pipeline._blocks.values():
             if serializable:
                 block = block.serialize()
             else:
@@ -54,21 +101,63 @@ class Pipeline:
             blocks.append(block)
         return blocks
 
-    def register_block(self, func: Callable, is_class: bool, max_queue: int, output_names=None,
-            tag: str = 'None', data_type: str = 'raw') -> None:
-        block = Block(func, is_class, max_queue, output_names, tag, data_type)
-        assert block.name not in self._blocks.keys(), 'The name %s is already registered as a pipeline block' % block.name
-        self._blocks[block.name] = block
 
-    def nodes(self):
+
+    def __init__(self):
+        self.pipeline = Graph(MAXSIZE)
+        self.runner = PipelineRunner()
+
+    def nodes(self) -> List[Node]:
+        """
+        Returns the list of :class:`.Node` that are part of the pipeline.
+
+        Returns
+        -------
+        List[Node]:
+            The list of nodes.
+        """
         return self.pipeline.v()
 
-    def connections(self, node_hash: int, out=None):
+    def connections(self, node_hash: int, out=None) -> List[tuple]:
+        """
+        Returns the list of connections of a particular node.
+        Each connections is a tuple of type ``(other_hash, out_idx, inp_idx, bool)``
+        where bool is ``True`` if the connection is to ``other``, ``False`` otherwise.
+
+        Parameters
+        ----------
+        node_hash : int
+            The hash of the node.
+        out : Union[bool, None]
+            If ``None`` returns all the connections of the node.
+            If ``True`` returns all the output connections.
+            If ``False`` returns all the input connections.
+
+        Returns
+        -------
+        List[tuple]:
+            The list of connections.
+        """
         node = self.get_node(node_hash)
         return self.pipeline.adj(node, out)
 
-    def add_node(self, block, **kwargs) -> Node:
-        node = Node(block, **kwargs)
+    def add_node(self, block_name: str, **kwargs) -> int:
+        """
+        Adds a new node to the pipeline.
+
+        Parameters
+        ----------
+        block_name : str
+            The name of the block you want to add.
+        **kwargs
+            Used to specify custom arguments for the block. 
+
+        Returns
+        -------
+        int:
+            The hash of the created node
+        """
+        node = Node(Pipeline._blocks[block_name], **kwargs)
         return self.pipeline.insertNode(node)
 
     def get_node(self, node_hash: int):
@@ -124,12 +213,32 @@ class Pipeline:
 
 
 class PipelineRunner:
+    """
+    The class used to run pipelines.
+
+    Attributes
+    ----------
+    built: bool
+        Whether the pipeline has already been built and can be run or not.
+    threads: List[TerminableThread]
+        The list of the threads associated to our pipeline.
+    vis_source: dict[QueueConsumer]
+        The list of consumers used for visualization.
+    """
     def __init__(self):
         self.built = False
         self.threads = []
         self.vis_source = {}
 
     def read_vis(self):
+        """
+        Reads the current data passing from all the visualization blocks.
+
+        Returns
+        -------
+        dict
+            The current visualization data.
+        """
         if not self.vis_source:
             return {}
 
@@ -146,31 +255,45 @@ class PipelineRunner:
     def _vis_index(self):
         return min([vis.size() for vis in self.vis_source.values()]) - 1
 
-    def build_pipeline(self, pipeline_def):
+    def build_pipeline(self, pipeline_def: Graph) -> None:
+        """
+        Builds the pipeline and makes it ready to be run.
+        It creates the list of associated :class:`.TerminableThread` and :class:`.QueueConsumer`
+        and binds them together using :obj:`Queue`
+
+        To build the pipeline graph we follow the `Kahn's Algorithm for topologic sorting <https://en.wikipedia.org/wiki/Topological_sorting#Kahn's_algorithm>`_
+        applied to the nodes that have their inputs satisfied.
+
+        Pseudo Code (from link)::
+
+            ----- Kahn's algorithm for topologic sorting. -----
+            L ← Empty list that will contain the sorted elements
+            S ← Set of all nodes with no incoming edge
+
+            while S is non-empty do
+                remove a node n from S
+                add n to tail of L
+                for each node m with an edge e from n to m do
+                    remove edge e from the graph
+                    if m has no other incoming edges then
+                        insert m into S
+
+            if graph has edges then
+                return error   (graph has at least one cycle)
+            else
+                return L   (a topologically sorted order)
+
+        Parameters
+        ----------
+        pipeline_def : Graph
+            The pipeline we want to build.
+        """
         assert not self.built
         if len(pipeline_def.v()) == 0:
             return
 
-        """
-        ----- Kahn's algorithm for topologic sorting. -----
-        L ← Empty list that will contain the sorted elements
-        S ← Set of all nodes with no incoming edge
-
-        while S is non-empty do
-            remove a node n from S
-            add n to tail of L
-            for each node m with an edge e from n to m do
-                remove edge e from the graph
-                if m has no other incoming edges then
-                    insert m into S
-
-        if graph has edges then
-            return error   (graph has at least one cycle)
-        else
-            return L   (a topologically sorted order)
-        """
         pipeline = copy.deepcopy(pipeline_def)
-        for node in pipeline.v():  # TODO: This can be checked inside the algo
+        for node in pipeline.v():
             if node.block.num_inputs() != len(pipeline.adj(node, out=False)):
                 pipeline.deleteNode(node)
                 print('%s has been removed as its input were not satisfied' % node.block.name)
@@ -237,6 +360,9 @@ class PipelineRunner:
         self.built = True
 
     def unbuild(self):
+        """
+        Unbuild the pipeline by destroying the threads and consumers.
+        """
         for i in reversed(range(len(self.threads))):
             thr = self.threads[i]
             if thr.is_alive():
@@ -252,7 +378,15 @@ class PipelineRunner:
         self.vis_source = {}
         self.built = False
 
-    def run(self, slow=False):
+    def run(self, slow: bool = False):
+        """
+        Run the pipeline (it has to be built already). 
+
+        Parameters
+        ----------
+        slow : bool
+            Whether to run the pipeline in slow mode, useful for visualization and debugging.
+        """
         if not self.built:
             raise Exception('The pipeline has not been built')
 
@@ -271,6 +405,9 @@ class PipelineRunner:
                 thr.start()
 
     def stop(self):
+        """
+        Stops the pipeline.
+        """
         if not self.built:
             raise Exception('The pipeline has not been built')
 
@@ -359,11 +496,11 @@ def block(f: Callable = None, max_queue: int = 2, output_names: str = None, tag:
             raise TypeError('The function you tagged is not a generator')
         is_class = True
 
-    assert data_type in pipeline.data_type
-    if tag == pipeline.vis_tag:
+    assert data_type in Pipeline.data_type
+    if tag == Pipeline.vis_tag:
         output_names = []
 
-    pipeline.register_block(f, is_class, max_queue,
+    Pipeline.register_block(f, is_class, max_queue,
                             output_names, tag, data_type)
     return f
 
@@ -454,5 +591,3 @@ class TerminableThread(Thread):
             if self.slow:
                 time.sleep(0.1)
 
-
-pipeline = Pipeline()

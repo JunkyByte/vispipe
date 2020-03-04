@@ -6,23 +6,17 @@ By default VisPipe provides a number of Operational blocks you can use to build 
 
 
 .. automodule:: vispipe.vispipe
-   :members:
    :exclude-members: TerminableThread
 
 .. automodule:: vispipe.node
-   :members:
 
 .. automodule:: vispipe.graph
-   :members:
 
 .. automodule:: vispipe.hashmap
-   :members:
 
 .. automodule:: vispipe.ops.flows
-   :members:
 
 .. automodule:: vispipe.ops.inputs
-   :members:
 
 
 .. toctree::

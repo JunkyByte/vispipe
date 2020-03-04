@@ -4,8 +4,8 @@ from inspect import signature, _empty
 
 class Block:
     """
-    The class used to represent one generator function (or class) that has been tagged with the block decorator
-    provided by vispipe.vispipe.Pipeline
+    The class used to represent one generator function (or class) that has been tagged with the
+    block decorator provided by :func:`.vispipe.block`.
 
     Parameters
     ----------
@@ -16,11 +16,13 @@ class Block:
     max_queue : int
         The maximum size of the queues of this block.
     output_names : List[str]
-        The names used by the outputs of your function. The length of this list is used as the number of outputs of the function.
+        The names used by the outputs of your function. The length of this list is used as the number
+        of outputs of the function.
     tag : str
-        [TODO:description]
+        A string tag used to group the blocks (useful during visualization).
     data_type : str
-        [TODO:description]
+        If a visualization block this field is used to specify the kind of data you want to visualize.
+        Check :class:`.vispipe.Pipeline` for a list of the supported types.
     """
     def __init__(self, f: Callable, is_class: bool, max_queue: int, output_names: List[str], tag: str, data_type: str):
         self.f = f

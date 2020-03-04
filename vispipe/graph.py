@@ -9,7 +9,7 @@ class Graph():
     Parameters
     ----------
     num_vertices: int
-        The max number of vertices (nodes) we want to represent. It is usually fixed to a large number, it cannot change after
+        The max number of vertices (nodes) we want to represent. It is usually fixed to a large number, it cannot be changed in a later moment.
         instantiation.
 
     Attributes

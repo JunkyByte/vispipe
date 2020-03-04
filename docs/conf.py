@@ -12,7 +12,7 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../vispipe/'))
+import vispipe
 
 import sphinx_rtd_theme
 
@@ -36,6 +36,12 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx_rtd_theme'
 ]
+
+autodoc_default_options = {
+    'members': True,
+    'private-members': True,
+    'member-order': 'bysource',
+}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

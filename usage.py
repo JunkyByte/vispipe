@@ -137,16 +137,6 @@ def print_test(input1):
     yield msg
 
 
-@vispipe.block(tag='vis', max_queue=10, data_type='image')
-def test_vis(input1):
-    yield input1
-
-
-@vispipe.block(tag='vis', max_queue=100, data_type='raw')
-def test_vis_raw(input1):
-    yield input1
-
-
 @vispipe.block
 class classex:
     def __init__(self):
@@ -225,18 +215,6 @@ class iterme:
         self.x = x
         yield None
 
-
-# Pipeline Test
-custom_add = vispipe.pipeline._blocks['test_addition']
-custom_sin = vispipe.pipeline._blocks['sin']
-custom_noinp = vispipe.pipeline._blocks['no_input']
-custom_rand = vispipe.pipeline._blocks['rand_range']
-two_out = vispipe.pipeline._blocks['test_identity_2_out']
-out_test = vispipe.pipeline._blocks['print_test']
-out_test_class = vispipe.pipeline._blocks['classex']
-classempty = vispipe.pipeline._blocks['testempty']
-testvis = vispipe.pipeline._blocks['test_vis']
-somelistb = vispipe.pipeline._blocks['some_list']
 
 #randonode = vispipe.pipeline.add_node(custom_rand, min=0, max=np.pi / 2)
 #output_print = vispipe.pipeline.add_node(out_test)

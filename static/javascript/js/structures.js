@@ -94,8 +94,6 @@ class VisNode extends Node {
     update_text(text) {
         var height = this.visrect.height;
 
-        // TODO: This is temporary solution to a complex problem
-        // TODO: Fallback if font becomes negative this will crash
         var k = 0;
         var style;
         while (true) {
@@ -110,12 +108,12 @@ class VisNode extends Node {
             });
 
             var currentHeight = PIXI.TextMetrics.measureText(text, style).height;
-            if (height <= currentHeight || VIS_FONT_SIZE - k === 1) {
+            if (height <= currentHeight || VIS_FONT_SIZE - k !== 1) {
                 k += 1;
             } else {
                 this.vissprite.style = style;
                 this.vissprite.text = text;
-                return
+                break
             }
         }
 
@@ -494,13 +492,22 @@ class SideMenu {
         this.pane = {};
         this.tag_idx = 0;
         this.selected_tag = null;
+        this.next_button = new Button('>>');
+        this.next_button.rect.on('mousedown', ev => { sidemenu.scroll_tag(true) });
+
+        var x = WIDTH - this.next_button.rect.width
+        this.next_button.rect.position.set(x, 0);
         for (var i = 0; i < 3; i++) {
             var button = new Button('tab-' + i.toString());
             button.rect.on('mousedown', ev => sidemenu.update_tag_blocks(ev.target.button), false);
-            button.rect.position.set(WIDTH - (3 - i) * button.rect.width + 1, 0);
-
+            x -= button.rect.width
+            button.rect.position.set(x, 0);
             this.tag_button.push(button);
         }
+        this.prev_button = new Button('<<');
+        this.prev_button.rect.on('mousedown', ev => { sidemenu.scroll_tag(false) });
+        x -= this.prev_button.rect.width
+        this.prev_button.rect.position.set(x, 0);
     }
 
     populate_menu(pipeline){
@@ -526,6 +533,9 @@ class SideMenu {
             }
         }
 
+        var index = Object.keys(this.pane).indexOf('None')
+        this.tag_idx = 0
+
         this.update_tag_labels();
         this.selected_tag = this.tags[0];
         this.update_tag_blocks(this.tag_button[0]);
@@ -536,10 +546,21 @@ class SideMenu {
         }
     }
 
+    scroll_tag(right){
+        var delta = (right) ? 1 : -1;
+        this.tag_idx = (this.tag_idx + delta) % this.tags.length;
+        this.update_tag_labels();
+    }
+
     update_tag_labels(){
+        var idx;
         for (var i = 0; i < 3; i++){
             if (i < this.tags.length) {
-                var name = this.tags[(i + this.tag_idx) % this.tags.length];
+                idx = (i + this.tag_idx) % this.tags.length;
+                if (idx < 0){
+                    idx = idx + this.tags.length;
+                }
+                var name = this.tags[idx];
                 this.tag_button[i].text.text = name;
             }
         }
