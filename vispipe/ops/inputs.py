@@ -9,7 +9,7 @@ Input generators for your pipeline.
 class numpy_file:
     """
     Yields the raw buffer, line by line from a numpy file.
-    This is equivalent to stacking a ``numpy_flow`` with a constant input into an ``iterator``
+    This is similar to stacking a ``numpy_flow`` into an ``iterator``
 
     Parameters
     ----------
@@ -22,12 +22,10 @@ class numpy_file:
         The Content of the loaded array line by line.
     """
 
-    def __init__(self):
-        self.file = None
+    def __init__(self, path: str = ''):
+        self.file = iter(np.load(path))
 
-    def run(self, path: str = ''):
-        if self.file is None:
-            self.file = iter(np.load(path))
+    def run(self):
         yield next(self.file)
 
 
@@ -41,3 +39,7 @@ def numpy_flow(path):
         The full content of the loaded array from the path you provided.
     """
     yield np.load(path)
+
+
+@block(tag='input')
+def pickle_file
