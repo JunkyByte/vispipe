@@ -1,7 +1,7 @@
 from vispipe import vispipe
 from flask_socketio import SocketIO
 from threading import Thread, Event
-from flask import Flask, render_template, session
+from flask import Flask, render_template, session, jsonify
 import usage
 import numpy as np
 import cv2
@@ -203,6 +203,18 @@ def test_connect():
     load_checkpoint(PATH_CKPT)
 
     socketio.emit('auto_save', None)
+
+@app.route('/get_menu')
+def get_menu():
+    blocks = vispipe.pipeline.get_blocks()
+    menu_data = {}
+    for block in blocks:
+        if block["tag"] in menu_data.keys():
+            menu_data[block["tag"]]["items"].append({"name" : block["name"], "label" : block["name"]})
+        else:
+            menu_data[block["tag"]] = {"name" : block["tag"], "label" : block["tag"], "items" : []} 
+    print(menu_data.values())
+    return jsonify(menu_data)
 
 
 @socketio.on('disconnect')

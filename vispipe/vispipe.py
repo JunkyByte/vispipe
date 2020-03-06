@@ -44,6 +44,10 @@ class Pipeline:
         self.pipeline = Graph(MAXSIZE)
         self.runner = PipelineRunner()
 
+    #used in the server to create the menu of usable blocks
+    def get_blocks_names(self):
+        return self._blocks.keys()
+
     def get_blocks(self, serializable=False):
         blocks = []
         for block in self._blocks.values():
