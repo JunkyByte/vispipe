@@ -2,6 +2,8 @@ from vispipe import vispipe
 from vispipe.ops.flows import *
 from vispipe.ops.inputs import *
 from vispipe.ops.vis import *
+from vispipe.ops.images import *
+from vispipe.ops.common import *
 from usage import *
 
 from flask_socketio import SocketIO
@@ -34,7 +36,7 @@ def share_blocks():
 def new_node(block):
     try:
         print('New node')
-        node_hash = hash(vispipe.pipeline.add_node(block['name']))
+        node_hash = hash(pipeline.add_node(block['name']))
         return {'id': node_hash}, 200
     except Exception as e:
         print(traceback.format_exc())
@@ -45,7 +47,7 @@ def new_node(block):
 def remove_node(id):
     try:
         print('Removing node')
-        vispipe.pipeline.remove_node(id)
+        pipeline.remove_node(id)
         return {}, 200
     except Exception as e:
         print(traceback.format_exc())
@@ -55,7 +57,7 @@ def remove_node(id):
 @socketio.on('new_conn')
 def new_conn(x):
     try:
-        vispipe.pipeline.add_conn(x['from_hash'], x['out_idx'], x['to_hash'], x['inp_idx'])
+        pipeline.add_conn(x['from_hash'], x['out_idx'], x['to_hash'], x['inp_idx'])
         return {}, 200
     except Exception as e:
         print(traceback.format_exc())
@@ -65,7 +67,7 @@ def new_conn(x):
 @socketio.on('set_custom_arg')
 def set_custom_arg(data):
     try:
-        vispipe.pipeline.set_custom_arg(data['id'], data['key'], data['value'])
+        pipeline.set_custom_arg(data['id'], data['key'], data['value'])
         return {}, 200
     except Exception as e:
         print(traceback.format_exc())
@@ -78,16 +80,14 @@ thread_stop_event = Event()
 
 
 def process_image(x):
-    x = np.array(x, dtype=np.int)  # Cast to int
+    x = np.array(x, dtype=np.uint8)  # Cast to int
     if x.ndim in [0, 1, 4]:
         raise Exception('The format image you passed is not visualizable')
 
-    if x.ndim == 2:  # Add channel dim
-        x = x.reshape((*x.shape, 1))
-    if x.shape[-1] == 1:  # Convert to rgb a grayscale
+    if x.ndim == 2: # Convert from gray to rgb
         x = cv2.cvtColor(x, cv2.COLOR_GRAY2RGB)
     if x.shape[-1] == 3:  # Add alpha channel
-        x = np.concatenate([x, np.ones((x.shape[0], x.shape[1], 1))], axis=-1)
+        x = np.concatenate([x, 255 * np.ones((x.shape[0], x.shape[1], 1))], axis=-1)
     shape = x.shape
     return np.reshape(x, (-1,)).tolist(), shape
 
@@ -95,9 +95,9 @@ def process_image(x):
 def send_vis():
     while not thread_stop_event.isSet():
         try:
-            vis = vispipe.pipeline.runner.read_vis()
+            vis = pipeline.runner.read_vis()
             for node_hash, value in vis.items():
-                node = vispipe.pipeline.get_node(int(node_hash))
+                node = pipeline.get_node(int(node_hash))
                 if node.block.data_type == 'image':
                     value, shape = process_image(value)
                 elif node.block.data_type == 'raw':
@@ -120,10 +120,10 @@ def send_vis():
 @socketio.on('run_pipeline')
 def run_pipeline():
     try:
-        if not vispipe.pipeline.runner.built:
-            vispipe.pipeline.build()
+        if not pipeline.runner.built:
+            pipeline.build()
 
-        vispipe.pipeline.run(slow=True)  # TODO: This becomes a parameter passed to the server (once wrapped)
+        pipeline.run(slow=True)  # TODO: This becomes a parameter passed to the server (once wrapped)
         global thread
         thread_stop_event.clear()
         if not thread.isAlive():
@@ -140,7 +140,7 @@ def stop_pipeline():
     try:
         global thread
         thread_stop_event.set()
-        vispipe.pipeline.unbuild()
+        pipeline.unbuild()
         if thread.isAlive():
             thread.join()
         return {}, 200
@@ -152,7 +152,7 @@ def stop_pipeline():
 def clear_pipeline():
     try:
         stop_pipeline()
-        vispipe.pipeline.clear_pipeline()
+        pipeline.clear_pipeline()
         return {}, 200
     except Exception as e:
         print(traceback.format_exc())

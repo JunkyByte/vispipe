@@ -108,7 +108,7 @@ class VisNode extends Node {
             });
 
             var currentHeight = PIXI.TextMetrics.measureText(text, style).height;
-            if (height <= currentHeight || VIS_FONT_SIZE - k !== 1) {
+            if (height <= currentHeight && VIS_FONT_SIZE - k !== 1) {
                 k += 1;
             } else {
                 this.vissprite.style = style;

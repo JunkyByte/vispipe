@@ -14,6 +14,8 @@ MAXSIZE = 100
 
 # TODO: Macro blocks? to execute multiple nodes subsequently, while it's impractical to run them in a faster way, I suppose that just creating a way to define them can be convenient.
 # TODO: Blocks with inputs undefined? Like tuple together all the inputs, how to?
+# TODO: When inputting custom args from visualization set them as current text as they are not modifiable
+# TODO: If more than one output on delete not cleaning correctly
 
 
 class Pipeline:
@@ -531,7 +533,11 @@ class BlockRunner:
         else:
             x = [q.get() for q in self.in_q]
 
-        ret = force_tuple(next(self.f(*x)))
+        try:
+            ret = force_tuple(next(self.f(*x)))
+        except Exception as e:
+            ret = [Pipeline._empty for _ in range(len(self.out_q))]
+            print(e)
 
         if len(ret) == 1 and isinstance(ret[0], Pipeline._skip_class):
             self.skip = True
