@@ -39,7 +39,3 @@ def numpy_flow(path):
         The full content of the loaded array from the path you provided.
     """
     yield np.load(path)
-
-
-@block(tag='input')
-def pickle_file
