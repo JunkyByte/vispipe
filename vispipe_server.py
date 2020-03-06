@@ -114,7 +114,7 @@ def send_vis():
         except Exception as e:
             print(traceback.format_exc())
             socketio.emit('message', str(e))
-        socketio.sleep(0.3)
+        socketio.sleep(0.1)
 
 
 @socketio.on('run_pipeline')

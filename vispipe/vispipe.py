@@ -534,10 +534,14 @@ class BlockRunner:
             x = [q.get() for q in self.in_q]
 
         try:
-            ret = force_tuple(next(self.f(*x)))
+            ret = next(self.f(*x))
+            if isinstance(ret, tuple) and self.node.num_outputs() <= 1:
+                ret = list(ret)
+            ret = force_tuple(ret)
+
         except Exception as e:
             ret = [Pipeline._empty for _ in range(len(self.out_q))]
-            print(e)
+            print('BlockRunner node: %s has thrown: %s' % (self.node.name, e))
 
         if len(ret) == 1 and isinstance(ret[0], Pipeline._skip_class):
             self.skip = True
@@ -590,10 +594,10 @@ class TerminableThread(Thread):
                 return
 
             if self._stopped():
-                time.sleep(0.25)
+                time.sleep(0.5)
                 continue
 
             self.target()
             if self.slow:
-                time.sleep(0.1)
+                time.sleep(1)
 

@@ -585,9 +585,14 @@ class SideMenu {
     }
 
     resize_menu(){
+        var x = WIDTH - this.next_button.rect.width
+        this.next_button.rect.position.set(x, 0);
         for (var i = 0; i < 3; i++) {
-            this.tag_button[i].rect.position.set(WIDTH - (3 - i) * this.tag_button[i].rect.width + 1, 0);
+            x -= this.tag_button[i].rect.width
+            this.tag_button[i].rect.position.set(x, 0);
         }
+        x -= this.prev_button.rect.width
+        this.prev_button.rect.position.set(x, 0);
 
         for (var i = 0; i < this.tags.length; i++){
             var y = 45;

@@ -1,5 +1,5 @@
 let app = new PIXI.Application({
-    antialias: true,
+    antialias: false,  // This makes a huge difference
     autoResize: true,
     resolution: window.devicePixelRatio
 });
