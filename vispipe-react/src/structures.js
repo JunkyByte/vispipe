@@ -15,8 +15,8 @@ export class AbstractNode {
 export class StaticNode extends AbstractNode {
     constructor(block) {
         super(block);
-        this.rect.on('mousedown', ev => APP.pipeline.spawn_node(this.block), false);  // TODO: Refactor this into this.rect attribute
-        this.rect.on('touchstart', ev => APP.pipeline.spawn_node(this.block), false);
+        // this.rect.on('mousedown', ev => APP.pipeline.spawn_node(this.block), false);  // TODO: Refactor this into this.rect attribute
+        // this.rect.on('touchstart', ev => APP.pipeline.spawn_node(this.block), false);
     }
 }
 
@@ -496,7 +496,7 @@ export class SideMenu {
         this.selected_tag = null;
         for (var i = 0; i < 3; i++) {
             var button = new Button('tab-' + i.toString());
-            button.rect.on('mousedown', ev => APP.sidemenu.update_tag_blocks(ev.target.button), false);
+            // button.rect.on('mousedown', ev => APP.sidemenu.update_tag_blocks(ev.target.button), false);
             button.rect.position.set(APP.WIDTH - (3 - i) * button.rect.width + 1, 0);
 
             this.tag_button.push(button);
@@ -552,15 +552,15 @@ export class SideMenu {
         this.pane[this.selected_tag].visible = true;
     }
 
-    scroll_blocks(ev){
-        for (var i = 0; i < APP.sidemenu.tags.length; i++){
-            if (APP.sidemenu.pane[APP.sidemenu.tags[i]].visible === true){
-                var new_y = APP.sidemenu.pane[APP.sidemenu.tags[i]].y += ev.wheelDelta / 5;
-                new_y = Math.max(new_y, -(50 - APP.HEIGHT + 50 * APP.sidemenu.pane[APP.sidemenu.tags[i]].children.length));
-                APP.sidemenu.pane[APP.sidemenu.tags[i]].y = Math.min(0, new_y);
-            }
-        }
-    }
+    // scroll_blocks(ev){
+    //     for (var i = 0; i < APP.sidemenu.tags.length; i++){
+    //         if (APP.sidemenu.pane[APP.sidemenu.tags[i]].visible === true){
+    //             var new_y = APP.sidemenu.pane[APP.sidemenu.tags[i]].y += ev.wheelDelta / 5;
+    //             new_y = Math.max(new_y, -(50 - APP.HEIGHT + 50 * APP.sidemenu.pane[APP.sidemenu.tags[i]].children.length));
+    //             APP.sidemenu.pane[APP.sidemenu.tags[i]].y = Math.min(0, new_y);
+    //         }
+    //     }
+    // }
 
     resize_menu(){
         for (var i = 0; i < 3; i++) {

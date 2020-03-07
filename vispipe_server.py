@@ -1,7 +1,7 @@
 from vispipe import vispipe
 from flask_socketio import SocketIO
 from threading import Thread, Event
-from flask import Flask, render_template, session, jsonify
+from flask import Flask, render_template, session, jsonify, request, make_response
 import usage
 import numpy as np
 import cv2
@@ -216,6 +216,13 @@ def get_menu():
     print(menu_data.values())
     return jsonify(menu_data)
 
+@app.route("/get_block", methods=['POST'])
+def get_block():
+    req = request.get_json()
+    name = req["name"]
+    block = vispipe.pipeline._blocks[name]
+    res = make_response(jsonify(block.serialize()), 200)
+    return res
 
 @socketio.on('disconnect')
 def test_disconnect():

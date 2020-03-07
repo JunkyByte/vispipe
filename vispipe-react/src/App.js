@@ -17,7 +17,8 @@ export let app = new PIXI.Application({
 app.renderer.backgroundColor = 0x202125;
 app.renderer.view.style.position = 'absolute';
 app.renderer.view.style.display = 'block';
-document.body.appendChild(app.view);
+// document.getElementById("root").appendChild(app.view)
+document.getElementById("container").appendChild(app.view)
 export var WIDTH = app.renderer.width / app.renderer.resolution;
 export var HEIGHT = app.renderer.height / app.renderer.resolution;
 export var VIS_IMAGE_SIZE = 128;
@@ -47,12 +48,12 @@ resize();
 
 // Pipeline class
 export var pipeline = new STRUCTURES.Pipeline();
-export var sidemenu = new STRUCTURES.SideMenu();
+// export var sidemenu = new STRUCTURES.SideMenu();
 export var runmenu = new STRUCTURES.RunMenu();
 export var popupmenu = new STRUCTURES.PopupMenu();
 window.addEventListener('resize', function() {runmenu.resize_menu()}, false);
-window.addEventListener('resize', function() {sidemenu.resize_menu()}, false);
-window.addEventListener('mousewheel', function(ev){sidemenu.scroll_blocks(ev)}, false);
+// window.addEventListener('resize', function() {sidemenu.resize_menu()}, false);
+// window.addEventListener('mousewheel', function(ev){sidemenu.scroll_blocks(ev)}, false);
 
 export var socket;
 $(document).ready(function(){
@@ -65,7 +66,7 @@ $(document).ready(function(){
   });
 
   socket.on('end_block', function(msg) {
-      sidemenu.populate_menu(pipeline, app);
+      // sidemenu.populate_menu(pipeline, app);
   });
 
   socket.on('send_vis', function(msg) {
@@ -182,11 +183,45 @@ $(document).ready(function(){
   //socket.emit('test_receive', 'test_send_see_me_python')
 });
 
-
+const items = [
+    { name: 'home', label: 'Home' },
+    {
+      name: 'billing',
+      label: 'Billing',
+      items: [
+        { name: 'statements', label: 'Statements' },
+        { name: 'reports', label: 'Reports' },
+      ],
+    },
+    {
+      name: 'settings',
+      label: 'Settings',
+      items: [
+        { name: 'profile', label: 'Profile' },
+        { name: 'insurance', label: 'Insurance' },
+        {
+          name: 'notifications',
+          label: 'Notifications',
+          items: [
+            { name: 'email', label: 'Email' },
+            {
+              name: 'desktop',
+              label: 'Desktop',
+              items: [
+                { name: 'schedule', label: 'Schedule' },
+                { name: 'frequency', label: 'Frequency' },
+              ],
+            },
+            { name: 'sms', label: 'SMS' },
+          ],
+        },
+      ],
+    },
+  ]
 
 function App() {
   return (
-    <Sidebar/>
+    <Sidebar items={items} depthStep={30}/>
   );
 }
 

@@ -11,3 +11,21 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+.sidebar {
+  max-width: 240px;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  background-color: grey;
+}
+
+#container{
+  position: relative;
+}
+
+#container canvas, #sidemenu{
+  position: absolute;
+}
+
+#sidemenu {
+  z-index: 10;
+}
