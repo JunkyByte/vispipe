@@ -11,14 +11,15 @@ import BottomMenu from './BottomMenu';
 import { BottomNavigationAction } from '@material-ui/core';
 
 export let app = new PIXI.Application({
-  antialias: true,
+  antialias: false,
   autoResize: true,
   resolution: window.devicePixelRatio
 });
 
 app.renderer.backgroundColor = 0x202125;
-app.renderer.view.style.position = 'absolute';
+app.renderer.view.style.position = 'fixed';
 app.renderer.view.style.display = 'block';
+app.renderer.view.style.left = "240px";
 // document.getElementById("root").appendChild(app.view)
 document.getElementById("container").appendChild(app.view)
 export var WIDTH = app.renderer.width / app.renderer.resolution;
@@ -42,7 +43,7 @@ window.addEventListener('resize', resize);
 
 // Resize function window
 function resize() {
-  app.renderer.resize(window.innerWidth, window.innerHeight);
+  app.renderer.resize(window.innerWidth - 240, window.innerHeight);
   WIDTH = app.renderer.width / app.renderer.resolution;
   HEIGHT = app.renderer.height / app.renderer.resolution;
 }
