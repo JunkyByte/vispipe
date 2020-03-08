@@ -207,13 +207,16 @@ def test_connect():
 @app.route('/get_menu')
 def get_menu():
     blocks = vispipe.pipeline.get_blocks()
+    for b in blocks:
+        if b["name"] == "test_vis":
+            print(b)
     menu_data = {}
     for block in blocks:
+        print("processing ", block["name"])
         if block["tag"] in menu_data.keys():
             menu_data[block["tag"]]["items"].append({"name" : block["name"], "label" : block["name"]})
         else:
-            menu_data[block["tag"]] = {"name" : block["tag"], "label" : block["tag"], "items" : []} 
-    print(menu_data.values())
+            menu_data[block["tag"]] = {"name" : block["tag"], "label" : block["tag"], "items" : [{"name" : block["name"], "label" : block["name"]}]} 
     return jsonify(menu_data)
 
 @app.route("/get_block", methods=['POST'])

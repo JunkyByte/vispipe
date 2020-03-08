@@ -61,7 +61,7 @@ function SidebarItem ({label, items, depthStep = 10, depth = 0, ...rest}){
 }
 
 
-function Sidebar({items, depthStep, depth}){
+function Sidebar({depthStep, depth}){
     const [menu, setMenu] = useState([]);
 
     useEffect(()=> {

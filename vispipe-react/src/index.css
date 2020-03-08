@@ -22,10 +22,10 @@ code {
   position: relative;
 }
 
-#container canvas, #sidemenu{
+#container canvas, #react-container{
   position: absolute;
 }
 
-#sidemenu {
+#react-container {
   z-index: 10;
 }

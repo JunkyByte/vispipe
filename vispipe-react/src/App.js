@@ -7,6 +7,8 @@ import * as UTILS from "./utils.js"
 import $ from "jquery"
 import io from "socket.io-client"
 import Sidebar from './Sidebar';
+import BottomMenu from './BottomMenu';
+import { BottomNavigationAction } from '@material-ui/core';
 
 export let app = new PIXI.Application({
   antialias: true,
@@ -183,46 +185,15 @@ $(document).ready(function(){
   //socket.emit('test_receive', 'test_send_see_me_python')
 });
 
-const items = [
-    { name: 'home', label: 'Home' },
-    {
-      name: 'billing',
-      label: 'Billing',
-      items: [
-        { name: 'statements', label: 'Statements' },
-        { name: 'reports', label: 'Reports' },
-      ],
-    },
-    {
-      name: 'settings',
-      label: 'Settings',
-      items: [
-        { name: 'profile', label: 'Profile' },
-        { name: 'insurance', label: 'Insurance' },
-        {
-          name: 'notifications',
-          label: 'Notifications',
-          items: [
-            { name: 'email', label: 'Email' },
-            {
-              name: 'desktop',
-              label: 'Desktop',
-              items: [
-                { name: 'schedule', label: 'Schedule' },
-                { name: 'frequency', label: 'Frequency' },
-              ],
-            },
-            { name: 'sms', label: 'SMS' },
-          ],
-        },
-      ],
-    },
-  ]
-
-function App() {
-  return (
-    <Sidebar items={items} depthStep={30}/>
-  );
+class App extends React.Component {
+  render() {
+      return (
+          <div id="container">
+          <Sidebar depthstep={30}/>
+          <BottomMenu/>
+          </div>
+      )
+  }
 }
 
 export default App;
