@@ -19,7 +19,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "start-flask": "cd .. && python vispipe_server.py",
+    "start-flask": "cd .. && python3 vispipe_server.py",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
