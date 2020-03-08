@@ -1,4 +1,4 @@
-from vispipe.vispipe import block
+from vispipe import block
 
 
 @block(tag='vis', max_queue=10, data_type='image')

@@ -1,5 +1,5 @@
-from vispipe.vispipe import Pipeline
-from vispipe.vispipe import block
+from vispipe import Pipeline
+from vispipe import block
 import numpy as np
 
 

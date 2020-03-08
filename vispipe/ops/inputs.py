@@ -1,4 +1,4 @@
-from vispipe.vispipe import block
+from vispipe import block
 import numpy as np
 """
 Input generators for your pipeline.

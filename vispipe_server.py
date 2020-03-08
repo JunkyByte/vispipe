@@ -1,4 +1,4 @@
-from vispipe import vispipe
+from vispipe import Pipeline
 from vispipe.ops.flows import *
 from vispipe.ops.inputs import *
 from vispipe.ops.vis import *
@@ -23,7 +23,7 @@ app.config['DEBUG'] = True
 # turn the flask app into a socketio app
 socketio = SocketIO(app, async_mode=None, logger=False, engineio_logger=False)
 PATH_CKPT = './scratch_test.pickle'
-pipeline = vispipe.Pipeline()
+pipeline = Pipeline()
 
 
 def share_blocks():
