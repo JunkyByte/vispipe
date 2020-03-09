@@ -1,10 +1,10 @@
 from vispipe import Pipeline
-from vispipe.ops.flows import *
-from vispipe.ops.inputs import *
-from vispipe.ops.vis import *
-from vispipe.ops.images import *
-from vispipe.ops.common import *
-from usage import *
+import vispipe.ops.flows
+import vispipe.ops.inputs
+import vispipe.ops.vis
+import vispipe.ops.images
+import vispipe.ops.common
+import usage
 
 from flask_socketio import SocketIO
 from threading import Thread, Event
@@ -13,7 +13,9 @@ import numpy as np
 import cv2
 import traceback
 import os
+import logging
 
+log = logging.getLogger('vispipe')
 app = Flask(__name__)
 SESSION_TYPE = 'redis'
 app.config.from_object(__name__)
@@ -35,22 +37,22 @@ def share_blocks():
 @socketio.on('new_node')
 def new_node(block):
     try:
-        print('New node')
+        log.info('New node')
         node_hash = hash(pipeline.add_node(block['name']))
         return {'id': node_hash}, 200
     except Exception as e:
-        print(traceback.format_exc())
+        log.error(traceback.format_exc())
         return str(e), 500
 
 
 @socketio.on('remove_node')
 def remove_node(id):
     try:
-        print('Removing node')
+        log.info('Removing node')
         pipeline.remove_node(id)
         return {}, 200
     except Exception as e:
-        print(traceback.format_exc())
+        log.error(traceback.format_exc())
         return str(e), 500
 
 
@@ -60,7 +62,7 @@ def new_conn(x):
         pipeline.add_conn(x['from_hash'], x['out_idx'], x['to_hash'], x['inp_idx'])
         return {}, 200
     except Exception as e:
-        print(traceback.format_exc())
+        log.error(traceback.format_exc())
         return str(e), 500
 
 
@@ -70,7 +72,7 @@ def set_custom_arg(data):
         pipeline.set_custom_arg(data['id'], data['key'], data['value'])
         return {}, 200
     except Exception as e:
-        print(traceback.format_exc())
+        log.error(traceback.format_exc())
         return str(e), 500
 
 
@@ -112,7 +114,7 @@ def send_vis():
 
                 socketio.emit('send_vis', {**{'id': node_hash, 'value': value}, **node.block.serialize()})
         except Exception as e:
-            print(traceback.format_exc())
+            log.error(traceback.format_exc())
             socketio.emit('message', str(e))
         socketio.sleep(0.1)
 
@@ -130,7 +132,7 @@ def run_pipeline():
             thread = socketio.start_background_task(send_vis)
         return {}, 200
     except Exception as e:
-        print(traceback.format_exc())
+        log.error(traceback.format_exc())
         return str(e), 500
     return 'Invalid State Encountered', 500
 
@@ -155,7 +157,7 @@ def clear_pipeline():
         pipeline.clear_pipeline()
         return {}, 200
     except Exception as e:
-        print(traceback.format_exc())
+        log.error(traceback.format_exc())
         return str(e), 500
 
 
@@ -163,10 +165,10 @@ def clear_pipeline():
 def save_nodes(vis_data):
     try:
         pipeline.save(PATH_CKPT, vis_data)
-        print('Saved checkpoint')
+        log.info('Saved checkpoint')
         return {}, 200
     except Exception as e:
-        print(traceback.format_exc())
+        log.error(traceback.format_exc())
         return str(e), 500
 
 
@@ -193,20 +195,20 @@ def index():
 
 @app.route('/get/')
 def show_session():
-    print(session['test_session'])
+    log.info(session['test_session'])
     return '%s' % session.get('test_session')
 
 
 @socketio.on('connect')
 def test_connect():
     # need visibility of the global thread object
-    print('Client connected')
+    log.warning('Client connected')
     pipeline.clear_pipeline()
 
-    print('Sharing blocks')
+    log.info('Sharing blocks')
     share_blocks()
 
-    print('Loading checkpoint from %s' % PATH_CKPT)
+    log.info('Loading checkpoint from %s' % PATH_CKPT)
     load_checkpoint(PATH_CKPT)
 
     socketio.emit('set_auto_save', True)
@@ -214,7 +216,7 @@ def test_connect():
 
 @socketio.on('disconnect')
 def test_disconnect():
-    print('Client disconnected')
+    log.warning('Client disconnected')
 
 
 if __name__ == '__main__':

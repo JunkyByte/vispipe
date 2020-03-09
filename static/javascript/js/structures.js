@@ -229,7 +229,7 @@ class Pipeline {
                     var j, out;
                     for (i=0; i<node_closure.out_c.length; i++){
                         out = node_closure.out_c[i]; 
-                        for (j=0; j<out.connection.length; j++){
+                        for (j=out.connection.length - 1; j>=0; j--){
                             clear_connection(out.connection[j]);
                         }
                     }
@@ -360,13 +360,15 @@ class PopupMenu {
                 value = custom_args[key];
                 type = custom_args_type[key];
                 var input_text = draw_text_input(String(value), 1);
+                input_text.text = String(value);
+
                 if (type === 'int'){
                     input_text.restrict = '0123456789';
                 } else if (type === 'float'){
                     input_text.restrict = '0123456789.';
                 }
 
-                input_text.on('input', function(input_text, key) {  // TODO: Can this be refactored with arrow function?
+                input_text.on('input', function(input_text, key) {
                     return function() {
                         if (input_text.text && String(input_text.text) !== input_text.placeholder){
                             pipeline.set_custom_arg(self.currentNode, key, input_text.text);

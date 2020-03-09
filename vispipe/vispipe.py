@@ -10,12 +10,14 @@ import types
 import copy
 import pickle
 import time
+import logging
 MAXSIZE = 100
+log = logging.getLogger('vispipe')
 
-# TODO: Macro blocks? to execute multiple nodes subsequently, while it's impractical to run them in a faster way, I suppose that just creating a way to define them can be convenient.
+
+# TODO: Macro blocks? to execute multiple nodes subsequently, while it's impractical to run them in a faster way
+# I suppose that just creating a way to define them can be convenient.
 # TODO: Blocks with inputs undefined? Like tuple together all the inputs, how to?
-# TODO: When inputting custom args from visualization set them as current text as they are not modifiable
-# TODO: If more than one output on delete not cleaning correctly
 
 
 class Pipeline:
@@ -152,7 +154,7 @@ class Pipeline:
         block_name : str
             The name of the block you want to add.
         **kwargs
-            Used to specify custom arguments for the block. 
+            Used to specify custom arguments for the block.
 
         Returns
         -------
@@ -298,7 +300,7 @@ class PipelineRunner:
         for node in pipeline.v():
             if node.block.num_inputs() != len(pipeline.adj(node, out=False)):
                 pipeline.deleteNode(node)
-                print('%s has been removed as its input were not satisfied' % node.block.name)
+                logging.warning('%s has been removed as its input were not satisfied' % node.block.name)
 
         ord_graph = []
         s = [node for node in pipeline.v() if node.block.num_inputs() == 0]
@@ -382,7 +384,7 @@ class PipelineRunner:
 
     def run(self, slow: bool = False):
         """
-        Run the pipeline (it has to be built already). 
+        Run the pipeline (it has to be built already).
 
         Parameters
         ----------
@@ -541,7 +543,7 @@ class BlockRunner:
 
         except Exception as e:
             ret = [Pipeline._empty for _ in range(len(self.out_q))]
-            print('BlockRunner node: %s has thrown: %s' % (self.node.name, e))
+            logging.error('BlockRunner node: %s has thrown: %s' % (self.node.name, e))
 
         if len(ret) == 1 and isinstance(ret[0], Pipeline._skip_class):
             self.skip = True
@@ -568,7 +570,7 @@ class TerminableThread(Thread):
         self.slow = False
 
     def __del__(self):
-        print('Deleted Thread Successfully')  # TODO: Remove me
+        logging.info('Deleted Thread Successfully')  # TODO: Remove me
 
     def kill(self):
         self._killer.set()
