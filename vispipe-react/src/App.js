@@ -8,19 +8,24 @@ import $ from "jquery"
 import io from "socket.io-client"
 import Sidebar from './Sidebar';
 import BottomMenu from './BottomMenu';
-import { BottomNavigationAction } from '@material-ui/core';
+
+// var ctx = mycanvas.getContext("2d")
+// ctx.fillRect(0, 0, mycanvas.width, mycanvas.height)
 
 export let app = new PIXI.Application({
+  view: document.getElementById("pixi-canvas"),
   antialias: true,
-  autoResize: true,
-  resolution: window.devicePixelRatio
+  resolution: window.devicePixelRatio,
+  backgroundColor: 0x202125,
+  forceCanvas: false
 });
 
-app.renderer.backgroundColor = 0x202125;
-app.renderer.view.style.position = 'absolute';
 app.renderer.view.style.display = 'block';
+app.renderer.view.style.position = "fixed"
+app.renderer.view.style.left = "193px"
+app.renderer.view.style.bottom = "56px"
 // document.getElementById("root").appendChild(app.view)
-document.getElementById("container").appendChild(app.view)
+//document.getElementById("container").appendChild(app.view)
 export var WIDTH = app.renderer.width / app.renderer.resolution;
 export var HEIGHT = app.renderer.height / app.renderer.resolution;
 export var VIS_IMAGE_SIZE = 128;
@@ -40,9 +45,9 @@ export var OUTPUT_COLOR = 0x5DBCD2;
 // Listen for window resize events
 window.addEventListener('resize', resize);
 
-// Resize function window
+//Resize canvas
 function resize() {
-  app.renderer.resize(window.innerWidth, window.innerHeight);
+  app.renderer.resize(window.innerWidth - 193, window.innerHeight);
   WIDTH = app.renderer.width / app.renderer.resolution;
   HEIGHT = app.renderer.height / app.renderer.resolution;
 }
@@ -51,9 +56,9 @@ resize();
 // Pipeline class
 export var pipeline = new STRUCTURES.Pipeline();
 // export var sidemenu = new STRUCTURES.SideMenu();
-export var runmenu = new STRUCTURES.RunMenu();
+// export var runmenu = new STRUCTURES.RunMenu();
 export var popupmenu = new STRUCTURES.PopupMenu();
-window.addEventListener('resize', function() {runmenu.resize_menu()}, false);
+// window.addEventListener('resize', function() {runmenu.resize_menu()}, false);
 // window.addEventListener('resize', function() {sidemenu.resize_menu()}, false);
 // window.addEventListener('mousewheel', function(ev){sidemenu.scroll_blocks(ev)}, false);
 
@@ -188,7 +193,7 @@ $(document).ready(function(){
 class App extends React.Component {
   render() {
       return (
-          <div id="container">
+          <div>
           <Sidebar depthstep={30}/>
           <BottomMenu/>
           </div>

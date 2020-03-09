@@ -3,6 +3,7 @@ import List from "@material-ui/core/List"
 import ListItem from "@material-ui/core/ListItem"
 import ListItemText from "@material-ui/core/ListItemText"
 import {withStyles} from "@material-ui/core/styles"
+import { makeStyles } from "@material-ui/core/styles"
 import * as APP from "./App"
 
 const StyledListItem = withStyles({
@@ -20,8 +21,16 @@ const StyledListItem = withStyles({
     },
   })(ListItem);
 
+const useStyle = makeStyles({
+    root: {
+        zIndex: 10
+    },
+})
+
 function SidebarItem ({label, items, depthStep = 10, depth = 0, ...rest}){
     const [block, setBlock] = useState({})
+    const classes = useStyle()
+
     useEffect(() => {
         if (typeof items != 'object'){
             fetch("/get_block", {
@@ -39,7 +48,7 @@ function SidebarItem ({label, items, depthStep = 10, depth = 0, ...rest}){
 
     return (
         <>
-            <ListItem button dense onClick={()=>APP.pipeline.spawn_node(block)} {...rest}>
+            <ListItem button dense onClick={()=>APP.pipeline.spawn_node(block)} {...rest} className={classes.root}>
                 <ListItemText style={{ paddingLeft: depth * depthStep}}>
                     <span>{label}</span>
                 </ListItemText>
@@ -72,7 +81,7 @@ function Sidebar({depthStep, depth}){
     }, [])
 
     return(
-        <div className="sidebar">
+        <div id="sidebar">
             <List disablePadding dense>
                 {menu.map((sidebarItem, index) => (
                 <SidebarItem

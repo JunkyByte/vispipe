@@ -271,11 +271,11 @@ export class Pipeline {
         APP.socket.emit('run_pipeline', function(response, status) {
             if (status === 200) {
                 self.state = RunState.RUNNING;
-                APP.runmenu.update_state();
+                // APP.runmenu.update_state();
             } else {
                 console.log(response);
             }
-            APP.runmenu.start_button.enable_button();
+            // APP.runmenu.start_button.enable_button();
         });
     }
 
@@ -284,11 +284,11 @@ export class Pipeline {
         APP.socket.emit('stop_pipeline', function(response, status) {
             if (status === 200) {
                 self.state = RunState.IDLE;
-                APP.runmenu.update_state();
+                // APP.runmenu.update_state();
             } else {
                 console.log(response);
             }
-            APP.runmenu.stop_button.enable_button();
+            // APP.runmenu.stop_button.enable_button();
         });
     }
 
@@ -297,7 +297,7 @@ export class Pipeline {
         APP.socket.emit('clear_pipeline', function(response, status) {
             if (status === 200) {
                 self.state = RunState.IDLE;
-                APP.runmenu.update_state();
+                // APP.runmenu.update_state();
 
                 var in_c, obj;
                 for (var i=0; i<APP.pipeline.DYNAMIC_NODES.length; i++){
@@ -311,7 +311,7 @@ export class Pipeline {
             } else {
                 console.log(response);
             }
-            APP.runmenu.clear_button.enable_button();
+            // APP.runmenu.clear_button.enable_button();
         });
     }
 }
