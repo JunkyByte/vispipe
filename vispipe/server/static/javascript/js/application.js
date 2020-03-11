@@ -7,6 +7,26 @@ app.renderer.backgroundColor = 0x202125;
 app.renderer.view.style.position = 'absolute';
 app.renderer.view.style.display = 'block';
 document.body.appendChild(app.view);
+
+var viewport = new Viewport.Viewport({
+    screenWidth: window.innerWidth,
+    screenHeight: window.innerHeight,
+    worldWidth: 3500,
+    worldHeight: 2000,
+    disableOnContextMenu: true,
+
+    interaction: app.renderer.plugins.interaction
+})
+app.stage.addChild(viewport);
+viewport
+    .drag({mouseButtons: 'right'})
+    .pinch()
+    .wheel()
+    .clamp({right: true, bottom: true})
+    .decelerate({friction: 0.85})
+viewport.clampZoom({minWidth: 200, minHeight: 200, maxWidth: 2500, maxHeight: 2500});
+viewport.fitWorld(false);
+
 var WIDTH = app.renderer.width / app.renderer.resolution;
 var HEIGHT = app.renderer.height / app.renderer.resolution;
 var VIS_IMAGE_SIZE = 128;
@@ -30,6 +50,8 @@ window.addEventListener('resize', resize);
 
 // Resize function window
 function resize() {
+    viewport.screenWidth = window.innerWidth;
+    viewport.screenHeight = window.innerHeight;
     app.renderer.resize(window.innerWidth, window.innerHeight);
     WIDTH = app.renderer.width / app.renderer.resolution;
     HEIGHT = app.renderer.height / app.renderer.resolution;
@@ -99,7 +121,7 @@ $(document).ready(function(){
                 console.log(response);
             }
         });
-    }, 10000);
+    }, 30000);
 
     socket.on('load_checkpoint', function(msg){ // TODO: IMPORTANT fix multiple output not connected after reload
         var vis_data = msg.vis_data;            // TODO: FIX CUSTOM ARG SETTINGS FOR ITERATOR NOT WORKING
@@ -159,16 +181,15 @@ $(document).ready(function(){
             conn = conn_dict[node.id];
             if (conn !== undefined) {
                 for (j=0; j<conn.length; j++){
-                    console.log(j, conn.length)
                     to_node = pipeline.find_node(conn[j][0]);
                     from = node.out_c[conn[j][1]]
                     to = to_node.in_c[conn[j][2]]
 
                     connection = create_connection(to, from); 
-                    app.stage.addChildAt(connection, app.stage.children.length);
+                    viewport.addChildAt(connection, viewport.children.length);
 
-                    app.renderer.render(node.rect)  // Force rendering to update positions
-                    app.renderer.render(to_node.rect)
+                    app.renderer.render(node.rect);  // Force rendering to update positions
+                    app.renderer.render(to_node.rect);
                 }
                 update_all_lines(node);
             }

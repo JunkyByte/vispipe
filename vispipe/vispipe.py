@@ -1,6 +1,7 @@
 from vispipe.node import Node, Block
 from vispipe.graph import Graph
 from functools import partial
+from itertools import chain
 from inspect import signature, isgeneratorfunction
 from typing import Callable
 from threading import Thread, Event
@@ -18,6 +19,8 @@ log = logging.getLogger('vispipe')
 # TODO: Macro blocks? to execute multiple nodes subsequently, while it's impractical to run them in a faster way
 # I suppose that just creating a way to define them can be convenient.
 # TODO: Blocks with inputs undefined? Like tuple together all the inputs, how to?
+# TODO: Add drag to resize (or arg to resize) to vis blocks as you can now zoom.
+# TODO: Improve autosave cpu usage
 
 
 class Pipeline:
@@ -105,8 +108,6 @@ class Pipeline:
             blocks.append(block)
         return blocks
 
-
-
     def __init__(self):
         self.pipeline = Graph(MAXSIZE)
         self.runner = PipelineRunner()
@@ -191,81 +192,58 @@ class Pipeline:
         else:
             node.custom_args[key] = arg_type(value)
 
-    def build(self) -> None:
-        self.runner.build_pipeline(self.pipeline)
-
-    def unbuild(self) -> None:
-        for node in self.pipeline.v():
-            node.clear_out_queues()
-        self.runner.unbuild()
-
-    def run(self, slow=False) -> None:
-        self.runner.run(slow)
-
-    def stop(self) -> None:
-        self.runner.stop()
-
-    def save(self, path, vis_data={}) -> None:
-        with open(path, 'wb') as f:
-            pickle.dump((self.pipeline, vis_data), f)
-
-    def load(self, path) -> dict:
-        self.clear_pipeline()
-        with open(path, 'rb') as f:
-            self.pipeline, vis_data = pickle.load(f)
-        return self.pipeline, vis_data
-
-
-class PipelineRunner:
-    """
-    The class used to run pipelines.
-
-    Attributes
-    ----------
-    built: bool
-        Whether the pipeline has already been built and can be run or not.
-    threads: List[TerminableThread]
-        The list of the threads associated to our pipeline.
-    vis_source: dict[QueueConsumer]
-        The list of consumers used for visualization.
-    """
-    def __init__(self):
-        self.built = False
-        self.threads = []
-        self.vis_source = {}
-
     def read_vis(self):
         """
         Reads the current data passing from all the visualization blocks.
 
         Returns
         -------
-        dict
+        dict:
             The current visualization data.
         """
-        if not self.vis_source:
-            return {}
+        return self.runner.read_vis()
 
-        vis = {}
-        idx = self._vis_index()
-        if idx < 0:
-            return {}  # This will prevent a crash while waiting for queues to be ready
+    def read_qsize(self):
+        """
+        Reads the current queues size from all the blocks.
 
-        for key, consumer in self.vis_source.items():
-            vis[key] = consumer.read(idx)
+        Returns
+        -------
+        list[tuples]:
+            A list of tuples of form (hash, block_name, current_size, max_size).
+        """
+        if not self.runner.built:
+            return []
 
-        return vis
+        def _unpack(h, n, x):
+            if isinstance(x, (Queue, QueueConsumer)):
+                return (h, n, x.qsize(), q.maxsize)
+            if x and isinstance(x, list):
+                if len(x) == 2 and isinstance(x[1], bool):
+                    return (h, n, x[0].qsize(), x[0].maxsize)
+                x = [_unpack(h, n, v) for v in x]
+                return x
 
-    def _vis_index(self):
-        return min([vis.size() for vis in self.vis_source.values()]) - 1
+        nodes_queues = []
+        for n in self.nodes():
+            if isinstance(n.out_queues, list) and not any(n.out_queues):
+                continue
 
-    def build_pipeline(self, pipeline_def: Graph) -> None:
+            if isinstance(n.out_queues, (Queue, QueueConsumer)):
+                q = n.out_queues
+                nodes_queues.append([(hash(n), n.block.name, q.qsize(), q.maxsize)])
+            else:
+                nodes_queues.extend([_unpack(hash(n), n.block.name, q) for q in n.out_queues])
+        return list(chain.from_iterable(nodes_queues))
+
+    def build(self) -> None:
         """
         Builds the pipeline and makes it ready to be run.
         It creates the list of associated :class:`.TerminableThread` and :class:`.QueueConsumer`
         and binds them together using :obj:`Queue`
 
-        To build the pipeline graph we follow the `Kahn's Algorithm for topologic sorting <https://en.wikipedia.org/wiki/Topological_sorting#Kahn's_algorithm>`_
+        To build the pipeline graph we follow the `Kahn's Algorithm for topologic sorting
+        <https://en.wikipedia.org/wiki/Topological_sorting#Kahn's_algorithm>`_
         applied to the nodes that have their inputs satisfied.
 
         Pseudo Code (from link)::
@@ -286,12 +264,81 @@ class PipelineRunner:
                 return error   (graph has at least one cycle)
             else
                 return L   (a topologically sorted order)
+        """
+        self.runner.build_pipeline(self.pipeline)
+
+    def unbuild(self) -> None:
+        """
+        Unbuild the pipeline by destroying the threads and consumers.
+        """
+        for node in self.pipeline.v():
+            node.clear_out_queues()
+        self.runner.unbuild()
+
+    def run(self, slow=False) -> None:
+        """
+        Run the pipeline (it has to be built already).
 
         Parameters
         ----------
-        pipeline_def : Graph
-            The pipeline we want to build.
+        slow : bool
+            Whether to run the pipeline in slow mode, useful for visualization and debugging.
         """
+        self.runner.run(slow)
+
+    def stop(self) -> None:
+        """
+        Stops the pipeline.
+        """
+        self.runner.stop()
+
+    def save(self, path, vis_data={}) -> None:
+        with open(path, 'wb') as f:
+            pickle.dump((self.pipeline, vis_data), f)
+
+    def load(self, path) -> dict:
+        self.clear_pipeline()
+        with open(path, 'rb') as f:
+            self.pipeline, vis_data = pickle.load(f)
+        return self.pipeline, vis_data
+
+
+class PipelineRunner:
+    """
+    The class used to build and run pipelines.
+
+    Attributes
+    ----------
+    built: bool
+        Whether the pipeline has already been built and can be run or not.
+    threads: List[TerminableThread]
+        The list of the threads associated to our pipeline.
+    vis_source: dict[QueueConsumer]
+        The list of consumers used for visualization.
+    """
+    def __init__(self):
+        self.built = False
+        self.threads = []
+        self.vis_source = {}
+
+    def read_vis(self):
+        if not self.vis_source:
+            return {}
+
+        vis = {}
+        idx = self._vis_index()
+        if idx < 0:
+            return {}  # This will prevent a crash while waiting for queues to be ready
+
+        for key, consumer in self.vis_source.items():
+            vis[key] = consumer.read(idx)
+
+        return vis
+
+    def _vis_index(self):
+        return min([vis.size() for vis in self.vis_source.values()]) - 1
+
+    def build_pipeline(self, pipeline_def: Graph) -> None:
         assert not self.built
         if len(pipeline_def.v()) == 0:
             return
@@ -364,9 +411,6 @@ class PipelineRunner:
         self.built = True
 
     def unbuild(self):
-        """
-        Unbuild the pipeline by destroying the threads and consumers.
-        """
         for i in reversed(range(len(self.threads))):
             thr = self.threads[i]
             if thr.is_alive():
@@ -383,14 +427,6 @@ class PipelineRunner:
         self.built = False
 
     def run(self, slow: bool = False):
-        """
-        Run the pipeline (it has to be built already).
-
-        Parameters
-        ----------
-        slow : bool
-            Whether to run the pipeline in slow mode, useful for visualization and debugging.
-        """
         if not self.built:
             raise Exception('The pipeline has not been built')
 
@@ -409,9 +445,6 @@ class PipelineRunner:
                 thr.start()
 
     def stop(self):
-        """
-        Stops the pipeline.
-        """
         if not self.built:
             raise Exception('The pipeline has not been built')
 
@@ -465,7 +498,7 @@ class QueueConsumer:
         return value
 
 
-def block(f: Callable = None, max_queue: int = 2, output_names: str = None, tag: str = 'None', data_type: str = 'raw'):
+def block(f: Callable = None, max_queue: int = 5, output_names: str = None, tag: str = 'None', data_type: str = 'raw'):
     """
     Decorator function to tag custom blocks to be added to pipeline
 
@@ -601,5 +634,5 @@ class TerminableThread(Thread):
 
             self.target()
             if self.slow:
-                time.sleep(1)
+                time.sleep(0.5)
 

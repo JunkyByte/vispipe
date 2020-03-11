@@ -10,7 +10,7 @@ function onDragStart(event)  // TODO: This function can be refactored with bette
         if (this.child.type !== undefined && this.child.containsPoint(event.data.global)) {
             obj = new PIXI.Graphics();
             this.ischild = obj;
-            app.stage.addChildAt(this.ischild, app.stage.children.length);
+            viewport.addChildAt(this.ischild, viewport.children.length);
             break;
         }
     }
@@ -23,7 +23,7 @@ function onDragStart(event)  // TODO: This function can be refactored with bette
     this._clicked = false;
     clearTimeout(this.__double);
 
-    this.start_pos = new PIXI.Point(event.data.global.x, event.data.global.y);
+    this.start_pos = viewport.toWorld(event.data.global);
     this.data = event.data;
 
     if (this.target.node !== undefined){
@@ -32,9 +32,13 @@ function onDragStart(event)  // TODO: This function can be refactored with bette
 
     if (!this.ischild && this.target.node !== undefined){
         this.alpha = 0.5;
-        app.stage.setChildIndex(this, app.stage.children.length-1);
+        if (viewport.children.length > 0){
+            viewport.setChildIndex(this, viewport.children.length-1);
+        }
     } else {
-        app.stage.setChildIndex(this, app.stage.children.length-2);
+        if (viewport.children.length > 1){
+            viewport.setChildIndex(this, viewport.children.length-2);
+        }
     }
 }
 
@@ -50,7 +54,7 @@ function onDragEnd(event)
     this.data = null;
 
     if (this.ischild){
-        var target_conn = point_to_conn(event.data.global); // The connection we arrived to
+        var target_conn = point_to_conn(viewport.toWorld(event.data.global)); // The connection we arrived to
         if (target_conn && target_conn.type !== this.child.type){
             var input = (this.child.type === 'input') ? this.child : target_conn;
             var output = (this.child.type === 'output') ? this.child : target_conn;
@@ -61,9 +65,9 @@ function onDragEnd(event)
             // If we connect a output node which is already connected we need to APPEND
             // its new connection
             var line = create_connection(input, output)  // Create the visual connection
-            app.stage.addChildAt(line, app.stage.children.length);
-            update_line(line, this.start_pos, event.data.global);
-            app.stage.removeChild(this.ischild)  // Delete temp line
+            viewport.addChildAt(line, viewport.children.length);
+            update_line(line, this.start_pos, viewport.toWorld(event.data.global));
+            viewport.removeChild(this.ischild)  // Delete temp line
             pipeline.add_connection(output_node.id, output.index,  // TODO: This is not checked server side but client side
                                     input_node.id, input.index);
         } else {
@@ -129,7 +133,7 @@ function onDragMove(event)
         this.dragging = newPosition;
         update_all_lines(this.target.node);
     } else if (this.ischild) {
-        update_line(this.ischild, this.start_pos, event.data.global);
+        update_line(this.ischild, this.start_pos, viewport.toWorld(event.data.global));
     }
 }
 
@@ -151,11 +155,13 @@ function update_all_lines(node){
     for (i=0; i<node.in_c.length; i++){
         if (node.in_c[i].conn_line){
             from = node.in_c[i].conn_line.from;
-            from_pos = new PIXI.Point(from.worldTransform.tx, from.worldTransform.ty);
+            from_pos = viewport.toWorld(from.worldTransform.tx, from.worldTransform.ty);
             to = node.in_c[i].conn_line.to;
-            to_pos = new PIXI.Point(to.worldTransform.tx, to.worldTransform.ty);
+            to_pos = viewport.toWorld(to.worldTransform.tx, to.worldTransform.ty);
             update_line(node.in_c[i].conn_line, to_pos, from_pos) // Is inverted
-            app.stage.setChildIndex(node.in_c[i].conn_line, app.stage.children.length-1);
+            if (viewport.children.length > 0){
+                viewport.setChildIndex(node.in_c[i].conn_line, viewport.children.length-1);
+            }
         }
     }
 
@@ -163,17 +169,20 @@ function update_all_lines(node){
         for (j=0; j<node.out_c[i].conn_line.length; j++){
             if (node.out_c[i].conn_line[j]){ 
                 from = node.out_c[i].conn_line[j].from;
-                from_pos = new PIXI.Point(from.worldTransform.tx, from.worldTransform.ty);
+                from_pos = viewport.toWorld(from.worldTransform.tx, from.worldTransform.ty);
                 to = node.out_c[i].conn_line[j].to;
-                to_pos = new PIXI.Point(to.worldTransform.tx, to.worldTransform.ty);
+                to_pos = viewport.toWorld(to.worldTransform.tx, to.worldTransform.ty);
                 update_line(node.out_c[i].conn_line[j], to_pos, from_pos) // Is inverted
-                app.stage.setChildIndex(node.out_c[i].conn_line[j], app.stage.children.length-1);
+                if (viewport.children.length > 0){
+                    viewport.setChildIndex(node.out_c[i].conn_line[j], viewport.children.length-1);
+                }
             }
         }
     }
 }
 
 function update_line(line, from, to){
+    from_world = viewport.toWorld(from);
     line.clear();
     line.moveTo(from.x, from.y);
     line.lineStyle(3, 0x46b882, 1);

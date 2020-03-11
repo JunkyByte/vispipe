@@ -50,8 +50,8 @@ class Node extends AbstractNode {
             this.out_c[i].conn_line = [];
             this.rect.addChild(this.out_c[i]);
         }
-        this.rect.position.set(WIDTH/3, HEIGHT/2);
-        app.stage.addChild(this.rect);
+        this.rect.position.set(viewport.center.x, viewport.center.y);
+        viewport.addChild(this.rect);
     }
 }
 
@@ -233,7 +233,7 @@ class Pipeline {
                             clear_connection(out.connection[j]);
                         }
                     }
-                    app.stage.removeChild(node_closure.rect);
+                    viewport.removeChild(node_closure.rect);
 
                     delete pipeline.vis[node_closure.id];
                 } else {
@@ -299,7 +299,7 @@ class Pipeline {
 
                 var in_c, obj;
                 for (var i=0; i<pipeline.DYNAMIC_NODES.length; i++){
-                    app.stage.removeChild(pipeline.DYNAMIC_NODES[i].rect);
+                    viewport.removeChild(pipeline.DYNAMIC_NODES[i].rect);
                     in_c = pipeline.DYNAMIC_NODES[i].in_c;
                     for (var j=0; j<in_c.length; j++){
                         clear_connection(in_c[j]);
@@ -495,7 +495,7 @@ class SideMenu {
         this.tag_idx = 0;
         this.selected_tag = null;
         this.next_button = new Button('>>');
-        this.next_button.rect.on('mousedown', ev => { sidemenu.scroll_tag(true) });
+        this.next_button.rect.on('mousedown', ev => { sidemenu.scroll_tag(false) });
 
         var x = WIDTH - this.next_button.rect.width
         this.next_button.rect.position.set(x, 0);
@@ -507,7 +507,7 @@ class SideMenu {
             this.tag_button.push(button);
         }
         this.prev_button = new Button('<<');
-        this.prev_button.rect.on('mousedown', ev => { sidemenu.scroll_tag(false) });
+        this.prev_button.rect.on('mousedown', ev => { sidemenu.scroll_tag(true) });
         x -= this.prev_button.rect.width
         this.prev_button.rect.position.set(x, 0);
     }
@@ -546,6 +546,8 @@ class SideMenu {
         for (var i = 0; i < this.tag_button.length; i++){
             app.stage.setChildIndex(this.tag_button[i].rect, app_length-1);
         }
+        app.stage.setChildIndex(this.next_button.rect, app_length-1);
+        app.stage.setChildIndex(this.prev_button.rect, app_length-1);
     }
 
     scroll_tag(right){
