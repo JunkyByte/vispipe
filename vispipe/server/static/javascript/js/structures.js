@@ -5,14 +5,17 @@ class AbstractNode {
         this.rect.buttonMode = true;
         this.rect.interactive = true;
         this.rect.node = this;
+        this.rect
+            .on('mouseover', onMouseOver)
+            .on('mouseout', onMouseOut);
     }
 }
 
 class StaticNode extends AbstractNode {
     constructor(block) {
         super(block);
-        this.rect.on('mousedown', ev => pipeline.spawn_node(this.block), false);  // TODO: Refactor this into this.rect attribute
-        this.rect.on('touchstart', ev => pipeline.spawn_node(this.block), false);
+        this.rect.on('mousedown', _ => pipeline.spawn_node(this.block), false);  // TODO: Refactor this into this.rect attribute
+        this.rect.on('touchstart', _ => pipeline.spawn_node(this.block), false);
     }
 }
 
@@ -32,8 +35,6 @@ class Node extends AbstractNode {
             // events for drag move
             .on('mousemove', onDragMove)
             .on('touchmove', onDragMove)
-            .on('mouseover', onMouseOver)
-            .on('mouseout', onMouseOut);
 
         [this.in_c, this.out_c] = draw_conn(Object.keys(block.input_args).length, block.output_names.length, this.rect)
         for (var i=0; i<this.in_c.length; i++){
@@ -94,9 +95,10 @@ class VisNode extends Node {
     update_text(text) {
         var height = this.visrect.height;
 
-        var k = 0;
+        var k = -1;
         var style;
-        while (true) {
+        while (height > currentHeight && VIS_FONT_SIZE - k !== 1) {
+            k += 1;
             style = new PIXI.TextStyle({
                 fontFamily: FONT,
                 breakWords: true,
@@ -106,16 +108,10 @@ class VisNode extends Node {
                 fill: TEXT_COLOR,
                 wordWrapWidth: this.visrect.width - 8,
             });
-
             var currentHeight = PIXI.TextMetrics.measureText(text, style).height;
-            if (height <= currentHeight && VIS_FONT_SIZE - k !== 1) {
-                k += 1;
-            } else {
-                this.vissprite.style = style;
-                this.vissprite.text = text;
-                break
-            }
         }
+        this.vissprite.style = style;
+        this.vissprite.text = text;
 
     }
 }
@@ -137,8 +133,8 @@ class Button {
     constructor(name, hidden=false) {
         var [width, height] = name_to_size(name);
         this.rect = draw_rect(width, height, BUTTON_COLOR, 0.8);
-        this.rect.on('mouseover', ev => { this.rect.alpha = 0.9 }, false);
-        this.rect.on('mouseout', ev => { this.rect.alpha = 1 }, false);
+        this.rect.on('mouseover', _ => { this.rect.alpha = 0.9 }, false);
+        this.rect.on('mouseout', _ => { this.rect.alpha = 1 }, false);
         this.text = draw_text(name, 0.9);
         this.text.anchor.set(0.5, 0.5);
         this.text.position.set(this.rect.width / 2, this.rect.height / 2);
@@ -297,7 +293,7 @@ class Pipeline {
                 self.state = RunState.IDLE;
                 runmenu.update_state();
 
-                var in_c, obj;
+                var in_c;
                 for (var i=0; i<pipeline.DYNAMIC_NODES.length; i++){
                     viewport.removeChild(pipeline.DYNAMIC_NODES[i].rect);
                     in_c = pipeline.DYNAMIC_NODES[i].in_c;
@@ -323,11 +319,11 @@ class PopupMenu {
         this.pane = draw_rect(CUSTOM_ARG_SIZE, this.pane_height, BLOCK_COLOR, 1);
         this.input_container = new PIXI.Container();
         this.delete_button = new Button(' DELETE ', true);
-        this.delete_button.rect.on('mousedown', ev => pipeline.remove_node(this.currentNode), false);
+        this.delete_button.rect.on('mousedown', _ => pipeline.remove_node(this.currentNode), false);
         this.pane.addChild(this.input_container);
         this.pane.buttonMode = true;
         this.pane.interactive = false;
-        this.pane.on('mouseover', ev => this.over_menu(ev), false);
+        this.pane.on('mouseover', _ => this.over_menu(), false);
         this.pane.on('mouseout', ev => this.out_menu(ev), false);
     }
 
@@ -411,7 +407,7 @@ class PopupMenu {
         this.target.addChild(this.pane);
     }
 
-    over_menu(event) {
+    over_menu() {
         this.flag_over = true;
     }
 
@@ -446,20 +442,20 @@ class RunMenu {
     constructor() {
         var x = 0;
         this.start_button = new Button('  RUN  ');
-        this.start_button.rect.on('mousedown', ev => this.start_button.disable_button(), false);
-        this.start_button.rect.on('mousedown', ev => pipeline.run_pipeline(), false);
+        this.start_button.rect.on('mousedown', _ => this.start_button.disable_button(), false);
+        this.start_button.rect.on('mousedown', _ => pipeline.run_pipeline(), false);
         this.start_button.rect.position.set(x, HEIGHT - this.start_button.rect.height + 3);
         x += this.start_button.rect.width - 2
 
         this.stop_button = new Button('  STOP  ');
-        this.stop_button.rect.on('mousedown', ev => this.stop_button.disable_button(), false);
-        this.stop_button.rect.on('mousedown', ev => pipeline.stop_pipeline(), false);
+        this.stop_button.rect.on('mousedown', _ => this.stop_button.disable_button(), false);
+        this.stop_button.rect.on('mousedown', _ => pipeline.stop_pipeline(), false);
         this.stop_button.rect.position.set(x, HEIGHT - this.stop_button.rect.height + 3);
         x += this.stop_button.rect.width - 2
 
         this.clear_button = new Button('  CLEAR  ');
-        this.clear_button.rect.on('mousedown', ev => this.clear_button.disable_button(), false);
-        this.clear_button.rect.on('mousedown', ev => pipeline.clear_pipeline(), false);
+        this.clear_button.rect.on('mousedown', _ => this.clear_button.disable_button(), false);
+        this.clear_button.rect.on('mousedown', _ => pipeline.clear_pipeline(), false);
         this.clear_button.rect.position.set(x, HEIGHT - this.clear_button.rect.height + 3);
         x += this.clear_button.rect.width - 2
 
@@ -495,7 +491,7 @@ class SideMenu {
         this.tag_idx = 0;
         this.selected_tag = null;
         this.next_button = new Button('>>');
-        this.next_button.rect.on('mousedown', ev => { sidemenu.scroll_tag(false) });
+        this.next_button.rect.on('mousedown', function() { sidemenu.scroll_tag(false) });
 
         var x = WIDTH - this.next_button.rect.width
         this.next_button.rect.position.set(x, 0);
@@ -507,7 +503,7 @@ class SideMenu {
             this.tag_button.push(button);
         }
         this.prev_button = new Button('<<');
-        this.prev_button.rect.on('mousedown', ev => { sidemenu.scroll_tag(true) });
+        this.prev_button.rect.on('mousedown', function() { sidemenu.scroll_tag(true) });
         x -= this.prev_button.rect.width
         this.prev_button.rect.position.set(x, 0);
     }
@@ -535,7 +531,7 @@ class SideMenu {
             }
         }
 
-        var index = Object.keys(this.pane).indexOf('None')
+        // var index = Object.keys(this.pane).indexOf('None') # TODO: Select by default?
         this.tag_idx = 0
 
         this.update_tag_labels();

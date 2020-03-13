@@ -128,4 +128,3 @@ class Node:
         state = self.__dict__.copy()
         state['out_queues'] = [[] for _ in range(self.block.num_outputs())]
         return state
-

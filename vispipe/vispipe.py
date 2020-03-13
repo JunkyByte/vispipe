@@ -190,12 +190,11 @@ class Pipeline:
         arg_type = node.block.custom_args_type[key]
         if arg_type in [list, bool, tuple, dict, None, bytes, np.ndarray]:
             try:
-                print(value)
                 parsed = literal_eval(value)
                 if arg_type is np.ndarray:
                     parsed = np.array(parsed)
 
-                if type(parsed) == arg_type:
+                if isinstance(parsed, arg_type):
                     node.custom_args[key] = parsed
                 else:
                     raise TypeError('Custom arg "%s" of "%s" with value "%s" is not of type "%s"' %
@@ -617,7 +616,7 @@ class TerminableThread(Thread):
         self.slow = False
 
     def __del__(self):
-        logging.info('Deleted Thread Successfully')  # TODO: Remove me
+        logging.info('Deleted Thread Successfully')
 
     def kill(self):
         self._killer.set()
@@ -649,4 +648,3 @@ class TerminableThread(Thread):
             self.target()
             if self.slow:
                 time.sleep(0.5)
-

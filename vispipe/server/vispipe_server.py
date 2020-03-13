@@ -79,10 +79,10 @@ class Server:
             log.error(traceback.format_exc())
             return str(e), 500
 
-    def remove_node(self, id):
+    def remove_node(self, node_hash):
         try:
             log.info('Removing node')
-            self.pipeline.remove_node(id)
+            self.pipeline.remove_node(node_hash)
             return {}, 200
         except Exception as e:
             log.error(traceback.format_exc())
@@ -129,7 +129,7 @@ class Server:
                             try:
                                 value = np.around(value, 2)
                             except Exception:
-                                pass
+                                log.error('The value is a numpy array or list that is not roundable')
                         elif isinstance(value, float):
                             value = round(value, 2)
                         value = str(value)
@@ -149,7 +149,6 @@ class Server:
                 self.gui.clear_queues()
             except Exception:
                 log.error(traceback.format_exc())
-                pass
             time.sleep(1)
 
     def run_pipeline(self):

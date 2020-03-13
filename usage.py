@@ -66,8 +66,8 @@ def randint():
 
 
 @vispipe.block
-def rand_range(min=-1., max=1.):
-    yield (np.random.random() * (max - min)) - min
+def rand_range(minn=-1., maxx=1.):
+    yield (np.random.random() * (maxx - minn)) - minn
 
 
 @vispipe.block
