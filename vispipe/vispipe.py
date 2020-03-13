@@ -18,7 +18,8 @@ MAXSIZE = 100
 log = logging.getLogger('vispipe')
 
 
-# TODO: Add parsing of lists / np array / tuples into the visual arguments
+# TODO: Add world position on checkpoints (instead of local pos)
+# TODO: Add iteration on outputs
 # TODO: Autosave can become automated at every pipeline modification (from the vispipe_server)
 # TODO: Add drag to resize (or arg to resize) to vis blocks as you can now zoom.
 # TODO: Macro blocks? to execute multiple nodes subsequently, while it's impractical to run them in a faster way
@@ -53,6 +54,10 @@ class Pipeline:
     vis_tag = 'vis'  #: The tag used for visualization blocks.
 
     _blocks = {}
+
+    def __init__(self):
+        self.pipeline = Graph(MAXSIZE)
+        self.runner = PipelineRunner()
 
     @staticmethod
     def register_block(func: Callable, is_class: bool, max_queue: int, output_names: List[str],
@@ -111,10 +116,6 @@ class Pipeline:
                 block = dict(block)
             blocks.append(block)
         return blocks
-
-    def __init__(self):
-        self.pipeline = Graph(MAXSIZE)
-        self.runner = PipelineRunner()
 
     def nodes(self) -> List[Node]:
         """
@@ -175,6 +176,11 @@ class Pipeline:
     def remove_node(self, node_hash: int):
         node = self.get_node(node_hash)
         self.pipeline.deleteNode(node)
+
+    def remove_tag(self, tag: str):
+        hashes = [hash(node) for node in self.nodes() if node.block.tag == tag]
+        for node_hash in hashes:
+            self.remove_node(node_hash)
 
     def clear_pipeline(self):
         self.pipeline.resetGraph()
@@ -298,22 +304,48 @@ class Pipeline:
             Whether to run the pipeline in slow mode, useful for visualization and debugging.
         """
         self.runner.run(slow)
-
+    
     def stop(self) -> None:
         """
         Stops the pipeline.
         """
         self.runner.stop()
 
-    def save(self, path, vis_data={}) -> None:
+    def save(self, path: str, vis_data: dict = {}) -> None:
         with open(path, 'wb') as f:
             pickle.dump((self.pipeline, vis_data), f)
 
-    def load(self, path) -> dict:
+    def load(self, path: str, vis_mode: bool = False, exclude_tags: list = []) -> object:
+        """
+        Loads a pipeline checkpoint from a previously created `.pickle` file.
+
+        Parameters
+        ----------
+        path : str
+            The path to the pickle file.
+        vis_mode : bool
+            Visualization mode, can cause memory leaks if no visualization is actually connected.
+            If `False` all the visualization blocks will be automatically removed. For this reason you should not save
+            the pipeline once you loaded it or you will lose the visualization part.
+        exclude_tags : list
+            Tags to exclude from the checkpoint. All the nodes with these tags will be removed from the pipeline.
+
+        Returns
+        -------
+        object:
+            The visualization data loaded in the checkpoint, you can ignore it if you are not using visualization.
+        """
+        if not vis_mode:
+            exclude_tags.append(Pipeline.vis_tag)
+
         self.clear_pipeline()
         with open(path, 'rb') as f:
             self.pipeline, vis_data = pickle.load(f)
-        return self.pipeline, vis_data
+
+        for tag in exclude_tags:
+            self.remove_tag(tag)
+
+        return vis_data
 
 
 class PipelineRunner:
@@ -631,18 +663,14 @@ class TerminableThread(Thread):
         return self._pause.is_set()
 
     def _killed(self):
-        return self._killer.isSet()
-
-    def _stopped(self):
-        return self._pause.isSet()
+        return self._killer.is_set()
 
     def run(self):
         while True:
             if self._killed():
                 return
 
-            if self._stopped():
-                time.sleep(0.5)
+            if self._pause.wait(timeout=0.5):
                 continue
 
             self.target()

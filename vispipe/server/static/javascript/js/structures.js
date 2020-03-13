@@ -34,7 +34,7 @@ class Node extends AbstractNode {
             .on('touchendoutside', onDragEnd)
             // events for drag move
             .on('mousemove', onDragMove)
-            .on('touchmove', onDragMove)
+            .on('touchmove', onDragMove);
 
         [this.in_c, this.out_c] = draw_conn(Object.keys(block.input_args).length, block.output_names.length, this.rect)
         for (var i=0; i<this.in_c.length; i++){
@@ -94,21 +94,20 @@ class VisNode extends Node {
 
     update_text(text) {
         var height = this.visrect.height;
+        var currentHeight = Infinity;
 
-        var k = -1;
-        var style;
-        while (height > currentHeight && VIS_FONT_SIZE - k !== 1) {
-            k += 1;
-            style = new PIXI.TextStyle({
-                fontFamily: FONT,
-                breakWords: true,
-                fontSize: VIS_FONT_SIZE - k,
-                wordWrap: true,
-                align: 'left',
-                fill: TEXT_COLOR,
-                wordWrapWidth: this.visrect.width - 8,
-            });
-            var currentHeight = PIXI.TextMetrics.measureText(text, style).height;
+        var style = new PIXI.TextStyle({
+            fontFamily: FONT,
+            breakWords: true,
+            fontSize: 2 * VIS_FONT_SIZE + 1,
+            wordWrap: true,
+            align: 'left',
+            fill: TEXT_COLOR,
+            wordWrapWidth: this.visrect.width - 8,
+        });
+        while (currentHeight >= (height - 8) && style.fontSize !== 1) {
+            style.fontSize -= 1
+            currentHeight = PIXI.TextMetrics.measureText(text, style).height;
         }
         this.vissprite.style = style;
         this.vissprite.text = text;

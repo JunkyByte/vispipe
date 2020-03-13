@@ -23,7 +23,7 @@ class Server:
     qsize_thread_stop_event = Event()
     SESSION_TYPE = 'redis'
 
-    def __init__(self, slow=True, PATH_CKPT='./scratch_test.pickle', use_curses=True):
+    def __init__(self, PATH_CKPT='./scratch_test.pickle', slow=True, use_curses=True):
         self.pipeline = Pipeline()
         self.PATH_CKPT = PATH_CKPT
         self.slow = slow
@@ -199,7 +199,7 @@ class Server:
         if not os.path.isfile(path):
             return
 
-        _, vis_data = self.pipeline.load(path)
+        vis_data = self.pipeline.load(path, vis_mode=True)
         pipeline_def = {'nodes': [], 'blocks': [], 'connections': [], 'custom_args': []}
         for node in self.pipeline.nodes():
             pipeline_def['nodes'].append(hash(node))

@@ -112,11 +112,11 @@ $(document).ready(function(){
             return;
         }
 
-        positions = [];
+        positions = {};
         for (var i=0; i<pipeline.DYNAMIC_NODES.length; i++){
             obj = pipeline.DYNAMIC_NODES[i];
             pos = obj.rect.position;
-            positions.push([obj.id, pos.x, pos.y]);
+            positions[obj.id] = [pos.x, pos.y];
         }
         socket.emit('save_nodes', positions, function(response, status){
             if (status !== 200){
@@ -125,8 +125,8 @@ $(document).ready(function(){
         });
     }, 30000);
 
-    socket.on('load_checkpoint', function(msg){ // TODO: IMPORTANT fix multiple output not connected after reload
-        var vis_data = msg.vis_data;            // TODO: FIX CUSTOM ARG SETTINGS FOR ITERATOR NOT WORKING
+    socket.on('load_checkpoint', function(msg){ 
+        var vis_data = msg.vis_data;            
         var pipeline_def = msg.pipeline;
         var nodes = pipeline_def.nodes;
         var blocks = pipeline_def.blocks;
@@ -145,18 +145,6 @@ $(document).ready(function(){
             conn_dict[hash] = conn;
         }
 
-        // Create positions dict
-        var pos_dict = {};
-        var pos;
-        for (i=0; i<vis_data.length; i++){
-            pos = vis_data[i];
-            if (pos.length == 0){
-                continue;
-            }
-            hash = pos[0];
-            pos_dict[hash] = [pos[1], pos[2]];
-        }
-
         var obj;
         var block, block_dict, arg, j, key;
         for (i=0; i<nodes.length; i++){
@@ -166,7 +154,7 @@ $(document).ready(function(){
                               block_dict.custom_args_type, block_dict.output_names,
                               block_dict.tag, block_dict.data_type);
             obj = pipeline.spawn_node_visual(block, nodes[i]);
-            obj.rect.position.set(pos_dict[nodes[i]][0], pos_dict[nodes[i]][1]);
+            obj.rect.position.set(vis_data[nodes[i]][0], vis_data[nodes[i]][1]);
 
             for (j=0; j<Object.keys(custom_args[i]).length; j++){
                 key = Object.keys(custom_args[i])[j];
