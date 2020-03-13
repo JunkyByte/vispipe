@@ -79,7 +79,7 @@ $(document).ready(function(){
         pipeline.STATIC_NODES.push(new StaticNode(block));
     });
 
-    socket.on('end_block', function(msg) {
+    socket.on('end_block', function() {
         sidemenu.populate_menu(pipeline);
     });
 
@@ -176,7 +176,7 @@ $(document).ready(function(){
         }
 
         // Create actual connections
-        var conn, to, from, to_pos, from_pos;
+        var conn, to, from;
         for (i=0; i<pipeline.DYNAMIC_NODES.length; i++){
             node = pipeline.DYNAMIC_NODES[i];
 
