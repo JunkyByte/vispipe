@@ -121,8 +121,7 @@ class Node:
     def __hash__(self):
         if self._hash is None:
             return id(self)
-        else:
-            return self._hash
+        return self._hash
 
     def __getstate__(self):
         state = self.__dict__.copy()

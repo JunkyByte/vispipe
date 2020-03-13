@@ -125,10 +125,9 @@ class Graph():
         node_id = self.node_ids.lookup(str(hash(node)))
         if out is None:
             return self.adj_list[node_id]
-        elif out:
+        if out:
             return [adj for adj in self.adj_list[node_id] if adj[-1]]
-        elif not out:
-            return [adj for adj in self.adj_list[node_id] if not adj[-1]]
+        return [adj for adj in self.adj_list[node_id] if not adj[-1]]
 
     def v(self):
         return list(self.vertices)
@@ -197,7 +196,6 @@ def main():
     print("adj c : ", graph.adj(c))
     #print("adj d : ", graph.adj(d))
 
+
 if __name__ == "__main__":
     main()
-
-

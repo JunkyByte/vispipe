@@ -112,8 +112,8 @@ class CursesQueueGUI:
         self.queue_win.box()
         curses.napms(100)
 
-    def set_queues(self, hash, name, values, max_values):
-        self.queues.setdefault(hash, []).append((name, values, max_values))
+    def set_queues(self, node_hash, name, values, max_values):
+        self.queues.setdefault(node_hash, []).append((name, values, max_values))
         self.draw_queues()
         self.refresh()
 

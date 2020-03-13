@@ -67,8 +67,7 @@ class Hash:
             except KeyError:
                 pass
             return True
-        else:
-            return False
+        return False
 
     def remove(self, key: str):
         i = self.scan(key, False)
