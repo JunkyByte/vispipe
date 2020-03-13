@@ -56,6 +56,11 @@ def rand():
 
 
 @vispipe.block
+def nparray(arr: np.array = np.array([[0, 1, 2], [3, 4, 5], [6, 7, 8]])):
+    yield arr
+
+
+@vispipe.block
 def randint():
     yield np.random.randint(0, 255)
 

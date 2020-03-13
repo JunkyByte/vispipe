@@ -54,7 +54,7 @@ function onDragEnd(event)
     this.data = null;
 
     if (this.ischild){
-        var target_conn = point_to_conn(viewport.toWorld(event.data.global)); // The connection we arrived to
+        var target_conn = point_to_conn(event.data.global); // The connection we arrived to
         if (target_conn && target_conn.type !== this.child.type){
             var input = (this.child.type === 'input') ? this.child : target_conn;
             var output = (this.child.type === 'output') ? this.child : target_conn;

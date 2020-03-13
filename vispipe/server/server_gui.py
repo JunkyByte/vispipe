@@ -43,6 +43,7 @@ def draw_console(screen):
     win.box()
     win.addstr(1, 2, "Console")
     win1 = win.subwin(console_pos, 0)
+    win1.move(3, 0)
 
     win1.refresh()
     MAX_ROW, MAX_COL = win1.getmaxyx()
@@ -51,26 +52,17 @@ def draw_console(screen):
     win1.leaveok(True)
     win1.setscrreg(3, MAX_ROW - 2)
     win1.addstr(4, 4, "")
-
-    mh = CursesHandler(win1)
-    win1.move(3, 0)
-    formatter = logging.Formatter(' %(asctime) -25s - %(name) -15s - %(levelname) -10s - %(message)s')
-    formatterDisplay = logging.Formatter('  %(asctime)-8s|%(name)-12s|%(levelname)-6s|%(message)-s', '%H:%M:%S')
-    mh.setFormatter(formatterDisplay)
-    logger = logging.getLogger('gui-vispipe')
-    logger.addHandler(mh)
-    return mh
+    return win1
 
 
 def MainWindow(screen):
     curses.curs_set(0)
-    logger = draw_console(screen)
-
+    win1 = draw_console(screen)
     win = screen.subwin(0, 0)
     win.box()
     win.addstr(1, 2, "Queues State")
     win.refresh()
-    return screen, win, logger
+    return screen, win, win1
 
 
 def draw_bar(value, max_value, size=10):
@@ -81,10 +73,20 @@ def draw_bar(value, max_value, size=10):
 
 class CursesQueueGUI:
     def __init__(self):
-        self.screen, self.queue_win, self.logger = wrapper(MainWindow)
+        self.screen, self.queue_win, self.log_win = wrapper(MainWindow)
+
+        mh = CursesHandler(self.log_win)
+        formatter = logging.Formatter(' %(asctime) -25s - %(name) -15s - %(levelname) -10s - %(message)s')
+        formatterDisplay = logging.Formatter('  %(asctime)-8s|%(name)-12s|%(levelname)-6s|%(message)-s', '%H:%M:%S')
+        mh.setFormatter(formatterDisplay)
+        logger = logging.getLogger('gui-vispipe')
+        logger.handlers = []
+        logger.addHandler(mh)
+        sys.stdout = mh
+        sys.stderr = mh
+
+        signal.signal(signal.SIGWINCH, self.resize_handler)
         signal.signal(signal.SIGINT, self.signal_handler)
-        sys.stdout = self.logger
-        sys.stderr = self.logger
 
         curses.start_color()
         curses.use_default_colors()
@@ -92,6 +94,12 @@ class CursesQueueGUI:
         curses.init_pair(2, curses.COLOR_GREEN, -1)
         self.queues = {}
         self.size = 20
+
+    def resize_handler(self, sig, frame):
+        # TODO: This does not work if you shrink the window
+        y, x = self.screen.getmaxyx()
+        curses.resize_term(y, x)
+        self.screen.refresh()
 
     def signal_handler(self, sig, frame):
         print('[ Press Enter to exit ]')
@@ -145,10 +153,10 @@ class CursesQueueGUI:
 
 if __name__ == "__main__":
     gui = CursesQueueGUI()
-    logging = logging.getLogger(__name__)
+    log = logging.getLogger(__name__)
 
     while True:
         import numpy as np
-        x = np.random.randint(0, 100)
-        logging.error('Logging the fake queue %s' % x)
+        x = 10
+        log.error('Logging the fake queue %s' % x)
         gui.set_queues(hash(gui), 'test_random', x, x + np.random.randint(0, 500))

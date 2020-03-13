@@ -13,4 +13,4 @@ def vis_text(input1):
 
 @block(tag='vis', max_queue=1, data_type='raw')
 def vis_shape(input1):
-    yield input1.shape
+    yield str(input1.shape)

@@ -19,13 +19,15 @@ var viewport = new Viewport.Viewport({
 })
 app.stage.addChild(viewport);
 viewport
-    .drag({mouseButtons: 'right'})
+    .drag({wheel: false, mouseButtons: 'left', keyToPress: ['ControlLeft']})
     .pinch()
     .wheel()
     .clamp({right: true, bottom: true})
     .decelerate({friction: 0.85})
-viewport.clampZoom({minWidth: 200, minHeight: 200, maxWidth: 2500, maxHeight: 2500});
-viewport.fitWorld(false);
+    .clampZoom({minWidth: 300, minHeight: 300, maxWidth: 2500, maxHeight: 2500})
+viewport.plugins.get('wheel').pause()
+window.addEventListener('wheel', function(ev) { if (ev.ctrlKey) { viewport.plugins.get('wheel').resume() }});
+app.renderer.render(viewport)
 
 var WIDTH = app.renderer.width / app.renderer.resolution;
 var HEIGHT = app.renderer.height / app.renderer.resolution;
@@ -195,6 +197,9 @@ $(document).ready(function(){
             }
 
         }
+
+        viewport.fitWorld(false)
+        viewport.fitWidth(1500, true);
     });
 
     //socket.emit('test_receive', 'test_send_see_me_python')

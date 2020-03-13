@@ -18,7 +18,7 @@ class iterator:
 
     Yields
     ------
-        Elements of the iterable object you passed as input
+        Elements of the iterable object you passed as input.
     """
 
     def __init__(self, return_stop: bool = False):
@@ -49,7 +49,7 @@ class batchify:
 
     Yields
     ------
-        Batch of inputs of the size specified
+        Batch of inputs of the size specified.
     """
 
     def __init__(self, size: int = 2):

@@ -1,5 +1,6 @@
 from typing import List, Callable
 from inspect import signature, _empty
+import numpy as np
 
 
 class Block:
@@ -10,7 +11,7 @@ class Block:
     Parameters
     ----------
     f : Callable
-        The function this block represent.
+        The function (or class with run function) this block represent.
     is_class : bool
         If the function tagged is actually a class.
     max_queue : int
@@ -24,6 +25,16 @@ class Block:
         If a visualization block this field is used to specify the kind of data you want to visualize.
         Check :class:`.vispipe.Pipeline` for a list of the supported types.
     """
+    @staticmethod
+    def serialize_args(args: dict):
+        return dict((k, Block._stringify(v)) for k, v in args.items())
+
+    @staticmethod
+    def _stringify(x):
+        if isinstance(x, np.ndarray):
+            return np.array2string(x, separator=',')
+        return str(x)
+
     def __init__(self, f: Callable, is_class: bool, max_queue: int, output_names: List[str], tag: str, data_type: str):
         self.f = f
         self.name = f.__name__
@@ -39,8 +50,8 @@ class Block:
         else:
             input_args = dict(signature(self.f).parameters)
         args = [(k, val.default) for k, val in input_args.items()]
-        self.input_args = dict([(k, val) for k, val in args if val == _empty])
-        self.custom_args = dict([(k, val) for k, val in args if val != _empty])
+        self.input_args = dict([(k, val) for k, val in args if val is _empty])
+        self.custom_args = dict([(k, val) for k, val in args if val is not _empty])
         self.custom_args_type = dict([(k, type(val)) for k, val in self.custom_args.items()])
         self.max_queue = max_queue
         self.output_names = output_names if output_names is not None else ['y']
@@ -56,9 +67,10 @@ class Block:
         del x['f']
         # TODO: Change me to a custom value, using None can cause problems
         # TODO: Support np array by casting to nested lists
-        x['input_args'] = dict([(k, v if v != _empty else None)
-                                for k, v in x['input_args'].items()])
-        x['custom_args_type'] = dict([(k, str(v.__name__)) for k, v in x['custom_args_type'].items()])
+        x['input_args'] = dict((k, v if v != _empty else None)
+                                for k, v in x['input_args'].items())
+        x['custom_args_type'] = dict((k, str(v.__name__)) for k, v in x['custom_args_type'].items())
+        x['custom_args'] = Block.serialize_args(x['custom_args'])
         return x
 
     def __iter__(self):

@@ -3,10 +3,12 @@ from vispipe.graph import Graph
 from functools import partial
 from itertools import chain
 from inspect import signature, isgeneratorfunction
-from typing import Callable
+from typing import Callable, Optional
 from threading import Thread, Event
 from queue import Queue
 from typing import List, Union
+from ast import literal_eval
+import numpy as np
 import types
 import copy
 import pickle
@@ -16,10 +18,12 @@ MAXSIZE = 100
 log = logging.getLogger('vispipe')
 
 
+# TODO: Add parsing of lists / np array / tuples into the visual arguments
+# TODO: Autosave can become automated at every pipeline modification (from the vispipe_server)
+# TODO: Add drag to resize (or arg to resize) to vis blocks as you can now zoom.
 # TODO: Macro blocks? to execute multiple nodes subsequently, while it's impractical to run them in a faster way
 # I suppose that just creating a way to define them can be convenient.
 # TODO: Blocks with inputs undefined? Like tuple together all the inputs, how to?
-# TODO: Add drag to resize (or arg to resize) to vis blocks as you can now zoom.
 # TODO: Improve autosave cpu usage
 
 
@@ -51,7 +55,7 @@ class Pipeline:
     _blocks = {}
 
     @staticmethod
-    def register_block(func: Callable, is_class: bool, max_queue: int, output_names: List[str] = None,
+    def register_block(func: Callable, is_class: bool, max_queue: int, output_names: List[str],
             tag: str = 'None', data_type: str = 'raw') -> None:
         """
         Register a block in the pipeline list of available blocks, this function is called
@@ -181,14 +185,24 @@ class Pipeline:
         to_node = self.get_node(to_hash)
         self.pipeline.insertEdge(from_node, to_node, out_index, inp_index)
 
-    def set_custom_arg(self, node_hash: str, key: str, value):
+    def set_custom_arg(self, node_hash: int, key: str, value):
         node = self.get_node(node_hash)
         arg_type = node.block.custom_args_type[key]
-        if arg_type is bool and isinstance(value, str):
-            if value.lower() == 'true':
-                node.custom_args[key] = True
-            elif value.lower() == 'false':
-                node.custom_args[key] = False
+        if arg_type in [list, bool, tuple, dict, None, bytes, np.ndarray]:
+            try:
+                print(value)
+                parsed = literal_eval(value)
+                if arg_type is np.ndarray:
+                    parsed = np.array(parsed)
+
+                if type(parsed) == arg_type:
+                    node.custom_args[key] = parsed
+                else:
+                    raise TypeError('Custom arg "%s" of "%s" with value "%s" is not of type "%s"' %
+                            (key, node.block.name, parsed, arg_type))
+            except (SyntaxError, ValueError):
+                raise ValueError('Cannot parse custom arg "%s" of "%s" with value "%s"' %
+                        (key, node.block.name, value))
         else:
             node.custom_args[key] = arg_type(value)
 
@@ -498,7 +512,7 @@ class QueueConsumer:
         return value
 
 
-def block(f: Callable = None, max_queue: int = 5, output_names: str = None, tag: str = 'None', data_type: str = 'raw'):
+def block(f: Callable = None, max_queue: int = 5, output_names: List[str] = None, tag: str = 'None', data_type: str = 'raw'):
     """
     Decorator function to tag custom blocks to be added to pipeline
 

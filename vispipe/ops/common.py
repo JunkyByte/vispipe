@@ -9,10 +9,17 @@ def reshape(x, shape: tuple = (28, 28)):
 
 
 @block(tag='common')
-def cast_to_float32(x):
-    yield np.array(x, dtype=np.float32)
+def numpy_cast(x, np_type: str = 'float32'):
+    """
+    Cast input to any numpy type.
 
+    Parameters
+    ----------
+    np_type : str
+        The numpy type you want to cast to.
 
-@block(tag='common')
-def cast_to_uint8(x):
-    yield np.array(x, dtype=np.uint8)
+    Yields
+    ------
+        Its input as a numpy array of type specified.
+    """
+    yield np.array(x).astype(np_type)

@@ -207,7 +207,7 @@ class Server:
             conn = self.pipeline.connections(hash(node), out=True)
             pipeline_def['connections'].append([(hash(n), i, j) for n, i, j, _ in conn])
             pipeline_def['blocks'].append(node.block.serialize())
-            pipeline_def['custom_args'].append(node.custom_args)
+            pipeline_def['custom_args'].append(node.block.serialize_args(node.custom_args))
         socketio.emit('load_checkpoint', {'vis_data': vis_data, 'pipeline': pipeline_def})
 
     def connect(self):
