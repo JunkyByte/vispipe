@@ -18,14 +18,13 @@ MAXSIZE = 100
 log = logging.getLogger('vispipe')
 
 
-# TODO: Add world position on checkpoints (instead of local pos)
 # TODO: Add iteration on outputs
 # TODO: Autosave can become automated at every pipeline modification (from the vispipe_server)
 # TODO: Add drag to resize (or arg to resize) to vis blocks as you can now zoom.
-# TODO: Macro blocks? to execute multiple nodes subsequently, while it's impractical to run them in a faster way
+# TODO: Macro blocks? to execute multiple nodes subsequently, while it's impractical to run them in a faster way.
 # I suppose that just creating a way to define them can be convenient.
 # TODO: Blocks with inputs undefined? Like tuple together all the inputs, how to?
-# TODO: Improve autosave cpu usage
+# TODO: during vis redirect console to screen?
 
 
 class Pipeline:

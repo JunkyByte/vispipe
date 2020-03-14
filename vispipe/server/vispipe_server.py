@@ -11,6 +11,8 @@ import logging
 import time
 log = logging.getLogger('vispipe')
 log.setLevel(logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG,
+                    format="%(asctime)s %(levelname)s %(threadName)s %(name)s %(message)s")
 app = Flask(__name__)
 socketio = SocketIO(app, async_mode=None, logger=False, engineio_logger=False)
 
@@ -27,6 +29,7 @@ class Server:
         self.pipeline = Pipeline()
         self.PATH_CKPT = PATH_CKPT
         self.slow = slow
+        self.vis_data = None
 
         # Run the actual server wrapped inside socketio
         app.config.from_object(__name__)
@@ -188,8 +191,13 @@ class Server:
 
     def save_nodes(self, vis_data):
         try:
+            if vis_data == self.vis_data:
+                log.info('Checkpoint skipped, there are changes')
+                return {}, 200
+
             self.pipeline.save(self.PATH_CKPT, vis_data)
-            log.info('Saved checkpoint')
+            self.vis_data = vis_data
+            log.info('Saved checkpoint automatically')
             return {}, 200
         except Exception as e:
             log.error(traceback.format_exc())
@@ -199,7 +207,7 @@ class Server:
         if not os.path.isfile(path):
             return
 
-        vis_data = self.pipeline.load(path, vis_mode=True)
+        self.vis_data = self.pipeline.load(path, vis_mode=True)
         pipeline_def = {'nodes': [], 'blocks': [], 'connections': [], 'custom_args': []}
         for node in self.pipeline.nodes():
             pipeline_def['nodes'].append(hash(node))
@@ -207,7 +215,7 @@ class Server:
             pipeline_def['connections'].append([(hash(n), i, j) for n, i, j, _ in conn])
             pipeline_def['blocks'].append(node.block.serialize())
             pipeline_def['custom_args'].append(node.block.serialize_args(node.custom_args))
-        socketio.emit('load_checkpoint', {'vis_data': vis_data, 'pipeline': pipeline_def})
+        socketio.emit('load_checkpoint', {'vis_data': self.vis_data, 'pipeline': pipeline_def})
 
     def connect(self):
         log.warning('Client connected')

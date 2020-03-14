@@ -14,7 +14,6 @@ var viewport = new Viewport.Viewport({
     worldWidth: 3500,
     worldHeight: 2000,
     disableOnContextMenu: true,
-
     interaction: app.renderer.plugins.interaction
 })
 app.stage.addChild(viewport);
@@ -26,8 +25,18 @@ viewport
     .decelerate({friction: 0.85})
     .clampZoom({minWidth: 300, minHeight: 300, maxWidth: 2500, maxHeight: 2500})
 viewport.plugins.get('wheel').pause()
-window.addEventListener('wheel', function(ev) { if (ev.ctrlKey) { viewport.plugins.get('wheel').resume() }});
+window.addEventListener('wheel', function(ev) { if (ev.ctrlKey) {
+    viewport.plugins.get('wheel').resume();
+    clearTimeout(ev.wheeling);
+    ev.wheeling = setTimeout(function() {
+        ev.wheeling = undefined;
+        viewport.plugins.get('wheel').pause();
+    }, 200);
+}});
+
 app.renderer.render(viewport)
+viewport.fitWorld(false)
+viewport.fitWidth(1500, true);
 
 var WIDTH = app.renderer.width / app.renderer.resolution;
 var HEIGHT = app.renderer.height / app.renderer.resolution;
@@ -73,7 +82,7 @@ var socket;
 $(document).ready(function(){
     socket = io.connect('http://' + document.domain + ':' + location.port);
 
-    socket.on('new_block', function(msg) {
+socket.on('new_block', function(msg) {
         var block = new Block(msg.name, msg.input_args, msg.custom_args, msg.custom_args_type,
                               msg.output_names, msg.tag, msg.data_type);
         pipeline.STATIC_NODES.push(new StaticNode(block));
@@ -118,12 +127,13 @@ $(document).ready(function(){
             pos = obj.rect.position;
             positions[obj.id] = [pos.x, pos.y];
         }
+        positions['viewport'] = [viewport.center.x, viewport.center.y, viewport.scaled];
         socket.emit('save_nodes', positions, function(response, status){
             if (status !== 200){
                 console.log(response);
             }
         });
-    }, 30000);
+    }, 10000);
 
     socket.on('load_checkpoint', function(msg){ 
         var vis_data = msg.vis_data;            
@@ -145,8 +155,7 @@ $(document).ready(function(){
             conn_dict[hash] = conn;
         }
 
-        var obj;
-        var block, block_dict, arg, j, key;
+        var obj, block, block_dict, arg, j, key;
         for (i=0; i<nodes.length; i++){
             // Create blocks
             block_dict = blocks[i];
@@ -154,7 +163,8 @@ $(document).ready(function(){
                               block_dict.custom_args_type, block_dict.output_names,
                               block_dict.tag, block_dict.data_type);
             obj = pipeline.spawn_node_visual(block, nodes[i]);
-            obj.rect.position.set(vis_data[nodes[i]][0], vis_data[nodes[i]][1]);
+            pos = new PIXI.Point(vis_data[nodes[i]][0], vis_data[nodes[i]][1]);
+            obj.rect.position.set(pos.x, pos.y);
 
             for (j=0; j<Object.keys(custom_args[i]).length; j++){
                 key = Object.keys(custom_args[i])[j];
@@ -183,11 +193,13 @@ $(document).ready(function(){
                 }
                 update_all_lines(node);
             }
-
         }
 
-        viewport.fitWorld(false)
-        viewport.fitWidth(1500, true);
+        if (vis_data.viewport !== undefined){
+            viewport.setZoom(vis_data.viewport[2], true);
+            viewport.moveCenter(vis_data.viewport[0], vis_data.viewport[1]);
+        }
+
     });
 
     //socket.emit('test_receive', 'test_send_see_me_python')
