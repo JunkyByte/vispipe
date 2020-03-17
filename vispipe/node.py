@@ -1,4 +1,4 @@
-from typing import List, Callable
+from typing import List, Tuple, Callable
 from inspect import signature, _empty
 import numpy as np
 
@@ -104,14 +104,17 @@ class Node:
         Custom hash used to reload the pipeline checkpoints.
     out_queues: List[Queue]
         The list of output queues used to process the outputs of the node.
+    name: Optional[str]
+        The name of the node, used for output management
     """
 
-    def __init__(self, node_block: Block, **kwargs):
-        self.block = node_block
+    def __init__(self, node_block: Tuple[Block, str], **kwargs):
+        self.block = node_block[0]
+        self.name = node_block[1]
         self.custom_args = kwargs
-        self._hash = None
         self.out_queues = []
         self.clear_out_queues()
+        self._hash = None
 
     def clear_out_queues(self):
         self.out_queues = []

@@ -1,12 +1,11 @@
-from vispipe.node import Node, Block
-from vispipe.graph import Graph
+from .node import Node, Block
+from .graph import Graph
 from functools import partial
 from itertools import chain
 from inspect import signature, isgeneratorfunction
-from typing import Callable, Optional
+from typing import Callable, Optional, List, Union, Tuple
 from threading import Thread, Event
 from queue import Queue
-from typing import List, Union
 from ast import literal_eval
 import numpy as np
 import types
@@ -19,17 +18,25 @@ log = logging.getLogger('vispipe')
 
 
 # TODO: Add iteration on outputs
-# TODO: Autosave can become automated at every pipeline modification (from the vispipe_server)
+# TODO: Add name set from visualization
+# TODO: Check save load works with outputs
 # TODO: Add drag to resize (or arg to resize) to vis blocks as you can now zoom.
 # TODO: Macro blocks? to execute multiple nodes subsequently, while it's impractical to run them in a faster way.
 # I suppose that just creating a way to define them can be convenient.
 # TODO: Blocks with inputs undefined? Like tuple together all the inputs, how to?
 # TODO: during vis redirect console to screen?
+# TODO: Autosave can become automated at every pipeline modification (from the vispipe_server)
 
 
 class Pipeline:
     """
     Pipeline class that is used to represent pipelines.
+
+    Parameters
+    ----------
+        path : Optional[str]
+            The path from which load a pipeline checkpoint.
+            If not specified an empty pipeline is created.
 
     Attributes
     ----------
@@ -39,8 +46,14 @@ class Pipeline:
     """
     class _skip_class:
         def __call__(self, x):
-            self.x = x
+            self._x = x
             return self
+
+        @property
+        def x(self):
+            x_copy = self._x
+            del self._x
+            return x_copy
 
     #: Yield this to specify that a block is not ready to create a new output.
     _empty = object()
@@ -52,11 +65,17 @@ class Pipeline:
     data_type = ['raw', 'image', 'plot']  #: Supported data_type for visualization blocks.
     vis_tag = 'vis'  #: The tag used for visualization blocks.
 
+    #: The maximum size of the output queues. This is set to avoid out of memory with running pipelines.
+    MAX_OUT_SIZE = 1000
+
     _blocks = {}
 
-    def __init__(self):
+    def __init__(self, path: Optional[str] = None):
         self.pipeline = Graph(MAXSIZE)
         self.runner = PipelineRunner()
+        self._outputs = []
+        if path:
+            self.load(path)
 
     @staticmethod
     def register_block(func: Callable, is_class: bool, max_queue: int, output_names: List[str],
@@ -116,6 +135,7 @@ class Pipeline:
             blocks.append(block)
         return blocks
 
+    @property
     def nodes(self) -> List[Node]:
         """
         Returns the list of :class:`.Node` that are part of the pipeline.
@@ -127,7 +147,25 @@ class Pipeline:
         """
         return self.pipeline.v()
 
-    def connections(self, node_hash: int, out=None) -> List[tuple]:
+    @property
+    def outputs(self) -> dict:
+        """
+        Returns a dictionary that maps the output node name to the output node iterator class.
+        If the name of the node was not specified (it can happen if you use hashes to create
+        outputs) the mapping will use the hash as name.
+
+        Returns
+        -------
+        dict:
+            Dictionary containing the outputs of the pipeline.
+        """
+        out = {}
+        for k, v in self.runner.outputs.items():
+            name = self.get_node(k).name
+            out[name if name else k] = v
+        return out
+
+    def connections(self, node_hash: int, out=None) -> List[Tuple]:
         """
         Returns the list of connections of a particular node.
         Each connections is a tuple of type ``(other_hash, out_idx, inp_idx, bool)``
@@ -144,7 +182,7 @@ class Pipeline:
 
         Returns
         -------
-        List[tuple]:
+        List[Tuple]:
             The list of connections.
         """
         node = self.get_node(node_hash)
@@ -158,31 +196,61 @@ class Pipeline:
         ----------
         block_name : str
             The name of the block you want to add.
+            You can append `'/name'` to specify a name that will be used to identify the node as an output.
+            For example `'sin/sin_preprocessing'` is a valid name for a node called `sin` with name
+            initialized to `'sin_preprocessing'`
         **kwargs
             Used to specify custom arguments for the block.
+
+        Note
+        ----
+        Names are arbitrary and unicity is NOT verified.
+        Creating multiple nodes with same name can produce unexpected results.
+        Be sure to use unique names for output nodes.
 
         Returns
         -------
         int:
             The hash of the created node
         """
-        node = Node(Pipeline._blocks[block_name], **kwargs)
+        if '/' in block_name:
+            block_name, name = block_name.split('/')
+        else:
+            name = None
+
+        node = Node((Pipeline._blocks[block_name], name), **kwargs)
         return self.pipeline.insertNode(node)
 
-    def get_node(self, node_hash: int):
-        return self.pipeline.get_node(node_hash)
+    def get_node(self, node: Union[int, str]):  # While the hash is unique the name may not be.
+        return self.pipeline.get_node(node)
 
     def remove_node(self, node_hash: int):
         node = self.get_node(node_hash)
         self.pipeline.deleteNode(node)
 
+    def add_output(self, output: Union[str, int]):
+        if isinstance(output, str):
+            node = self.get_node(output)
+            output = hash(node)
+
+        if output in self._outputs:
+            raise Exception('The node specified is already an output')
+        self._outputs.append(output)
+
+    def remove_output(self, output: Union[str, int]):
+        if isinstance(output, str):
+            node = self.get_node(output)
+            output = hash(node)
+        self._outputs.remove(output)
+
     def remove_tag(self, tag: str):
-        hashes = [hash(node) for node in self.nodes() if node.block.tag == tag]
+        hashes = [hash(node) for node in self.nodes if node.block.tag == tag]
         for node_hash in hashes:
             self.remove_node(node_hash)
 
     def clear_pipeline(self):
         self.pipeline.resetGraph()
+        self._outputs = []
         self.unbuild()
 
     def add_conn(self, from_hash: int, out_index: int, to_hash: int, inp_index: int):
@@ -227,7 +295,7 @@ class Pipeline:
 
         Returns
         -------
-        list[tuples]:
+        List[Tuple]:
             A list of tuples of form (hash, block_name, current_size, max_size).
         """
         if not self.runner.built:
@@ -243,7 +311,7 @@ class Pipeline:
                 return x
 
         nodes_queues = []
-        for n in self.nodes():
+        for n in self.nodes:
             if isinstance(n.out_queues, list) and not any(n.out_queues):
                 continue
 
@@ -283,13 +351,13 @@ class Pipeline:
             else
                 return L   (a topologically sorted order)
         """
-        self.runner.build_pipeline(self.pipeline)
+        self.runner.build_pipeline(self.pipeline, self._outputs)
 
     def unbuild(self) -> None:
         """
         Unbuild the pipeline by destroying the threads and consumers.
         """
-        for node in self.pipeline.v():
+        for node in self.nodes:
             node.clear_out_queues()
         self.runner.unbuild()
 
@@ -303,7 +371,7 @@ class Pipeline:
             Whether to run the pipeline in slow mode, useful for visualization and debugging.
         """
         self.runner.run(slow)
-    
+
     def stop(self) -> None:
         """
         Stops the pipeline.
@@ -364,6 +432,7 @@ class PipelineRunner:
         self.built = False
         self.threads = []
         self.vis_source = {}
+        self.outputs = {}
 
     def read_vis(self):
         if not self.vis_source:
@@ -382,7 +451,7 @@ class PipelineRunner:
     def _vis_index(self):
         return min([vis.size() for vis in self.vis_source.values()]) - 1
 
-    def build_pipeline(self, pipeline_def: Graph) -> None:
+    def build_pipeline(self, pipeline_def: Graph, outputs: dict) -> None:
         assert not self.built
         if len(pipeline_def.v()) == 0:
             return
@@ -391,7 +460,7 @@ class PipelineRunner:
         for node in pipeline.v():
             if node.block.num_inputs() != len(pipeline.adj(node, out=False)):
                 pipeline.deleteNode(node)
-                logging.warning('%s has been removed as its input were not satisfied' % node.block.name)
+                log.warning('%s has been removed as its input were not satisfied' % node.block.name)
 
         ord_graph = []
         s = [node for node in pipeline.v() if node.block.num_inputs() == 0]
@@ -416,6 +485,9 @@ class PipelineRunner:
                 for i, cand in enumerate(node_out.out_queues[out_idx]):
                     q, state = cand
                     if state is False:
+                        # Set output node queue state to True to prevent other from using it
+                        # out_idx -> index of the out, i -> free queue, 1 -> Index of the state bool
+
                         node_out.out_queues[out_idx][i][1] = True
                         return q
                 raise AssertionError
@@ -443,6 +515,12 @@ class PipelineRunner:
                     node.out_queues[adj[1]].append([Queue(node.block.max_queue), False])
                 out_q = [[x[0] for x in out] for out in node.out_queues]
 
+                if hash(node) in outputs:
+                    log.debug('Output %s (%s) has been builded' % (node.name, hash(node)))
+                    q = Queue(Pipeline.MAX_OUT_SIZE)
+                    out_q.append(q)  # The last element of out_q is the output queue.
+                    self.outputs[hash(node)] = OutputConsumer(q) 
+
             # Create the thread
             runner = BlockRunner(node.block, in_q, out_q, node.custom_args)
             thr = TerminableThread(runner.run)
@@ -467,6 +545,7 @@ class PipelineRunner:
                 thr.kill()
             del thr
 
+        self.outputs.clear()
         self.vis_source = {}
         self.built = False
 
@@ -542,6 +621,25 @@ class QueueConsumer:
         return value
 
 
+class OutputConsumer:
+    def __init__(self, q):
+        self.q = q
+        self.run = False
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.run:
+            raise StopIteration
+
+        x = self.q.get()
+        if x is StopIteration:
+            self.run = True
+            raise StopIteration
+        return x
+
+
 def block(f: Callable = None, max_queue: int = 5, output_names: List[str] = None, tag: str = 'None', data_type: str = 'raw'):
     """
     Decorator function to tag custom blocks to be added to pipeline
@@ -595,16 +693,24 @@ class BlockRunner:
         self.node = node
         self.in_q = in_q
         self.out_q = out_q
+
+        # Create full output if this is an output node
+        self.full_out = None
+        if self.node.num_outputs() + 1 == len(self.out_q):
+            self.full_out = self.out_q.pop()
+
         self.custom_arg = custom_arg
         self.skip = False
+        self.terminate = False
 
+        # Map the correct function from the block
         if node.is_class:
             self.f = node.f(**self.custom_arg).run
         else:
             self.f = partial(node.f, **self.custom_arg)
 
     def run(self):
-        # Pipeline.empty -> The function is not ready to return anything and you should skip its output
+        # Pipeline.empty -> The function is not ready to return anything and its output is skip
         # Pipeline._skip -> The function is still busy processing old input, do not pass another
         if self.skip:
             x = [Pipeline._empty for _ in range(len(self.in_q))]
@@ -612,24 +718,41 @@ class BlockRunner:
         else:
             x = [q.get() for q in self.in_q]
 
-        try:
-            ret = next(self.f(*x))
-            if isinstance(ret, tuple) and self.node.num_outputs() <= 1:
-                ret = list(ret)
-            ret = force_tuple(ret)
-
-        except Exception as e:
-            ret = [Pipeline._empty for _ in range(len(self.out_q))]
-            logging.error('BlockRunner node: %s has thrown: %s' % (self.node.name, e))
+        if any(v is StopIteration for v in x):
+            ret = [StopIteration for _ in range(len(self.out_q))]
+            log.debug('Received a stop iteration from a queue')
+            self.terminate = True
+        else:
+            try:
+                ret = next(self.f(*x))
+                if isinstance(ret, tuple) and self.node.num_outputs() <= 1:
+                    ret = list(ret)
+                ret = force_tuple(ret)
+            except RuntimeError:
+                ret = [StopIteration for _ in range(len(self.out_q))]
+                self.terminate = True
+                log.debug('Received a StopIteration from %s' % self.node.name)
+            except Exception as e:
+                raise e
+                ret = [Pipeline._empty for _ in range(len(self.out_q))]
+                log.error('BlockRunner node: %s has thrown: %s' % (self.node.name, e))
 
         if len(ret) == 1 and isinstance(ret[0], Pipeline._skip_class):
             self.skip = True
             ret = [re.x for re in ret]
+
+        if self.full_out:
+            if not all([re == Pipeline._empty for re in ret]):
+                self.full_out.put(ret if len(ret) > 1 else ret[0])
+
         for i, out in enumerate(self.out_q):
             for q in out:
                 v = ret[i]
                 if v is not Pipeline._empty:
                     q.put(v)
+
+        if self.terminate:
+            raise StopIteration
 
 
 class FakeQueue:
@@ -647,7 +770,7 @@ class TerminableThread(Thread):
         self.slow = False
 
     def __del__(self):
-        logging.info('Deleted Thread Successfully')
+        log.info('Deleted Thread Successfully')
 
     def kill(self):
         self._killer.set()
@@ -672,6 +795,11 @@ class TerminableThread(Thread):
             if self._pause.wait(timeout=0.5):
                 continue
 
-            self.target()
+            try:
+                self.target()
+            except StopIteration:
+                self.kill()
+                return
+
             if self.slow:
                 time.sleep(0.5)
