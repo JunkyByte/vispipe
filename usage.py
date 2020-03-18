@@ -222,26 +222,46 @@ class iterme:
         yield None
 
 
+@vispipe.block
+class timer_out:
+    def __init__(self):
+        self.count = 0
+
+    def run(self, x):
+        self.count += 1
+        if self.count == 5:
+            yield StopIteration
+        yield x
+
+
 import logging
 logging.basicConfig(level=logging.DEBUG,
         format="%(asctime)s %(levelname)s %(threadName)s: %(message)s")
-#pipeline = Pipeline()
+pipeline = Pipeline()
 
 
 #small_arr = pipeline.add_node('numpy_file/file', path='./experiments/shortarray.npy')
-#plus = pipeline.add_node('test_plus100/plus')
+small_arr = pipeline.add_node('no_input')
+plus = pipeline.add_node('test_plus100/plus')
+timeout = pipeline.add_node('timer_out/timeout')
+plus2 = pipeline.add_node('test_plus100/plus2')
 
-#pipeline.add_conn(small_arr, 0, plus, 0)
+pipeline.add_conn(small_arr, 0, plus, 0)
+pipeline.add_conn(plus, 0, timeout, 0)
+pipeline.add_conn(timeout, 0, plus2, 0)
 
-#pipeline.add_output(plus)
+pipeline.add_output('plus2')
+pipeline.build()
+pipeline.run(slow=True)
 
-#pipeline.build()
-
-#pipeline.run(slow=True)
-
-#output_iter = pipeline.outputs['plus']
-#for x in output_iter:
-#    print('Got value: ', x)
+output_iter = pipeline.outputs['plus2']
+for x in output_iter:
+    print('Got value: ', x)
+while True:
+    for thr in pipeline.runner.threads:
+        print(thr.is_alive())
+    print()
+    time.sleep(3)
 
 #output_iter = pipeline.outputs['plus']
 #for x in output_iter:

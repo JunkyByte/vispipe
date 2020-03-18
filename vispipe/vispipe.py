@@ -719,8 +719,8 @@ class BlockRunner:
 
         if any(v is StopIteration for v in x):
             ret = [StopIteration for _ in range(len(self.out_q))]
-            log.debug('Received a stop iteration from a queue')
             self.terminate = True
+            log.debug('%s received a StopIteration from a queue' % self.node.name)
         else:
             try:
                 ret = next(self.f(*x))
@@ -736,10 +736,11 @@ class BlockRunner:
                 ret = [Pipeline._empty for _ in range(len(self.out_q))]
                 log.error('BlockRunner node: %s has thrown: %s' % (self.node.name, e))
 
-        if len(ret) == 1 and isinstance(ret[0], Pipeline._skip_class):
-            self.skip = True
-            ret = [re.x for re in ret]
+            if len(ret) == 1 and isinstance(ret[0], Pipeline._skip_class):
+                self.skip = True
+                ret = [re.x for re in ret]
 
+        # Fill output queues
         if self.full_out:
             if not all([re == Pipeline._empty for re in ret]):
                 self.full_out.put(ret if len(ret) > 1 else ret[0])
