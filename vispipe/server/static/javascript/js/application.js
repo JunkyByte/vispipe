@@ -49,10 +49,10 @@ var VIS_FONT_SIZE = 18;
 var TEXT_COLOR = 'white';
 var BUTTON_COLOR = 0x5DBCD2;
 var BLOCK_COLOR = 0x5DBCD2;
-var INPUT_COLOR = 0x5DBCD2;  // TODO: Add me
-var INPUT_WRONG_COLOR = 0xED1909;
-var INPUT_TEXT_COLOR = 0x26272E;
-var OUTPUT_COLOR = 0x5DBCD2;
+var BLOCK_OUT_COLOR = 0xFF7256;
+var INPUT_COLOR = 0x3fc32a;
+var OUTPUT_COLOR = 0xc32a2a;
+var INPUT_TEXT_COLOR = 0xd2757b;
 
 var autosave = false;
 
@@ -138,10 +138,17 @@ socket.on('new_block', function(msg) {
     socket.on('load_checkpoint', function(msg){ 
         var vis_data = msg.vis_data;            
         var pipeline_def = msg.pipeline;
-        var nodes = pipeline_def.nodes;
         var blocks = pipeline_def.blocks;
         var custom_args = pipeline_def.custom_args;
         var connections = pipeline_def.connections;
+        var nodes = [];
+        var outs = [];
+        var names = [];
+        for (var i=0; i<pipeline_def.nodes.length; i++){
+            nodes.push(pipeline_def.nodes[i][0])
+            outs.push(pipeline_def.nodes[i][1])
+            names.push(pipeline_def.nodes[i][2])
+        }
 
         // Create connections dict
         var conn_dict = {};
@@ -155,7 +162,7 @@ socket.on('new_block', function(msg) {
             conn_dict[hash] = conn;
         }
 
-        var obj, block, block_dict, arg, j, key;
+        var node, obj, block, block_dict, arg, j, key;
         for (i=0; i<nodes.length; i++){
             // Create blocks
             block_dict = blocks[i];
@@ -165,11 +172,16 @@ socket.on('new_block', function(msg) {
             obj = pipeline.spawn_node_visual(block, nodes[i]);
             pos = new PIXI.Point(vis_data[nodes[i]][0], vis_data[nodes[i]][1]);
             obj.rect.position.set(pos.x, pos.y);
+            node = pipeline.find_node(nodes[i]);
+            node.name = names[i]
+            node.is_output = outs[i];
+            node.set_output(outs[i]);
 
             for (j=0; j<Object.keys(custom_args[i]).length; j++){
                 key = Object.keys(custom_args[i])[j];
                 arg = Object.values(custom_args[i])[j];
-                pipeline.set_custom_arg(obj, key, arg);
+                //pipeline.set_custom_arg(obj, key, arg);
+                node.block.custom_args[key] = arg;
             }
         }
 

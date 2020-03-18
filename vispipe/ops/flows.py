@@ -10,20 +10,13 @@ class iterator:
     """
     Iterates over its input, will not accept new inputs until it reaches a StopIteration.
 
-    Parameters
-    ----------
-    return_stop : bool
-        if True returns StopIteration as last element of each iteration
-        if False skips the StopIteration starting the subsequent iterator directly.
-
     Yields
     ------
         Elements of the iterable object you passed as input.
     """
 
-    def __init__(self, return_stop: bool = False):
+    def __init__(self):
         self.iterator = None
-        self.return_stop = StopIteration if return_stop else Pipeline._empty
 
     def run(self, x):
         if self.iterator is None:
@@ -33,7 +26,7 @@ class iterator:
             y = Pipeline._skip(next(self.iterator))
         except StopIteration:
             self.iterator = None
-            y = self.return_stop
+            y = Pipeline._empty
         yield y
 
 

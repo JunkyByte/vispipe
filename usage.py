@@ -1,4 +1,5 @@
-from vispipe import vispipe
+import vispipe
+from vispipe import Pipeline
 import numpy as np
 import math
 import time
@@ -221,39 +222,31 @@ class iterme:
         yield None
 
 
-#randonode = vispipe.pipeline.add_node(custom_rand, min=0, max=np.pi / 2)
-#output_print = vispipe.pipeline.add_node(out_test)
-#sinnode = vispipe.pipeline.add_node(custom_sin)
-#printnode = vispipe.pipeline.add_node(out_test)
-#empty = vispipe.pipeline.add_node(classempty)
-#somelist = vispipe.pipeline.add_node(somelistb)
-
-#from vispipe.ops.flows import iterator, batchify
-#iteratorb = vispipe.pipeline._blocks['iterator']
-#batchifyb = vispipe.pipeline._blocks['batchify']
-#iterat = vispipe.pipeline.add_node(iteratorb)
-#batch = vispipe.pipeline.add_node(batchifyb, size=9)
+import logging
+logging.basicConfig(level=logging.DEBUG,
+        format="%(asctime)s %(levelname)s %(threadName)s: %(message)s")
+#pipeline = Pipeline()
 
 
-#vispipe.pipeline.add_conn(somelist, 0, iterat, 0)
-#vispipe.pipeline.add_conn(iterat, 0, batch, 0)
-#vispipe.pipeline.add_conn(batch, 0, printnode, 0)
-# Constant input are attached to sum which returns 2
-#vispipe.pipeline.add_conn(randonode, 0, sinnode, 0)
-#vispipe.pipeline.add_conn(custom_sin, sinidx, 0, classempty, empty, 0)
-#vispipe.pipeline.add_conn(classempty, empty, 0, out_test, output_print, 0)
-#vispipe.pipeline.add_conn(sinnode, 0, printnode, 0)
+#small_arr = pipeline.add_node('numpy_file/file', path='./experiments/shortarray.npy')
+#plus = pipeline.add_node('test_plus100/plus')
 
-#vispipe.pipeline.save('./scratch_test.pickle')
-#vispipe.pipeline.build()
-#vispipe.pipeline.clear_pipeline()
-#vispipe.pipeline.load('./test.pickle')
+#pipeline.add_conn(small_arr, 0, plus, 0)
 
-#vispipe.pipeline.build()
-#vispipe.pipeline.run(slow=True)
+#pipeline.add_output(plus)
 
-#for v in iterme.instance:
-#    print('Iterating on an instance', v)
+#pipeline.build()
 
-#while True:
-#    continue
+#pipeline.run(slow=True)
+
+#output_iter = pipeline.outputs['plus']
+#for x in output_iter:
+#    print('Got value: ', x)
+
+#output_iter = pipeline.outputs['plus']
+#for x in output_iter:
+#    print('Got value: ', x)
+
+#pipeline.clear_pipeline()
+#pipeline.save('./scratch_test.pickle')
+#pipeline.load('./test.pickle')

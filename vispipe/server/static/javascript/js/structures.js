@@ -23,6 +23,8 @@ class Node extends AbstractNode {
     constructor(block, id) {
         super(block);
         this.id = id;
+        this.name = null;
+        this.is_output = false;
         this.rect
             // events for drag start
             .on('mousedown', onDragStart)
@@ -53,6 +55,24 @@ class Node extends AbstractNode {
         }
         this.rect.position.set(viewport.center.x, viewport.center.y);
         viewport.addChild(this.rect);
+    }
+
+    set_output(value){
+        if (value === undefined){
+            this.is_output = !this.is_output;
+        } else {
+            this.is_output = value;
+        }
+
+        if (this.is_output){
+            this.rect.clear();
+            var [width, height] = name_to_size(this.text.text);
+            this.rect = draw_rect(width, height, BLOCK_OUT_COLOR, 1, this.rect);
+        } else {
+            this.rect.clear();
+            var [width, height] = name_to_size(this.text.text);
+            this.rect = draw_rect(width, height, BLOCK_COLOR, 1, this.rect);
+        }
     }
 }
 
@@ -249,9 +269,42 @@ class Pipeline {
         });
     }
 
+    set_name(node, name){
+        socket.emit('set_name', {'id': node.id, 'name': name}, function(){
+            var node_closure = node;
+            var name_closure = name;
+            return function(response, status){
+                if (status === 200){
+                    console.log('The name of the node has been set');
+                    node_closure.name = name_closure;
+                } else {
+                    console.log(response);
+                }
+            }
+        }());
+    }
+
+    set_output(node){
+        socket.emit('set_output', {'id': node.id, 'state': !node.is_output}, function() {
+            var node_closure = node;
+            return function(response, status){
+                if (status === 200){
+                    node_closure.set_output()
+                } else {
+                    console.log(response);
+                }
+            }
+        }());
+    }
+
     add_connection(from_hash, out_idx, to_hash, inp_idx){
         socket.emit('new_conn',
-            {'from_hash': from_hash, 'out_idx': out_idx, 'to_hash': to_hash, 'inp_idx': inp_idx},
+            {
+                'from_hash': from_hash,
+                'out_idx': out_idx,
+                'to_hash': to_hash,
+                'inp_idx': inp_idx
+            },
             function(response, status){
                 if (status !== 200){
                     console.log(response);
@@ -319,6 +372,8 @@ class PopupMenu {
         this.input_container = new PIXI.Container();
         this.delete_button = new Button(' DELETE ', true);
         this.delete_button.rect.on('mousedown', _ => pipeline.remove_node(this.currentNode), false);
+        this.out_button = new Button(' OUTPUT ', true);
+        this.out_button.rect.on('mousedown', _ => pipeline.set_output(this.currentNode), false);
         this.pane.addChild(this.input_container);
         this.pane.buttonMode = true;
         this.pane.interactive = false;
@@ -331,9 +386,10 @@ class PopupMenu {
             return;
         }
 
-        if (this.pane.parent) {  // TODO: Can be refactored
-            this.flag_over = true;
-            this.out_menu();
+        clearTimeout(this.__out_event);
+        if (this.target){
+            this.close_menu();
+            this.flag_over = false;
         }
 
         this.target = ev.target;
@@ -341,12 +397,30 @@ class PopupMenu {
         var block = this.target.node.block;
         var custom_args = block.custom_args;
         var custom_args_type = block.custom_args_type;
-        
         var value, type, height;
         var x = CUSTOM_ARG_SIZE - 215;
         var y = 15;
-
         var self = this;
+
+        // Draw text field
+        var name = this.currentNode.name === null ? '' : String(this.currentNode.name);
+        var input_text = draw_text_input(String(name), 1);
+        input_text.text = String(name);
+
+        input_text.on('input', function(input_text) {
+            return function() {
+                if (String(input_text.text) !== input_text.placeholder){
+                    pipeline.set_name(self.currentNode, input_text.text);
+                }
+            }
+        }(input_text), false);
+        var key_text = draw_text('node name', 1);
+        height = input_text.height;
+        input_text.position.set(x, y);
+        key_text.position.set(7, y + 5);
+        y += height + 5;
+        this.input_container.addChild(input_text);
+        this.input_container.addChild(key_text);
 
         // Draw the menu
         var length = Object.keys(custom_args).length
@@ -373,28 +447,23 @@ class PopupMenu {
                 var key_text = draw_text(key + ': ' + type, 1);
                 height = input_text.height;
                 input_text.position.set(x, y);
-                key_text.position.set(7, y + 2);
+                key_text.position.set(7, y + height / 8);
                 y += height + 5;
                 this.input_container.addChild(input_text);
                 this.input_container.addChild(key_text);
             }
         }
 
-        var scale_y, scale_x, delete_pos;
-        if (length === 0){
-            scale_x = this.delete_button.rect.width / CUSTOM_ARG_SIZE;
-            scale_y = this.delete_button.rect.height / this.pane_height;
-            delete_pos = new PIXI.Point(1, 0.5)
-        } else {
-            scale_x = 1
-            scale_y = (y + 40) / this.pane_height;
-            delete_pos = new PIXI.Point(CUSTOM_ARG_SIZE / 2, y - 2)
-        }
+        var scale_y = (y + 40) / this.pane_height;
+        var delete_pos = new PIXI.Point(1 * CUSTOM_ARG_SIZE / 6, y - 2);
+        var out_pos = new PIXI.Point(4 * CUSTOM_ARG_SIZE / 6, y - 2);
 
         this.delete_button.rect.position.set(delete_pos.x, delete_pos.y);
+        this.out_button.rect.position.set(out_pos.x, out_pos.y);
         this.input_container.addChild(this.delete_button.rect);
+        this.input_container.addChild(this.out_button.rect);
 
-        this.pane.scale.set(scale_x, scale_y)
+        this.pane.scale.set(1, scale_y)
         for (var i=0; i<this.pane.children.length; i++){
             var obj = this.pane.children[i]
             obj.scale.y = 1 / this.pane.scale.y;
@@ -408,6 +477,7 @@ class PopupMenu {
 
     over_menu() {
         this.flag_over = true;
+        clearTimeout(this.__out_event);
     }
 
     out_menu(event) {
@@ -426,14 +496,20 @@ class PopupMenu {
         }
 
         if (this.flag_over) {
-            this.flag_over = false;
-            this.input_container.destroy();
-            this.input_container = new PIXI.Container();
-            this.pane.scale.y = 1;
-            this.pane.addChild(this.input_container);
-            this.target.removeChild(this.pane);
-            this.target = undefined;
+            this.__out_event = setTimeout(() => {
+                this.close_menu();
+            }, 300);
         }
+    }
+
+    close_menu(){
+        this.flag_over = false;
+        this.input_container.destroy();
+        this.input_container = new PIXI.Container();
+        this.pane.scale.y = 1;
+        this.pane.addChild(this.input_container);
+        this.target.removeChild(this.pane);
+        this.target = undefined;
     }
 }
 

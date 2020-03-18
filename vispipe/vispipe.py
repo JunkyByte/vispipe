@@ -17,15 +17,12 @@ MAXSIZE = 100
 log = logging.getLogger('vispipe')
 
 
-# TODO: Add iteration on outputs
-# TODO: Add name set from visualization
 # TODO: Check save load works with outputs
 # TODO: Add drag to resize (or arg to resize) to vis blocks as you can now zoom.
 # TODO: Macro blocks? to execute multiple nodes subsequently, while it's impractical to run them in a faster way.
 # I suppose that just creating a way to define them can be convenient.
 # TODO: Blocks with inputs undefined? Like tuple together all the inputs, how to?
 # TODO: during vis redirect console to screen?
-# TODO: Autosave can become automated at every pipeline modification (from the vispipe_server)
 
 
 class Pipeline:
@@ -226,6 +223,8 @@ class Pipeline:
 
     def remove_node(self, node_hash: int):
         node = self.get_node(node_hash)
+        if node in self._outputs:
+            self._outputs.remove(node)
         self.pipeline.deleteNode(node)
 
     def add_output(self, output: Union[str, int]):
@@ -380,7 +379,7 @@ class Pipeline:
 
     def save(self, path: str, vis_data: dict = {}) -> None:
         with open(path, 'wb') as f:
-            pickle.dump((self.pipeline, vis_data), f)
+            pickle.dump((self.pipeline, self._outputs, vis_data), f)
 
     def load(self, path: str, vis_mode: bool = False, exclude_tags: list = []) -> object:
         """
@@ -407,7 +406,7 @@ class Pipeline:
 
         self.clear_pipeline()
         with open(path, 'rb') as f:
-            self.pipeline, vis_data = pickle.load(f)
+            self.pipeline, self._outputs, vis_data = pickle.load(f)
 
         for tag in exclude_tags:
             self.remove_tag(tag)
@@ -519,7 +518,7 @@ class PipelineRunner:
                     log.debug('Output %s (%s) has been builded' % (node.name, hash(node)))
                     q = Queue(Pipeline.MAX_OUT_SIZE)
                     out_q.append(q)  # The last element of out_q is the output queue.
-                    self.outputs[hash(node)] = OutputConsumer(q) 
+                    self.outputs[hash(node)] = OutputConsumer(q)
 
             # Create the thread
             runner = BlockRunner(node.block, in_q, out_q, node.custom_args)

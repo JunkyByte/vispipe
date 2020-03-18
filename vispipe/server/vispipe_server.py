@@ -9,10 +9,8 @@ import traceback
 import os
 import logging
 import time
-log = logging.getLogger('vispipe')
+log = logging.getLogger('vispipe.server')
 log.setLevel(logging.DEBUG)
-logging.basicConfig(level=logging.DEBUG,
-                    format="%(asctime)s %(levelname)s %(threadName)s %(name)s %(message)s")
 app = Flask(__name__)
 socketio = SocketIO(app, async_mode=None, logger=False, engineio_logger=False)
 
@@ -30,6 +28,7 @@ class Server:
         self.PATH_CKPT = PATH_CKPT
         self.slow = slow
         self.vis_data = None
+        self.update = True
 
         # Run the actual server wrapped inside socketio
         app.config.from_object(__name__)
@@ -39,6 +38,8 @@ class Server:
         socketio.on_event('remove_node', self.remove_node)
         socketio.on_event('new_conn', self.new_conn)
         socketio.on_event('set_custom_arg', self.set_custom_arg)
+        socketio.on_event('set_name', self.set_name)
+        socketio.on_event('set_output', self.set_output)
         socketio.on_event('run_pipeline', self.run_pipeline)
         socketio.on_event('stop_pipeline', self.stop_pipeline)
         socketio.on_event('clear_pipeline', self.clear_pipeline)
@@ -94,6 +95,7 @@ class Server:
     def new_conn(self, x):
         try:
             self.pipeline.add_conn(x['from_hash'], x['out_idx'], x['to_hash'], x['inp_idx'])
+            self.update = True
             return {}, 200
         except Exception as e:
             log.error(traceback.format_exc())
@@ -101,7 +103,34 @@ class Server:
 
     def set_custom_arg(self, data):
         try:
+            log.debug('Setting node %s arg %s to value %s' % (data['id'], data['key'], data['value']))
             self.pipeline.set_custom_arg(data['id'], data['key'], data['value'])
+            self.update = True
+            return {}, 200
+        except Exception as e:
+            log.error(traceback.format_exc())
+            return str(e), 500
+
+    def set_name(self, data):
+        try:
+            log.debug('Setting node %s name to value %s' % (data['id'], data['name']))
+            self.pipeline.get_node(data['id']).name = data['name']
+            self.update = True
+            return {}, 200
+        except Exception as e:
+            log.error(traceback.format_exc())
+            return str(e), 500
+
+    def set_output(self, data):
+        try:
+            node_hash = data['id']
+            state = data['state']
+            log.debug('Setting output %s' % node_hash)
+            if state:
+                self.pipeline.add_output(node_hash)
+            else:
+                self.pipeline.remove_output(node_hash)
+            self.update = True
             return {}, 200
         except Exception as e:
             log.error(traceback.format_exc())
@@ -191,13 +220,14 @@ class Server:
 
     def save_nodes(self, vis_data):
         try:
-            if vis_data == self.vis_data:
-                log.info('Checkpoint skipped, there are changes')
+            if vis_data == self.vis_data and not self.update:
+                log.info('Checkpoint skipped, there are no changes')
                 return {}, 200
 
             self.pipeline.save(self.PATH_CKPT, vis_data)
             self.vis_data = vis_data
             log.info('Saved checkpoint automatically')
+            self.update = False
             return {}, 200
         except Exception as e:
             log.error(traceback.format_exc())
@@ -209,8 +239,9 @@ class Server:
 
         self.vis_data = self.pipeline.load(path, vis_mode=True)
         pipeline_def = {'nodes': [], 'blocks': [], 'connections': [], 'custom_args': []}
-        for node in self.pipeline.nodes():
-            pipeline_def['nodes'].append(hash(node))
+        for node in self.pipeline.nodes:
+            value = (hash(node), hash(node) in self.pipeline._outputs, node.name)
+            pipeline_def['nodes'].append(value)
             conn = self.pipeline.connections(hash(node), out=True)
             pipeline_def['connections'].append([(hash(n), i, j) for n, i, j, _ in conn])
             pipeline_def['blocks'].append(node.block.serialize())

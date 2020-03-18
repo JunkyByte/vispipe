@@ -9,7 +9,8 @@ Input generators for your pipeline.
 class numpy_file:
     """
     Yields the raw buffer, line by line from a numpy file.
-    This is similar to stacking a ``numpy_flow`` into an ``iterator``
+    This is similar to stacking a ``numpy_flow`` into an ``iterator``.
+    This is a finite generator and will stop the pipeline on end.
 
     Parameters
     ----------
@@ -33,6 +34,7 @@ class numpy_file:
 def numpy_flow(path):
     """
     Yields the raw buffer from the path provided as input.
+    This is an infinite generator and will never return a StopIteration
 
     Yields
     ------

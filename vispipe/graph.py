@@ -1,4 +1,5 @@
-from vispipe.hashmap import Hash
+from .hashmap import Hash
+from typing import Union
 import copy
 
 
@@ -9,8 +10,8 @@ class Graph():
     Parameters
     ----------
     num_vertices: int
-        The max number of vertices (nodes) we want to represent. It is usually fixed to a large number, it cannot be changed in a later moment.
-        instantiation.
+        The max number of vertices (nodes) we want to represent. It is usually fixed to a large number,
+        it cannot be changed in a later moment.
 
     Attributes
     ----------
@@ -132,12 +133,18 @@ class Graph():
     def v(self):
         return list(self.vertices)
 
-    def get_node(self, node_hash: int):
-        assert isinstance(node_hash, int)
+    def get_node(self, node: Union[int, str]):
+        assert isinstance(node, (str, int))
 
-        for el in self.vertices:
-            if node_hash == hash(el):
-                return el
+        if isinstance(node, str):
+            for el in self.vertices:
+                if node == el.name:
+                    return el
+        else:
+            for el in self.vertices:
+                if node == hash(el):
+                    return el
+
         raise Exception("Node not in graph")
 
     def resetGraph(self):

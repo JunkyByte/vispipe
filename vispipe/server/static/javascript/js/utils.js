@@ -4,6 +4,10 @@ function onDragStart(event)  // TODO: This function can be refactored with bette
     var obj;
 
     this.target = event.target;
+    if (! this.target){
+        return
+    }
+
     this.ischild = false;
     for (i=0; i<event.target.children.length; i++){
         this.child = event.target.children[i];
@@ -28,16 +32,16 @@ function onDragStart(event)  // TODO: This function can be refactored with bette
 
     if (this.target.node !== undefined){
         this.dragging = this.data.getLocalPosition(this.parent);
-    }
 
-    if (!this.ischild && this.target.node !== undefined){
-        this.alpha = 0.5;
-        if (viewport.children.length > 0){
-            viewport.setChildIndex(this, viewport.children.length-1);
-        }
-    } else {
-        if (viewport.children.length > 1){
-            viewport.setChildIndex(this, viewport.children.length-2);
+        if (!this.ischild){
+            this.alpha = 0.5;
+            if (viewport.children.length > 0){
+                viewport.setChildIndex(this, viewport.children.length-1);
+            }
+        } else {
+            if (viewport.children.length > 1){
+                viewport.setChildIndex(this, viewport.children.length-2);
+            }
         }
     }
 }
@@ -205,8 +209,10 @@ function name_to_size(name){
     return [w, h];
 }
 
-function draw_rect(width, height, color, scale){
-    var obj = new PIXI.Graphics();
+function draw_rect(width, height, color, scale, obj){
+    if (obj === undefined){
+        var obj = new PIXI.Graphics();
+    }
     obj.lineStyle(2, 0x000000, 1);
     obj.beginFill(color);
     obj.drawRect(0, 0, width * scale, height * scale);
@@ -214,9 +220,9 @@ function draw_rect(width, height, color, scale){
     return obj;
 }
 
-function draw_block(name){
+function draw_block(name, color=BLOCK_COLOR){
     var [width, height] = name_to_size(name);
-    var obj = draw_rect(width, height, BLOCK_COLOR, 1);
+    var obj = draw_rect(width, height, color, 1);
     var text = draw_text(name);
     text.anchor.set(0.5, 0.5);
     text.position.set(obj.width / 2, obj.height / 2);
@@ -242,7 +248,7 @@ function draw_text_input(default_value, scale=1){
             fontSize: FONT_SIZE * scale,
             padding: '12px',
             width: '200px',
-            height: '30px',
+            height: '35px',
             color: INPUT_TEXT_COLOR,
         },
         box: {
@@ -269,10 +275,10 @@ function draw_conn(inputs, outputs, rect){
     var input_conn = [];
     var output_conn = [];
 
-    function draw_circle(){
+    function draw_circle(color){
         var obj = new PIXI.Graphics();
         obj.lineStyle(2, 0x000000, 1);
-        obj.beginFill(INPUT_COLOR);
+        obj.beginFill(color);
         obj.drawCircle(0, 0, radius);
         obj.endFill();
         return obj;
@@ -282,7 +288,7 @@ function draw_conn(inputs, outputs, rect){
     var y = height - 45;
     var offset = 0;
     for (var i = 0; i < inputs; i++){
-        var obj = draw_circle()
+        var obj = draw_circle(INPUT_COLOR)
         if (i !== 0 || inputs % 2 === 0) {
             offset = (-1)**i * (1 + Math.floor((i - 1 + in_even) / 2)) * in_step;
         }
@@ -293,7 +299,7 @@ function draw_conn(inputs, outputs, rect){
     y = height + 1;
     offset = 0;
     for (i = 0; i < outputs; i++){
-        obj = draw_circle()
+        obj = draw_circle(OUTPUT_COLOR)
         if (i !== 0 || outputs % 2 === 0) {
             offset = (-1)**i * (1 + Math.floor((i - 1 + out_even) / 2)) * out_step;
         }
