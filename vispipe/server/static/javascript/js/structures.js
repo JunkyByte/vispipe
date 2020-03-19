@@ -423,7 +423,6 @@ class PopupMenu {
         this.input_container.addChild(key_text);
 
         // Draw the menu
-        var length = Object.keys(custom_args).length
         for (var key in custom_args) {
             if (custom_args.hasOwnProperty(key)) {
                 value = custom_args[key];

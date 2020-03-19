@@ -24,6 +24,10 @@ class Block:
     data_type : str
         If a visualization block this field is used to specify the kind of data you want to visualize.
         Check :class:`.vispipe.Pipeline` for a list of the supported types.
+    intercept_end: bool
+        Whether the block should intercept pipeline end and manually manage termination.
+        This is a complex and advanced feature and must be implemented correctly or pipeline
+        termination is not assured.
     """
     @staticmethod
     def serialize_args(args: dict):
@@ -35,12 +39,14 @@ class Block:
             return np.array2string(x, separator=',')
         return str(x)
 
-    def __init__(self, f: Callable, is_class: bool, max_queue: int, output_names: List[str], tag: str, data_type: str):
+    def __init__(self, f: Callable, is_class: bool, max_queue: int, output_names: List[str],
+            tag: str, data_type: str, intercept_end: bool):
         self.f = f
         self.name = f.__name__
         self.is_class = is_class
         self.tag = tag
         self.data_type = data_type
+        self.intercept_end = intercept_end
         if self.is_class:
             init_params = signature(self.f).parameters
             if any([v.default == _empty for v in init_params.values()]):
@@ -83,6 +89,7 @@ class Block:
         yield 'output_names', self.output_names
         yield 'tag', self.tag
         yield 'data_type', self.data_type
+        yield 'intercept_end', self.intercept_end
 
 
 class Node:

@@ -3,6 +3,7 @@ from vispipe import Pipeline
 import numpy as np
 import math
 import time
+import logging
 
 
 @vispipe.block
@@ -190,6 +191,7 @@ class timer:
             end_time = time.time()
             delta = end_time - self.start_time
             self.last_result = 'Benchmark - %s runs | time: %s | r/s: %s' % (self.start_n, delta, round(self.start_n / delta, 4))
+            logging.info(self.last_result)
             self.n = self.start_n
             self.start_time = time.time()
         yield self.last_result
@@ -230,42 +232,55 @@ class timer_out:
     def run(self, x):
         self.count += 1
         if self.count == 5:
-            yield StopIteration
+            raise StopIteration
         yield x
 
 
-import logging
+@vispipe.block(intercept_end=True, max_queue=1)
+class accumulator:
+    def __init__(self):
+        self.i = 0
+
+    def run(self, x):
+        if x is StopIteration:
+            print('Got the StopIteration, yielding skip(i)')
+            self.i += 1
+            if self.i < 5:
+                yield Pipeline._skip(self.i)# - 1)
+            yield -1 #self.i - 1
+        yield 0
+
+
 logging.basicConfig(level=logging.DEBUG,
         format="%(asctime)s %(levelname)s %(threadName)s: %(message)s")
 pipeline = Pipeline()
 
+small_arr1 = pipeline.add_node('numpy_file', path='./experiments/mnist.npy')
 
-#small_arr = pipeline.add_node('numpy_file/file', path='./experiments/shortarray.npy')
-small_arr = pipeline.add_node('no_input')
-plus = pipeline.add_node('test_plus100/plus')
 timeout = pipeline.add_node('timer_out/timeout')
-plus2 = pipeline.add_node('test_plus100/plus2')
+acc = pipeline.add_node('accumulator/acc')
+add2 = pipeline.add_node('test_plus100')
 
-pipeline.add_conn(small_arr, 0, plus, 0)
-pipeline.add_conn(plus, 0, timeout, 0)
-pipeline.add_conn(timeout, 0, plus2, 0)
+pipeline.add_conn(small_arr1, 0, timeout, 0)
+pipeline.add_conn(timeout, 0, acc, 0)
+pipeline.add_conn(acc, 0, add2, 0)
 
-pipeline.add_output('plus2')
-pipeline.build()
+pipeline.add_output('acc')
 pipeline.run(slow=True)
 
-output_iter = pipeline.outputs['plus2']
+output_iter = pipeline.outputs['acc']
 for x in output_iter:
-    print('Got value: ', x)
-while True:
     for thr in pipeline.runner.threads:
         print(thr.is_alive())
     print()
-    time.sleep(3)
+    #print('Got value: ', x)
+    pass
 
-#output_iter = pipeline.outputs['plus']
-#for x in output_iter:
-#    print('Got value: ', x)
+#while True:
+#    for thr in pipeline.runner.threads:
+#        print(thr.is_alive())
+#    print()
+#    time.sleep(3)
 
 #pipeline.clear_pipeline()
 #pipeline.save('./scratch_test.pickle')
