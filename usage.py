@@ -243,12 +243,11 @@ class accumulator:
 
     def run(self, x):
         if x is StopIteration:
-            print('Got the StopIteration, yielding skip(i)')
             self.i += 1
             if self.i < 5:
-                yield Pipeline._skip(self.i)# - 1)
-            yield -1 #self.i - 1
-        yield 0
+                yield Pipeline._skip(self.i - 1)
+            yield self.i - 1
+        yield -1
 
 
 logging.basicConfig(level=logging.DEBUG,
@@ -272,16 +271,14 @@ output_iter = pipeline.outputs['acc']
 for x in output_iter:
     for thr in pipeline.runner.threads:
         print(thr.is_alive())
-    print()
-    #print('Got value: ', x)
+    print('Got value: ', x)
     pass
 
-#while True:
-#    for thr in pipeline.runner.threads:
-#        print(thr.is_alive())
-#    print()
-#    time.sleep(3)
-
+while True:
+    for thr in pipeline.runner.threads:
+        print(thr.is_alive())
+    print()
+    time.sleep(1)
 #pipeline.clear_pipeline()
 #pipeline.save('./scratch_test.pickle')
 #pipeline.load('./test.pickle')

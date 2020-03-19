@@ -632,7 +632,7 @@ class CloseableQueue(Queue):
 
     def close(self):
         self.close_ev.set()
-        super().put(StopIteration, True, timeout=None)
+        #super().put(StopIteration, True, timeout=None)
 
 
 def block(f: Callable = None, max_queue: int = 5, output_names: List[str] = None,
@@ -714,57 +714,87 @@ class BlockRunner:
     def run(self):
         # Pipeline.empty -> The function is not ready to return anything and its output is skip
         # Pipeline._skip -> The function is still busy processing old input, do not pass another
-        skip = self.skip
-        if skip:
-            fill = StopIteration if self.block.intercept_end else Pipeline._empty
-            x = [fill for _ in range(len(self.in_q))]
+        # If the last returned value is a Pipeline._skip object, self.skip will be True.
+        if self.skip:
+            # As we are skipping the input there are two possible situations:
+            # 1 - The block asked for more time to end its job, this is only possible if
+            # intercept_end flag is True, and we have intercept set to False
+            # To allow the block to keep running in this 'overtime' state we need to keep
+            # passing StopIteration to it.
+            # 2 - The block just wants to skip its input, we are going to give it an empty
+            fill = StopIteration if self.block.intercept_end and not self.intercept else Pipeline._empty
+            x = [fill for _ in range(len(self.in_q))]  # This is going to be the input
             self.skip = False
+            last_iteration = False
             log.debug('Using empty %s' % self.block.name)
         else:
+            x = [q.get() for q in self.in_q]  # This is going to be the input
+            # If any queue returns a stop iteration we can assume the Pipeline is ending.
+            last_iteration = any(v is StopIteration for v in x)
             log.debug('arrived here %s' % self.block.name)
-            x = [q.get() for q in self.in_q]
 
-        last_iteration = any(v is StopIteration for v in x)
-        if last_iteration and not skip and not self.intercept:
+        # Here the main if else block. If we are having our 'last_iteration' aka one of our
+        # inputs is a StopIteration and we cannot procede further we are gonna create a fake
+        # output made of StopIteration that will be shared to our connections so that they
+        # know they should terminate as well.
+        # If the block has the special flag intercept_end, the node wants to intercept the
+        # ending of the pipeline and we are gonna skip the 'first' last_iteration we encounter
+        if last_iteration and not self.intercept:
             ret = [StopIteration for _ in range(len(self.out_q))]
             log.debug('Received a stop iteration from a queue block: %s' % self.block.name)
             self.terminate = True
         else:
             if last_iteration:
+                # If this should be the last iteration and we intercepted it because of the
+                # block flag we make sure that the input queues are filled with the
+                # StopIteration flags we did not process yet.
                 self.intercept = False
                 for q in self.in_q:
                     q.put(StopIteration)
-            try:
-                ret = next(self.f(*x))
-                if ret is StopIteration:
-                    raise StopIteration
 
+            try:  # We are finally ready to call our function
+                ret = next(self.f(*x))
+
+                # We need to get a tuple for correct sorting of outputs, so we force it
+                # But if the output has length 1 and is an actual tuple this is gonna break it
+                # into parts so we convert it to a list as a workaround.
                 if isinstance(ret, tuple) and self.block.num_outputs() <= 1:
                     ret = list(ret)
-                ret = force_tuple(ret)
-                if not isinstance(ret[0], np.ndarray):
-                    log.debug('Returned %s block %s' % (ret, self.block.name))
+                ret = force_tuple(ret)  # Force the tuple
+
+            # If the ending was manually managed we are gonna get a nice StopIteration
+            # exception but if the block is a class and does some sort of iteration that
+            # throws an exception it will be seen as a RuntimeError.
             except (StopIteration, RuntimeError):
+                # We need to shut down our connections, ideally this is reached by a node
+                # with no inputs first and propagating a bunch of StopIteration is enough
+                # we are not sure of that tho. so if the block has any input queue we are
+                # gonna close them, closing a queue will make it throw an exception on put
                 ret = [StopIteration for _ in range(len(self.out_q))]
                 for q in self.in_q:
                     q.close()
-                self.terminate = True
+                self.terminate = True  # We mark this node to be terminated
                 log.debug('Returned a StopIteration %s' % self.block.name)
-            except Exception as e:
+            except Exception as e:  # Other exceptions are logged and a fake output is created
                 ret = [Pipeline._empty for _ in range(len(self.out_q))]
                 log.error('BlockRunner block: %s has thrown: %s' % (self.block.name, e))
 
+        # If the function returned a _skip object we need to process it correctly.
+        # We read the data stored inside of it and mark the node to skip next input
         if len(ret) == 1 and isinstance(ret[0], Pipeline._skip):
             self.skip = True
-            log.debug('gonna skip %s' % self.block.name)
-            ret = [re.x for re in ret]
+            ret = tuple(re.x for re in ret)
 
+        # Fill the output queues (the one tagged using pipeline.add_output) with the values
+        # returned by the function (squeezed if possible) if the values returned are usable
+        # aka at least one of them is not an _empty objects (ideally none of them)
         if self.full_out:
             if not all([re is Pipeline._empty for re in ret]):
-                log.debug('setting ret %s block %s' % (ret, self.block.name))
                 self.full_out.put(ret if len(ret) > 1 else ret[0])
 
-        all_died = False
+        # Some of the output queues may be closed, but we still want to serve the open ones!
+        # If all of them are closed we have no purpose and can terminate.
+        all_died = False  # Set to false by default (as we can have no outputs)
         if any(out for out in self.out_q):
             all_died = True
             for i, out in enumerate(self.out_q):
@@ -773,12 +803,11 @@ class BlockRunner:
                     if v is not Pipeline._empty:
                         try:
                             q.put(v)
-                            all_died = False
-                        except CloseableQueue.Closed:
+                            all_died = False  # If at least one is open keep running
+                        except CloseableQueue.Closed:  # On closed queue exception
                             log.debug('Found queue closed %s' % self.block.name)
-                            pass
 
-        if self.terminate or all_died:
+        if self.terminate or all_died:  # If all outputs died or instructed to terminate
             raise StopIteration
 
 
