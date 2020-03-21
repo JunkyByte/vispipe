@@ -1,23 +1,50 @@
-Welcome to VisPipe's documentation!
-===================================
+VisPipe's documentation!
+========================
 
-VisPipe will help simplify the process of building pipelines in python by providing you a convenient visualization that can be simply extended to custom operations.
-By default VisPipe provides a number of Operational blocks you can use to build your own pipeline but if they do not suit your needs creating new blocks is easy.
+.. image:: https://www.codefactor.io/repository/github/junkybyte/vispipe/badge?s=b4f0ed72fedffa8ed8cbc9bc9887a0db528a24b2
+   :target: https://www.codefactor.io/repository/github/junkybyte/vispipe
+   :alt: CodeFactor
 
+-----------
 
+Pipeline Class / block decorator
+================================
 .. automodule:: vispipe.vispipe
    :exclude-members: TerminableThread
+
+Blocks
+======
+
+Inputs
+------
+.. automodule:: vispipe.ops.inputs
+
+Flows
+-----
+.. automodule:: vispipe.ops.flows
+
+Common data manipulation
+------------------------
+.. automodule:: vispipe.ops.common
+
+Images manipulation
+-------------------
+.. automodule:: vispipe.ops.images
+
+Visualization
+-------------
+.. automodule:: vispipe.ops.vis
+
+Additional Documentation
+========================
+.. note::
+   The following documentation is for parts of the library you should not usually interact with directly, the documentation is attached for completeness.
 
 .. automodule:: vispipe.node
 
 .. automodule:: vispipe.graph
 
 .. automodule:: vispipe.hashmap
-
-.. automodule:: vispipe.ops.flows
-
-.. automodule:: vispipe.ops.inputs
-
 
 .. toctree::
    :maxdepth: 2

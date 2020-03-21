@@ -30,17 +30,18 @@ author = 'JunkyByte'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'recommonmark',
+    'm2r',
     'sphinx.ext.autodoc',
     'sphinx.ext.coverage',
     'sphinx.ext.napoleon',
     'sphinx_rtd_theme'
 ]
+source_suffix = ['.rst', '.md']
 
 autodoc_default_options = {
     'members': True,
     'private-members': True,
-    'member-order': 'bysource',
+    'member-order': 'bysource'
 }
 
 # Add any paths that contain templates here, relative to this directory.
@@ -50,6 +51,7 @@ templates_path = ['_templates']
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+add_module_names = False
 
 
 # -- Options for HTML output -------------------------------------------------

@@ -272,7 +272,6 @@ for x in output_iter:
     for thr in pipeline.runner.threads:
         print(thr.is_alive())
     print('Got value: ', x)
-    pass
 
 while True:
     for thr in pipeline.runner.threads:

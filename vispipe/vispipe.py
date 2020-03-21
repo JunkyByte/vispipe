@@ -23,6 +23,7 @@ log = logging.getLogger('vispipe')
 # I suppose that just creating a way to define them can be convenient.
 # TODO: Blocks with inputs undefined? Like tuple together all the inputs, how to?
 # TODO: during vis redirect console to screen?
+# TODO: Variable output size based on arguments
 
 
 class Pipeline:
@@ -37,8 +38,8 @@ class Pipeline:
 
     Attributes
     ----------
-    pipeline: :class:`.vispipe.graph.Graph`
-    runner: :class:`.PipelineRunner`
+    pipeline: Graph
+    runner: PipelineRunner
 
     """
 
@@ -317,8 +318,8 @@ class Pipeline:
         """
         Note
         ----
-        This will automatically be called by running the pipeline.
-        You should not need to call this method.
+            This will automatically be called by running the pipeline.
+            You should not need to call this method.
 
         Build the pipeline and make it ready to be run.
         It creates the list of associated :class:`.TerminableThread` and :class:`.QueueConsumer`
@@ -726,12 +727,10 @@ class BlockRunner:
             x = [fill for _ in range(len(self.in_q))]  # This is going to be the input
             self.skip = False
             last_iteration = False
-            log.debug('Using empty %s' % self.block.name)
         else:
             x = [q.get() for q in self.in_q]  # This is going to be the input
             # If any queue returns a stop iteration we can assume the Pipeline is ending.
             last_iteration = any(v is StopIteration for v in x)
-            log.debug('arrived here %s' % self.block.name)
 
         # Here the main if else block. If we are having our 'last_iteration' aka one of our
         # inputs is a StopIteration and we cannot procede further we are gonna create a fake
@@ -774,7 +773,7 @@ class BlockRunner:
                 for q in self.in_q:
                     q.close()
                 self.terminate = True  # We mark this node to be terminated
-                log.debug('Returned a StopIteration %s' % self.block.name)
+                log.debug('Function returned a StopIteration %s' % self.block.name)
             except Exception as e:  # Other exceptions are logged and a fake output is created
                 ret = [Pipeline._empty for _ in range(len(self.out_q))]
                 log.error('BlockRunner block: %s has thrown: %s' % (self.block.name, e))
