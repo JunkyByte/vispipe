@@ -98,8 +98,8 @@ class Node:
 
     Parameters
     ----------
-    node_block: Block
-        The block of the pipeline the node represent.
+    node_block: Tuple[Block, str]
+        The block of the pipeline the node represent and the name used to initialize the node.
 
     Attributes
     ----------

@@ -148,8 +148,8 @@ class iter_folders:
             Whether the search should be recursive or not.
         """
         root_dir = os.path.join(root_dir, '**') if recursive else root_dir
-        filters = lambda x: x.endswith(extension) and os.path.isfile(x)
-        self.files = (f for f in iglob(root_dir, recursive=recursive) if filters(f))
+        self.files = (f for f in iglob(root_dir, recursive=recursive) if
+                f.endswith(extension) and os.path.isfile(f))
 
     def run(self):
         yield next(self.files)

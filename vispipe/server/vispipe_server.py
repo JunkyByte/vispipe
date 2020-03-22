@@ -154,7 +154,10 @@ class Server:
                 vis = self.pipeline.runner.read_vis()
                 for node_hash, value in vis.items():
                     node = self.pipeline.get_node(int(node_hash))
-                    if node.block.data_type == 'image':
+                    if node.block.data_type == 'plot':
+                        img = np.frombuffer(value.canvas.tostring_rgb(), dtype=np.uint8)
+                        value = img.reshape(value.canvas.get_width_height()[::-1] + (3,))
+                    if node.block.data_type in ['image', 'plot']:
                         value, shape = self.process_image(value)
                     elif node.block.data_type == 'raw':
                         if isinstance(value, (np.ndarray, list)):
@@ -202,7 +205,7 @@ class Server:
     def stop_pipeline(self):
         try:
             self.vis_thread_stop_event.set()
-            self.pipeline.unbuild()
+            self.pipeline.stop()
             if self.vis_thread.isAlive():
                 self.vis_thread.join()
             return {}, 200

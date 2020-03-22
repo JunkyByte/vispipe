@@ -22,8 +22,8 @@ log = logging.getLogger('vispipe')
 # TODO: Macro blocks? to execute multiple nodes subsequently, while it's impractical to run them in a faster way.
 # I suppose that just creating a way to define them can be convenient.
 # TODO: Blocks with inputs undefined? Like tuple together all the inputs, how to?
+# TODO: Variable output size based on arguments.
 # TODO: during vis redirect console to screen?
-# TODO: Variable output size based on arguments
 
 
 class Pipeline:
@@ -64,6 +64,8 @@ class Pipeline:
         self.pipeline = Graph(MAXSIZE)
         self.runner = PipelineRunner()
         self._outputs = []
+        self.vis_mode = False
+
         if path:
             self.load(path)
 
@@ -227,6 +229,9 @@ class Pipeline:
 
         if output in self._outputs:
             raise Exception('The node specified is already an output')
+        if node.tag == Pipeline.vis_tag:
+            raise Exception('Visualization blocks cannot ben used as outputs')
+
         self._outputs.append(output)
 
     def remove_output(self, output: Union[str, int]):
@@ -243,7 +248,7 @@ class Pipeline:
     def clear_pipeline(self):
         self.pipeline.resetGraph()
         self._outputs = []
-        self.unbuild()
+        self.runner.unbuild()
 
     def add_conn(self, from_hash: int, out_index: int, to_hash: int, inp_index: int):
         from_node = self.get_node(from_hash)
@@ -264,9 +269,9 @@ class Pipeline:
                 else:
                     raise TypeError('Custom arg "%s" of "%s" with value "%s" is not of type "%s"' %
                             (key, node.block.name, parsed, arg_type))
-            except (SyntaxError, ValueError):
+            except (ValueError, SyntaxError):
                 raise ValueError('Cannot parse custom arg "%s" of "%s" with value "%s"' %
-                        (key, node.block.name, value))
+                        (key, node.block.name, value)) from None
         else:
             node.custom_args[key] = arg_type(value)
 
@@ -348,7 +353,7 @@ class Pipeline:
             else
                 return L   (a topologically sorted order)
         """
-        self.runner.build_pipeline(self.pipeline, self._outputs)
+        self.runner.build_pipeline(self.pipeline, self._outputs if not self.vis_mode else [])
 
     def run(self, slow=False) -> None:
         """
@@ -398,6 +403,7 @@ class Pipeline:
         object:
             The visualization data loaded in the checkpoint, you can ignore it if you are not using visualization.
         """
+        self.vis_mode = vis_mode
         if not vis_mode:
             exclude_tags.append(Pipeline.vis_tag)
 
@@ -447,8 +453,10 @@ class PipelineRunner:
     def _vis_index(self):
         return min([vis.size() for vis in self.vis_source.values()]) - 1
 
-    def build_pipeline(self, pipeline_def: Graph, outputs: dict) -> None:
-        assert not self.built
+    def build_pipeline(self, pipeline_def: Graph, outputs: list) -> None:
+        if self.built:
+            raise Exception('The pipeline is already built')
+
         if len(pipeline_def.v()) == 0:
             return
 
@@ -456,7 +464,7 @@ class PipelineRunner:
         for node in pipeline.v():
             if node.block.num_inputs() != len(pipeline.adj(node, out=False)):
                 pipeline.deleteNode(node)
-                log.warning('%s has been removed as its input were not satisfied' % node.block.name)
+                log.warning('"%s" has been removed as its input were not satisfied' % node.block.name)
 
         ord_graph = []
         s = [node for node in pipeline.v() if node.block.num_inputs() == 0]
@@ -512,7 +520,7 @@ class PipelineRunner:
                 out_q = [[x[0] for x in out] for out in node.out_queues]
 
                 if hash(node) in outputs:
-                    log.debug('Output %s (%s) has been builded' % (node.name, hash(node)))
+                    log.debug('Output "%s" (%s) has been builded' % (node.name, hash(node)))
                     q = CloseableQueue(Pipeline.MAX_OUT_SIZE)
                     out_q.append(q)  # The last element of out_q is the output queue.
                     self.outputs[hash(node)] = OutputConsumer(q)
@@ -586,6 +594,9 @@ class QueueConsumer:
     def _reader(self):
         while True:
             x = self.in_q.get()
+            if x is StopIteration:
+                self.kill()
+                return
             self.out.append(x)
 
     def size(self):
@@ -698,7 +709,7 @@ class BlockRunner:
 
         # Create full output if this is an output block
         self.full_out = None
-        if self.block.num_outputs() + 1 == len(self.out_q):
+        if isinstance(self.out_q[-1], CloseableQueue):
             self.full_out = self.out_q.pop()
 
         self.custom_arg = custom_arg
@@ -740,7 +751,7 @@ class BlockRunner:
         # ending of the pipeline and we are gonna skip the 'first' last_iteration we encounter
         if last_iteration and not self.intercept:
             ret = [StopIteration for _ in range(len(self.out_q))]
-            log.debug('Received a stop iteration from a queue block: %s' % self.block.name)
+            log.debug('Received a stop iteration from a queue block "%s"' % self.block.name)
             self.terminate = True
         else:
             if last_iteration:
@@ -773,10 +784,10 @@ class BlockRunner:
                 for q in self.in_q:
                     q.close()
                 self.terminate = True  # We mark this node to be terminated
-                log.debug('Function returned a StopIteration %s' % self.block.name)
+                log.debug('Function "%s" returned a StopIteration' % self.block.name)
             except Exception as e:  # Other exceptions are logged and a fake output is created
                 ret = [Pipeline._empty for _ in range(len(self.out_q))]
-                log.error('BlockRunner block: %s has thrown: %s' % (self.block.name, e))
+                log.error('BlockRunner block "%s" has thrown "%s"' % (self.block.name, e))
 
         # If the function returned a _skip object we need to process it correctly.
         # We read the data stored inside of it and mark the node to skip next input
@@ -804,7 +815,7 @@ class BlockRunner:
                             q.put(v)
                             all_died = False  # If at least one is open keep running
                         except CloseableQueue.Closed:  # On closed queue exception
-                            log.debug('Found queue closed %s' % self.block.name)
+                            log.debug('"%s" found queue closed' % self.block.name)
 
         if self.terminate or all_died:  # If all outputs died or instructed to terminate
             raise StopIteration

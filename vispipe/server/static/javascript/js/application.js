@@ -18,7 +18,7 @@ var viewport = new Viewport.Viewport({
 })
 app.stage.addChild(viewport);
 viewport
-    .drag({wheel: false, mouseButtons: 'left', keyToPress: ['ControlLeft']})
+    .drag({wheel: false, mouseButtons: 'left', keyToPress: ['ControlLeft', 'ControlRight']})
     .pinch()
     .wheel()
     .clamp({right: true, bottom: true})
@@ -40,7 +40,7 @@ viewport.fitWidth(1500, true);
 
 var WIDTH = app.renderer.width / app.renderer.resolution;
 var HEIGHT = app.renderer.height / app.renderer.resolution;
-var VIS_IMAGE_SIZE = 128;
+var VIS_IMAGE_SIZE = 256;
 var VIS_RAW_SIZE = 256;
 var CUSTOM_ARG_SIZE = 350;
 var FONT = 'Arial';
@@ -96,7 +96,7 @@ socket.on('new_block', function(msg) {
         var data_type = msg.data_type;
         var vis_node = pipeline.vis[msg.id]
 
-        if (data_type == 'image') {
+        if (data_type == 'image' || data_type == 'plot') {
             var value = new Uint8Array(msg.value);
             var size = value.length / 4;
             var s = Math.sqrt(size);
@@ -199,10 +199,8 @@ socket.on('new_block', function(msg) {
 
                     connection = create_connection(to, from); 
                     viewport.addChildAt(connection, viewport.children.length);
-
-                    app.renderer.render(node.rect);  // Force rendering to update positions
-                    app.renderer.render(to_node.rect);
                 }
+                app.renderer.render(viewport)
                 update_all_lines(node);
             }
         }

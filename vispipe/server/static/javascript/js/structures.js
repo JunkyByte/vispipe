@@ -89,14 +89,13 @@ class VisNode extends Node {
             this.visrect = draw_rect(VIS_RAW_SIZE + 8, Number(VIS_RAW_SIZE * 1 / 4) + 4, BLOCK_COLOR, 1);
             setpos(this.rect, this.visrect);
             this.vissprite = new PIXI.Text('', new PIXI.TextStyle());
-        } else if (this.block.data_type === 'image'){
+        } else if (this.block.data_type === 'image' || this.block.data_type === 'plot'){
             this.visrect = draw_rect(VIS_IMAGE_SIZE + 8, VIS_IMAGE_SIZE + 8, BLOCK_COLOR, 1);
             setpos(this.rect, this.visrect);
 
             let texture = PIXI.Texture.EMPTY  // Temporary texture
             this.vissprite = PIXI.Sprite.from(texture);
             this.update_texture(texture);
-
         }
         if (this.vissprite !== undefined) {
             this.visrect.addChild(this.vissprite)
@@ -119,7 +118,7 @@ class VisNode extends Node {
         var style = new PIXI.TextStyle({
             fontFamily: FONT,
             breakWords: true,
-            fontSize: 2 * VIS_FONT_SIZE + 1,
+            fontSize: VIS_FONT_SIZE,
             wordWrap: true,
             align: 'left',
             fill: TEXT_COLOR,

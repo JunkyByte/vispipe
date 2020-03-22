@@ -1,3 +1,6 @@
+from typing import Optional
+
+
 class Hash:
     """
     The class used to assign unique identifiers to the nodes of the pipeline.
@@ -46,7 +49,7 @@ class Hash:
             j = c
         return j
 
-    def lookup(self, key: str) -> int:
+    def lookup(self, key: str) -> Optional[int]:
         assert isinstance(key, str)
         i = self.scan(key, False)
         if self.A[i] == key:

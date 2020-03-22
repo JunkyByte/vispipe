@@ -252,32 +252,22 @@ class accumulator:
 
 logging.basicConfig(level=logging.DEBUG,
         format="%(asctime)s %(levelname)s %(threadName)s: %(message)s")
-pipeline = Pipeline()
+#pipeline = Pipeline()
 
-small_arr1 = pipeline.add_node('numpy_file', path='./experiments/mnist.npy')
+#it = pipeline.add_node('iter_folders', root_dir='./', recursive=True)
+#pipeline.add_output(it)
 
-timeout = pipeline.add_node('timer_out/timeout')
-acc = pipeline.add_node('accumulator/acc')
-add2 = pipeline.add_node('test_plus100')
+#pipeline.run(slow=True)
 
-pipeline.add_conn(small_arr1, 0, timeout, 0)
-pipeline.add_conn(timeout, 0, acc, 0)
-pipeline.add_conn(acc, 0, add2, 0)
+#output_iter = pipeline.outputs[it]
+#for x in output_iter:
+#    print('Got value: ', x)
 
-pipeline.add_output('acc')
-pipeline.run(slow=True)
-
-output_iter = pipeline.outputs['acc']
-for x in output_iter:
-    for thr in pipeline.runner.threads:
-        print(thr.is_alive())
-    print('Got value: ', x)
-
-while True:
-    for thr in pipeline.runner.threads:
-        print(thr.is_alive())
-    print()
-    time.sleep(1)
+#while True:
+#    for thr in pipeline.runner.threads:
+#        print(thr.is_alive())
+#    print()
+#    time.sleep(1)
 #pipeline.clear_pipeline()
 #pipeline.save('./scratch_test.pickle')
 #pipeline.load('./test.pickle')
