@@ -32,6 +32,27 @@ def image():
 
 
 @vispipe.block
+def image_randsize():
+    s1 = np.random.randint(32, 256)
+    s2 = np.random.randint(32, 256)
+    yield np.concatenate([np.random.randint(0, 255, size=(s1, s2, 3)), np.ones((s1, s2, 1)) * 255], axis=-1)
+
+
+@vispipe.block
+def image_randw():
+    s1 = 256
+    s2 = np.random.randint(32, 256)
+    yield np.concatenate([np.random.randint(0, 255, size=(s1, s2, 3)), np.ones((s1, s2, 1)) * 255], axis=-1)
+
+
+@vispipe.block
+def image_randh():
+    s1 = np.random.randint(32, 256)
+    s2 = 256
+    yield np.concatenate([np.random.randint(0, 255, size=(s1, s2, 3)), np.ones((s1, s2, 1)) * 255], axis=-1)
+
+
+@vispipe.block
 def image_plus(x):
     yield np.concatenate([x * np.ones((28, 28, 3)), np.ones((28, 28, 1)) * 255], axis=-1)
 

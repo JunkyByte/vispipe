@@ -16,7 +16,6 @@ import logging
 MAXSIZE = 100
 log = logging.getLogger('vispipe')
 
-
 # TODO: Check save load works with outputs
 # TODO: Add drag to resize (or arg to resize) to vis blocks as you can now zoom.
 # TODO: Macro blocks? to execute multiple nodes subsequently, while it's impractical to run them in a faster way.

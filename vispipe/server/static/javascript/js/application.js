@@ -97,10 +97,9 @@ socket.on('new_block', function(msg) {
         var vis_node = pipeline.vis[msg.id]
 
         if (data_type == 'image' || data_type == 'plot') {
+            var shape = msg.shape
             var value = new Uint8Array(msg.value);
-            var size = value.length / 4;
-            var s = Math.sqrt(size);
-            var texture = PIXI.Texture.fromBuffer(value, s, s);
+            var texture = PIXI.Texture.fromBuffer(value, shape[0], shape[1]);
             vis_node.update_texture(texture);
         } else if (data_type == 'raw') {
             vis_node.update_text(msg.value);

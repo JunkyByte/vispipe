@@ -146,12 +146,21 @@ class Server:
         if x.shape[-1] == 3:  # Add alpha channel
             x = np.concatenate([x, 255 * np.ones((x.shape[0], x.shape[1], 1))], axis=-1)
         shape = x.shape
+        max_s = 128
+        if max(shape) > max_s:
+            arg = np.argmax(shape)
+            ratio = shape[1 - arg] / shape[arg]
+            new_size = tuple((max_s * np.eye(2)[arg] + max_s * np.eye(2)[1 - arg] * ratio).astype(np.int))
+            x = cv2.resize(x, new_size)
+            shape = x.shape
+
         return np.reshape(x, (-1,)).tolist(), shape
 
     def send_vis(self, vis_thread_stop_event):
         while not vis_thread_stop_event.isSet():
             try:
                 vis = self.pipeline.runner.read_vis()
+                shape = None
                 for node_hash, value in vis.items():
                     node = self.pipeline.get_node(int(node_hash))
                     if node.block.data_type == 'plot':
@@ -169,7 +178,7 @@ class Server:
                             value = round(value, 2)
                         value = str(value)
 
-                    socketio.emit('send_vis', {**{'id': node_hash, 'value': value}, **node.block.serialize()})
+                    socketio.emit('send_vis', {**{'id': node_hash, 'value': value, 'shape': shape}, **node.block.serialize()})
             except Exception as e:
                 log.error(traceback.format_exc())
                 socketio.emit('message', str(e))

@@ -80,35 +80,45 @@ class VisNode extends Node {
     constructor(block, id) {
         super(block, id);
 
-        function setpos(rect, visrect){
-            var delta = rect.width - visrect.width;
-            visrect.position.set(delta / 2, 40);
-        }
-
         if (this.block.data_type === 'raw'){
             this.visrect = draw_rect(VIS_RAW_SIZE + 8, Number(VIS_RAW_SIZE * 1 / 4) + 4, BLOCK_COLOR, 1);
-            setpos(this.rect, this.visrect);
+            this.setpos(this.rect, this.visrect);
             this.vissprite = new PIXI.Text('', new PIXI.TextStyle());
         } else if (this.block.data_type === 'image' || this.block.data_type === 'plot'){
             this.visrect = draw_rect(VIS_IMAGE_SIZE + 8, VIS_IMAGE_SIZE + 8, BLOCK_COLOR, 1);
-            setpos(this.rect, this.visrect);
+            this.setpos(this.rect, this.visrect);
 
             let texture = PIXI.Texture.EMPTY  // Temporary texture
             this.vissprite = PIXI.Sprite.from(texture);
-            this.update_texture(texture);
         }
-        if (this.vissprite !== undefined) {
-            this.visrect.addChild(this.vissprite)
-            this.vissprite.position.set(4, 4);
-        }
+
+        this.visrect.addChild(this.vissprite)
+        this.vissprite.position.set(4, 4);
         pipeline.vis[this.id] = this;
         this.rect.addChild(this.visrect);
     }
 
+    setpos(rect, visrect){
+        var delta = rect.geometry.bounds.maxX - visrect.width;
+        visrect.position.set(delta / 2, 40);
+    }
+
     update_texture(texture) {
         this.vissprite.texture = texture;
-        let ratio = VIS_IMAGE_SIZE / texture.width;
-        this.vissprite.scale.set(ratio);
+        if (texture.width >= texture.height){
+            var ratio = texture.width / texture.height;
+            this.vissprite.scale.x = ratio * VIS_IMAGE_SIZE / texture.width;
+            this.vissprite.scale.y = VIS_IMAGE_SIZE / texture.height;
+        } else {
+            var ratio = texture.height / texture.width;
+            this.vissprite.scale.x = VIS_IMAGE_SIZE / texture.width;
+            this.vissprite.scale.y = ratio * VIS_IMAGE_SIZE / texture.height;
+        }
+        this.visrect.scale.x = (texture.width * this.vissprite.scale.x) / VIS_IMAGE_SIZE;
+        this.visrect.scale.y = (texture.height * this.vissprite.scale.y) / VIS_IMAGE_SIZE;
+        this.vissprite.scale.x = this.vissprite.scale.x / this.visrect.scale.x
+        this.vissprite.scale.y = this.vissprite.scale.y / this.visrect.scale.y
+        this.setpos(this.rect, this.visrect);
     }
 
     update_text(text) {
