@@ -116,8 +116,8 @@ class VisNode extends Node {
         }
         this.visrect.scale.x = (texture.width * this.vissprite.scale.x) / VIS_IMAGE_SIZE;
         this.visrect.scale.y = (texture.height * this.vissprite.scale.y) / VIS_IMAGE_SIZE;
-        this.vissprite.scale.x = this.vissprite.scale.x / this.visrect.scale.x
-        this.vissprite.scale.y = this.vissprite.scale.y / this.visrect.scale.y
+        this.vissprite.scale.x = this.vissprite.scale.x / this.visrect.scale.x;
+        this.vissprite.scale.y = this.vissprite.scale.y / this.visrect.scale.y;
         this.setpos(this.rect, this.visrect);
     }
 
@@ -196,6 +196,7 @@ class Pipeline {
     constructor() {
         this.state = RunState.IDLE;
         this.STATIC_NODES = [];
+        this.NAMES = [];
         this.DYNAMIC_NODES = [];
         this.vis = {};
     }

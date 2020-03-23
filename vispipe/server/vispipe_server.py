@@ -12,6 +12,8 @@ import time
 log = logging.getLogger('vispipe.server')
 log.setLevel(logging.DEBUG)
 app = Flask(__name__)
+app.config['DEBUG'] = True
+app.config['SECRET_KEY'] = os.urandom(16)
 socketio = SocketIO(app, async_mode=None, logger=False, engineio_logger=False)
 
 
@@ -29,11 +31,6 @@ class Server:
         self.slow = slow
         self.vis_data = None
         self.update = True
-
-        # Run the actual server wrapped inside socketio
-        app.config.from_object(__name__)
-        app.config['SECRET_KEY'] = 'secret!'
-        app.config['DEBUG'] = True
         socketio.on_event('new_node', self.new_node)
         socketio.on_event('remove_node', self.remove_node)
         socketio.on_event('new_conn', self.new_conn)

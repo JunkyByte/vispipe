@@ -82,10 +82,15 @@ var socket;
 $(document).ready(function(){
     socket = io.connect('http://' + document.domain + ':' + location.port);
 
-socket.on('new_block', function(msg) {
+    socket.on('new_block', function(msg) {
+        if (pipeline.NAMES.indexOf(msg.name) !== -1){
+            return    
+        }
+
         var block = new Block(msg.name, msg.input_args, msg.custom_args, msg.custom_args_type,
                               msg.output_names, msg.tag, msg.data_type);
         pipeline.STATIC_NODES.push(new StaticNode(block));
+        pipeline.NAMES.push(msg.name);
     });
 
     socket.on('end_block', function() {
@@ -94,10 +99,10 @@ socket.on('new_block', function(msg) {
 
     socket.on('send_vis', function(msg) {
         var data_type = msg.data_type;
-        var vis_node = pipeline.vis[msg.id]
+        var vis_node = pipeline.vis[msg.id];
 
         if (data_type == 'image' || data_type == 'plot') {
-            var shape = msg.shape
+            var shape = msg.shape;
             var value = new Uint8Array(msg.value);
             var texture = PIXI.Texture.fromBuffer(value, shape[0], shape[1]);
             vis_node.update_texture(texture);
@@ -134,7 +139,10 @@ socket.on('new_block', function(msg) {
         });
     }, 10000);
 
-    socket.on('load_checkpoint', function(msg){ 
+    socket.on('load_checkpoint', function(msg){
+        if (pipeline.DYNAMIC_NODES.length !== 0){
+            return;
+        }
         var vis_data = msg.vis_data;            
         var pipeline_def = msg.pipeline;
         var blocks = pipeline_def.blocks;
@@ -179,7 +187,6 @@ socket.on('new_block', function(msg) {
             for (j=0; j<Object.keys(custom_args[i]).length; j++){
                 key = Object.keys(custom_args[i])[j];
                 arg = Object.values(custom_args[i])[j];
-                //pipeline.set_custom_arg(obj, key, arg);
                 node.block.custom_args[key] = arg;
             }
         }
@@ -199,7 +206,7 @@ socket.on('new_block', function(msg) {
                     connection = create_connection(to, from); 
                     viewport.addChildAt(connection, viewport.children.length);
                 }
-                app.renderer.render(viewport)
+                app.renderer.render(viewport);
                 update_all_lines(node);
             }
         }
@@ -211,7 +218,4 @@ socket.on('new_block', function(msg) {
 
     });
 
-    //socket.emit('test_receive', 'test_send_see_me_python')
 });
-//$('#log').html(numbers_string);
-

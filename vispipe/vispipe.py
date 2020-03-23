@@ -23,6 +23,7 @@ log = logging.getLogger('vispipe')
 # TODO: Blocks with inputs undefined? Like tuple together all the inputs, how to?
 # TODO: Variable output size based on arguments.
 # TODO: during vis redirect console to screen?
+# TODO: If you set an output with name when you access pipeline.outputs you cannot get by hash
 
 
 class Pipeline:
@@ -222,14 +223,14 @@ class Pipeline:
         self.pipeline.deleteNode(node)
 
     def add_output(self, output: Union[str, int]):
+        node = self.get_node(output)
         if isinstance(output, str):
-            node = self.get_node(output)
             output = hash(node)
 
         if output in self._outputs:
             raise Exception('The node specified is already an output')
-        if node.tag == Pipeline.vis_tag:
-            raise Exception('Visualization blocks cannot ben used as outputs')
+        if node.block.tag == Pipeline.vis_tag:
+            raise Exception('Visualization blocks cannot be used as outputs')
 
         self._outputs.append(output)
 
