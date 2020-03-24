@@ -32,6 +32,11 @@ def image():
 
 
 @vispipe.block
+def image_highres():
+    yield np.concatenate([np.random.randint(0, 255, size=(1024, 1024, 3)), np.ones((1024, 1024, 1)) * 255], axis=-1)
+
+
+@vispipe.block
 def image_randsize():
     s1 = np.random.randint(32, 256)
     s2 = np.random.randint(32, 256)
@@ -213,8 +218,7 @@ class timer:
             delta = end_time - self.start_time
             self.last_result = 'Benchmark - %s runs | time: %s | r/s: %s' % (self.start_n, delta, round(self.start_n / delta, 4))
             logging.info(self.last_result)
-            self.n = self.start_n
-            self.start_time = time.time()
+            raise StopIteration
         yield self.last_result
 
 
@@ -273,7 +277,21 @@ class accumulator:
 
 logging.basicConfig(level=logging.DEBUG,
         format="%(asctime)s %(levelname)s %(threadName)s: %(message)s")
-#pipeline = Pipeline()
+pipeline = Pipeline()
+
+img1 = pipeline.add_node('image_highres')
+img2 = pipeline.add_node('image_highres')
+add = pipeline.add_node('test_addition')
+timern = pipeline.add_node('timer', n=10)
+
+pipeline.add_conn(img1, 0, add, 0)
+pipeline.add_conn(img2, 0, add, 1)
+pipeline.add_conn(add, 0, timern, 0)
+
+pipeline.run(slow=False)
+
+#for thr in pipeline.runner.threads:
+#    thr.join()
 
 #it = pipeline.add_node('iter_folders', root_dir='./', recursive=True)
 #pipeline.add_output(it)
@@ -284,11 +302,11 @@ logging.basicConfig(level=logging.DEBUG,
 #for x in output_iter:
 #    print('Got value: ', x)
 
-#while True:
-#    for thr in pipeline.runner.threads:
-#        print(thr.is_alive())
-#    print()
-#    time.sleep(1)
+while True:
+    for thr in pipeline.runner.threads:
+        print(thr.is_alive())
+    print()
+    time.sleep(1)
 #pipeline.clear_pipeline()
 #pipeline.save('./scratch_test.pickle')
 #pipeline.load('./test.pickle')

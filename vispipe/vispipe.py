@@ -5,7 +5,12 @@ from itertools import chain
 from inspect import signature, isgeneratorfunction
 from typing import Callable, Optional, List, Union, Tuple, Any
 from threading import Thread, Event
+import queue
 from queue import Queue
+from multiprocessing import queues, Process, get_context, Event
+import sys
+Thread = Process
+Queue = queues.Queue
 from ast import literal_eval
 import numpy as np
 import types
@@ -745,17 +750,26 @@ class CloseableQueue(Queue):
         pass
 
     def __init__(self, maxsize):
-        super(CloseableQueue, self).__init__(maxsize)
+        #super(CloseableQueue, self).__init__(maxsize)
+        super(CloseableQueue, self).__init__(maxsize, ctx=get_context())
         self.close_ev = Event()
 
-    def put(self, item, block=True, timeout=None):
+    def put(self, item):
         if self.close_ev.is_set():
+            while not self.empty():
+                self.get()
+            self.close()
             raise CloseableQueue.Closed
-        super().put(item, block, timeout)
+
+        try:
+            # There is a small chance that a node with full output queue is already waiting
+            # to put while the queue is closed. We add a timeout to check the event again.
+            super().put(item, block=True, timeout=1)
+        except queue.Full:
+            self.put(item)
 
     def close(self):
         self.close_ev.set()
-        #super().put(StopIteration, True, timeout=None)
 
 
 def block(f: Callable = None, max_queue: int = 5, output_names: List[str] = None,
@@ -891,9 +905,9 @@ class BlockRunner:
                 # with no inputs first and propagating a bunch of StopIteration is enough
                 # we are not sure of that tho. so if the block has any input queue we are
                 # gonna close them, closing a queue will make it throw an exception on put
+                # the closing is done on the end of the function to be sure that the rest
+                # of the function is executed.
                 ret = [StopIteration for _ in range(len(self.out_q))]
-                for q in self.in_q:
-                    q.close()
                 self.terminate = True  # We mark this node to be terminated
                 log.debug('Function "%s" returned a StopIteration' % self.block.name)
             except Exception as e:  # Other exceptions are logged and a fake output is created
@@ -928,7 +942,10 @@ class BlockRunner:
                         except CloseableQueue.Closed:  # On closed queue exception
                             log.debug('"%s" found queue closed' % self.block.name)
 
+        print('All died', all_died)
         if self.terminate or all_died:  # If all outputs died or instructed to terminate
+            for q in self.in_q:
+                q.close()
             raise StopIteration
 
 
@@ -963,7 +980,6 @@ class TerminableThread(Thread):
                 self.target()
             except StopIteration:
                 self.kill()
-                return
 
             if self.slow:
                 time.sleep(0.5)
