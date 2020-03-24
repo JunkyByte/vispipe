@@ -12,8 +12,12 @@ Pipeline Class / block decorator
 .. automodule:: vispipe.vispipe
    :exclude-members: TerminableThread
 
+
 Blocks
 ======
+The following is documentation for prebuilt blocks of the pipeline.
+You can use these blocks directly by adding them to the pipeline.
+
 
 Inputs
 ------
@@ -34,6 +38,7 @@ Images manipulation
 Visualization
 -------------
 .. automodule:: vispipe.ops.vis
+
 
 Additional Documentation
 ========================

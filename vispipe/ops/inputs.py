@@ -1,8 +1,9 @@
 from vispipe import block
+from glob import iglob
 import numpy as np
 import pickle
 import os
-from glob import iglob
+import json
 """
 Input generators for your pipeline.
 """
@@ -108,7 +109,7 @@ class pickle_file:
 
     Yields
     ------
-        The Content of the loaded pickle line by line.
+        The Content of the loaded pickle.
     """
     def __init__(self, path: str = ''):
         self.file = pickle.load(open(path, 'rb'))
@@ -128,6 +129,41 @@ def pickle_flow(path):
         The full content of the loaded pickle from the path you provided.
     """
     yield pickle.load(open(path, 'rb'))
+
+
+@block(tag='input')
+class json_file:
+    """
+    Yields the full raw buffer once from a json file.
+
+    Parameters
+    ----------
+    path : str
+        The path to the file you want to load.
+
+
+    Yields
+    ------
+        The Content of the loaded json.
+    """
+    def __init__(self, path: str = ''):
+        self.file = json.load(open(path))
+
+    def run(self):
+        yield self.file
+
+
+@block(tag='input', max_queue=1)
+def json_flow(path):
+    """
+    Yields the raw buffer from the path provided as input.
+    This is an infinite generator and will never raise a StopIteration.
+
+    Yields
+    ------
+        The full content of the loaded json from the path you provided.
+    """
+    yield json.load(open(path))
 
 
 @block(tag='input', max_queue=10)

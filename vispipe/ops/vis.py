@@ -1,22 +1,59 @@
 from vispipe import block
 import matplotlib
 import matplotlib.pyplot as plt
+import cv2
+import numpy as np
 matplotlib.use('Agg')
 
 
 @block(tag='vis', max_queue=1, data_type='image')
-def vis_image(input1):
-    yield input1
+class vis_image:
+    def __init__(self, max_size: int = 128):
+        """
+        Visualize an image.
+
+        Parameters
+        ----------
+        max_size : int
+            The maximum size accepted for the image.
+            If the image has an higher resolution (on major dimension) it will be scaled
+            to `max_size` while keeping the aspect ratio.
+            Using an higher resolution than default can slow down visualization.
+        """
+        self.max_size = max_size
+
+    def run(self, x):
+        x = np.array(x, dtype=np.uint8)  # Cast to int
+        if x.ndim in [0, 1, 4]:
+            raise Exception('The format image you passed is not visualizable')
+
+        if x.ndim == 2:  # Convert from gray to rgb
+            x = cv2.cvtColor(x, cv2.COLOR_GRAY2RGB)
+        if x.shape[-1] == 3:  # Add alpha channel
+            x = np.concatenate([x, 255 * np.ones((x.shape[0], x.shape[1], 1))], axis=-1)
+        if max(x.shape) > self.max_size:  # Force max resolution
+            arg = np.argmax(x.shape)
+            ratio = x.shape[1 - arg] / x.shape[arg]
+            new_size = self.max_size * np.eye[arg] + self.max_size * np.eye[1 - arg] * ratio
+            x = cv2.resize(x, tuple(new_size.astype(np.int)))
+        yield x
 
 
 @block(tag='vis', max_queue=1, data_type='raw')
 def vis_text(input1):
+    """
+    Visualize raw text.
+    """
     yield input1
 
 
 @block(tag='vis', max_queue=1, data_type='raw')
 def vis_shape(input1):
-    yield str(input1.shape)
+    """
+    Visualize shape of object (if supported).
+    This is equivalent to calling `input.shape` and passing it to a raw visualization buffer.
+    """
+    yield input1.shape
 
 
 class plot:
@@ -69,6 +106,14 @@ class plot:
 
 @block(tag='vis', max_queue=1, data_type='plot')
 class plt_scatter(plot):
+    """
+    Visualize a scatter plot, equivalent to `matplotlib.pyplot.scatter` on the `x` and `y` inputs.
+
+    Parameters
+    ----------
+    show_axis : bool
+        Whether to show the axis of the plot.
+    """
     def draw(self, x, y):
         return self.ax.scatter(x, y)
 
@@ -78,6 +123,14 @@ class plt_scatter(plot):
 
 @block(tag='vis', max_queue=1, data_type='plot')
 class plt_plot(plot):
+    """
+    Visualize a plot, equivalent to `matplotlib.pyplot.plot` on the `x` and `y` inputs.
+
+    Parameters
+    ----------
+    show_axis : bool
+        Whether to show the axis of the plot.
+    """
     def draw(self, x, y):
         return self.ax.plot(x, y)[0]
 
