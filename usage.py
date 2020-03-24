@@ -282,7 +282,7 @@ pipeline = Pipeline()
 img1 = pipeline.add_node('image_highres')
 img2 = pipeline.add_node('image_highres')
 add = pipeline.add_node('test_addition')
-timern = pipeline.add_node('timer', n=10)
+timern = pipeline.add_node('timer', n=1000)
 
 pipeline.add_conn(img1, 0, add, 0)
 pipeline.add_conn(img2, 0, add, 1)
