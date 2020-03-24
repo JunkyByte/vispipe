@@ -942,7 +942,6 @@ class BlockRunner:
                         except CloseableQueue.Closed:  # On closed queue exception
                             log.debug('"%s" found queue closed' % self.block.name)
 
-        print('All died', all_died)
         if self.terminate or all_died:  # If all outputs died or instructed to terminate
             for q in self.in_q:
                 q.close()

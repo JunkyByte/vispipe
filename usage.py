@@ -290,8 +290,8 @@ pipeline.add_conn(add, 0, timern, 0)
 
 pipeline.run(slow=False)
 
-#for thr in pipeline.runner.threads:
-#    thr.join()
+for thr in pipeline.runner.threads:
+    thr.join()
 
 #it = pipeline.add_node('iter_folders', root_dir='./', recursive=True)
 #pipeline.add_output(it)
@@ -302,11 +302,11 @@ pipeline.run(slow=False)
 #for x in output_iter:
 #    print('Got value: ', x)
 
-while True:
-    for thr in pipeline.runner.threads:
-        print(thr.is_alive())
-    print()
-    time.sleep(1)
+#while True:
+#    for thr in pipeline.runner.threads:
+#        print(thr.is_alive())
+#    print()
+#    time.sleep(1)
 #pipeline.clear_pipeline()
 #pipeline.save('./scratch_test.pickle')
 #pipeline.load('./test.pickle')
