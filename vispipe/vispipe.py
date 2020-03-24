@@ -7,10 +7,9 @@ from typing import Callable, Optional, List, Union, Tuple, Any
 from threading import Thread, Event
 import queue
 from queue import Queue
-from multiprocessing import queues, Process, get_context, Event
-import sys
-Thread = Process
-Queue = queues.Queue
+#from multiprocessing import queues, Process, get_context, Event
+#Thread = Process
+#Queue = queues.Queue
 from ast import literal_eval
 import numpy as np
 import types
@@ -750,8 +749,8 @@ class CloseableQueue(Queue):
         pass
 
     def __init__(self, maxsize):
-        #super(CloseableQueue, self).__init__(maxsize)
-        super(CloseableQueue, self).__init__(maxsize, ctx=get_context())
+        super(CloseableQueue, self).__init__(maxsize)
+        #super(CloseableQueue, self).__init__(maxsize, ctx=get_context())
         self.close_ev = Event()
 
     def put(self, item):
