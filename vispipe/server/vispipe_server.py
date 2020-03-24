@@ -133,26 +133,6 @@ class Server:
             log.error(traceback.format_exc())
             return str(e), 500
 
-    def process_image(self, x):
-        x = np.array(x, dtype=np.uint8)  # Cast to int
-        if x.ndim in [0, 1, 4]:
-            raise Exception('The format image you passed is not visualizable')
-
-        if x.ndim == 2:  # Convert from gray to rgb
-            x = cv2.cvtColor(x, cv2.COLOR_GRAY2RGB)
-        if x.shape[-1] == 3:  # Add alpha channel
-            x = np.concatenate([x, 255 * np.ones((x.shape[0], x.shape[1], 1))], axis=-1)
-        shape = x.shape
-        max_s = 128
-        if max(shape) > max_s:
-            arg = np.argmax(shape)
-            ratio = shape[1 - arg] / shape[arg]
-            new_size = tuple((max_s * np.eye(2)[arg] + max_s * np.eye(2)[1 - arg] * ratio).astype(np.int))
-            x = cv2.resize(x, new_size)
-            shape = x.shape
-
-        return np.reshape(x, (-1,)).tolist(), shape
-
     def send_vis(self, vis_thread_stop_event):
         while not vis_thread_stop_event.isSet():
             try:
@@ -164,7 +144,8 @@ class Server:
                         img = np.frombuffer(value.canvas.tostring_rgb(), dtype=np.uint8)
                         value = img.reshape(value.canvas.get_width_height()[::-1] + (3,))
                     if node.block.data_type in ['image', 'plot']:
-                        value, shape = self.process_image(value)
+                        shape = value.shape
+                        value = np.reshape(value, (-1,)).tolist()
                     elif node.block.data_type == 'raw':
                         if isinstance(value, (np.ndarray, list)):
                             try:

@@ -3,7 +3,7 @@ from .graph import Graph
 from functools import partial
 from itertools import chain
 from inspect import signature, isgeneratorfunction
-from typing import Callable, Optional, List, Union, Tuple
+from typing import Callable, Optional, List, Union, Tuple, Any
 from threading import Thread, Event
 from queue import Queue
 from ast import literal_eval
@@ -23,7 +23,6 @@ log = logging.getLogger('vispipe')
 # TODO: Blocks with inputs undefined? Like tuple together all the inputs, how to?
 # TODO: Variable output size based on arguments.
 # TODO: during vis redirect console to screen?
-# TODO: If you set an output with name when you access pipeline.outputs you cannot get by hash
 
 
 class Pipeline:
@@ -151,11 +150,33 @@ class Pipeline:
         dict:
             Dictionary containing the outputs of the pipeline.
         """
+        if not self.runner.built:
+            raise Exception('The pipeline has to be run before accessing its outputs')
+
         out = {}
         for k, v in self.runner.outputs.items():
             name = self.get_node(k).name
             out[name if name else k] = v
         return out
+
+    def get_output(self, node: Union[int, str]):
+        """
+        Returns the output node iterator class with name or hash you specified.
+
+        Note
+        -----
+        While its suggested to use `Pipeline.outputs[node]` to access a particular output
+        this method can be convenient if you want to access a node by its hash even if it
+        hash a specified name (in the outputs you can access it only by name).
+
+        Parameters
+        ----------
+        node : Union[int, str]
+            The hash or name of the node you are looking for.
+        """
+        if isinstance(node, str):
+            node = hash(self.get_node(node))
+        return self.runner.outputs[node]
 
     def connections(self, node_hash: int, out=None) -> List[Tuple]:
         """
@@ -214,15 +235,49 @@ class Pipeline:
         return self.pipeline.insertNode(node)
 
     def get_node(self, node: Union[int, str]):  # While the hash is unique the name may not be.
+        """
+        Returns the node that corresponds to name or hash.
+
+        Note
+        ----
+        Names are arbitrary and unicity is NOT verified.
+        Using name to access nodes may lead to undesired results if the name is duplicated.
+
+        Parameters
+        ----------
+        node : Union[int, str]
+            The name or hash of the node you are looking for.
+        """
         return self.pipeline.get_node(node)
 
-    def remove_node(self, node_hash: int):
-        node = self.get_node(node_hash)
+    def remove_node(self, node: Union[str, int]):
+        """
+        Remove a node from the pipeline.
+
+        Parameters
+        ----------
+        node : Union[str, int]
+            The name or hash of the node you want to remove.
+        """
+        node = self.get_node(node)
         if node in self._outputs:
             self._outputs.remove(node)
         self.pipeline.deleteNode(node)
 
     def add_output(self, output: Union[str, int]):
+        """
+        Mark a node as output, outputs will be the entry point of the pipeline during execution.
+
+        Note
+        ----
+        If an output is not consumed during pipeline execution it can stall once its queue
+        is full. Ideally all nodes marked as output are consumed.
+
+        Parameters
+        ----------
+        output : Union[str, int]
+            The name or hash of the node you want to mark as an output.
+        """
         node = self.get_node(output)
         if isinstance(output, str):
             output = hash(node)
@@ -235,27 +290,73 @@ class Pipeline:
         self._outputs.append(output)
 
     def remove_output(self, output: Union[str, int]):
+        """
+        Remove an output from the pipeline.
+
+        Parameters
+        ----------
+        output : Union[str, int]
+            The name or hash of the node you want to remove from the list of outputs.
+        """
         if isinstance(output, str):
             node = self.get_node(output)
             output = hash(node)
         self._outputs.remove(output)
 
     def remove_tag(self, tag: str):
+        """
+        Remove all nodes with a particular tag.
+
+        Parameters
+        ----------
+        tag : str
+            The tag you want to remove.
+        """
         hashes = [hash(node) for node in self.nodes if node.block.tag == tag]
         for node_hash in hashes:
             self.remove_node(node_hash)
 
     def clear_pipeline(self):
+        """
+        Resets the state of the pipeline by deleting all its nodes and clearing its outputs.
+        """
         self.pipeline.resetGraph()
         self._outputs = []
         self.runner.unbuild()
 
     def add_conn(self, from_hash: int, out_index: int, to_hash: int, inp_index: int):
+        """
+        Add a connection between two nodes of the pipeline.
+        An output can have multiple connections while an input can have only one.
+
+        Parameters
+        ----------
+        from_hash : int
+            The hash of the output node you are connecting.
+        out_index : int
+            The index of the output you want to connect (starting from zero).
+        to_hash : int
+            The hash of the input node you are connecting to.
+        inp_index : int
+            The index of the input you want to connect (starting from zero).
+        """
         from_node = self.get_node(from_hash)
         to_node = self.get_node(to_hash)
         self.pipeline.insertEdge(from_node, to_node, out_index, inp_index)
 
-    def set_custom_arg(self, node_hash: int, key: str, value):
+    def set_custom_arg(self, node_hash: int, key: str, value: Any):
+        """
+        Set a custom argument of a node.
+
+        Parameters
+        ----------
+        node_hash : int
+            The hash of the node.
+        key : str
+            The name of the argument you want to set.
+        value : Any
+            The value to set for this argument.
+        """
         node = self.get_node(node_hash)
         arg_type = node.block.custom_args_type[key]
         if arg_type in [list, bool, tuple, dict, None, bytes, np.ndarray]:
@@ -380,6 +481,16 @@ class Pipeline:
         self.runner.unbuild()
 
     def save(self, path: str, vis_data: dict = {}) -> None:
+        """
+        Save the pipeline to file.
+
+        Parameters
+        ----------
+        path : str
+            The path of the file you want to save the pipeline to.
+        vis_data : dict
+            The visualization data associated with this pipeline.
+        """
         with open(path, 'wb') as f:
             pickle.dump((self.pipeline, self._outputs, vis_data), f)
 
@@ -697,7 +808,7 @@ def block(f: Callable = None, max_queue: int = 5, output_names: List[str] = None
     return f
 
 
-def force_tuple(x):
+def _force_tuple(x):
     return x if isinstance(x, tuple) else (x,)
 
 
@@ -770,7 +881,7 @@ class BlockRunner:
                 # into parts so we convert it to a list as a workaround.
                 if isinstance(ret, tuple) and self.block.num_outputs() <= 1:
                     ret = list(ret)
-                ret = force_tuple(ret)  # Force the tuple
+                ret = _force_tuple(ret)  # Force the tuple
 
             # If the ending was manually managed we are gonna get a nice StopIteration
             # exception but if the block is a class and does some sort of iteration that
@@ -823,7 +934,7 @@ class BlockRunner:
 
 class FakeQueue:
     def get(self):
-        return []
+        raise Exception('This is a fake queue and should be replaced')
 
 
 class TerminableThread(Thread):

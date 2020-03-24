@@ -177,7 +177,10 @@ $(document).ready(function(){
                               block_dict.custom_args_type, block_dict.output_names,
                               block_dict.tag, block_dict.data_type);
             obj = pipeline.spawn_node_visual(block, nodes[i]);
-            pos = new PIXI.Point(vis_data[nodes[i]][0], vis_data[nodes[i]][1]);
+
+            if (vis_data[nodes[i]] !== undefined){
+                pos = new PIXI.Point(vis_data[nodes[i]][0], vis_data[nodes[i]][1]);
+            }
             obj.rect.position.set(pos.x, pos.y);
             node = pipeline.find_node(nodes[i]);
             node.name = names[i]
@@ -197,7 +200,7 @@ $(document).ready(function(){
             node = pipeline.DYNAMIC_NODES[i];
 
             conn = conn_dict[node.id];
-            if (conn !== undefined) {
+            if (conn !== undefined){
                 for (j=0; j<conn.length; j++){
                     to_node = pipeline.find_node(conn[j][0]);
                     from = node.out_c[conn[j][1]]
