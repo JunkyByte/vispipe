@@ -202,10 +202,11 @@ class testempty:
 
 @vispipe.block
 class timer:
-    def __init__(self, n=1000):
+    def __init__(self, n: int = 1000, end: bool = True):
         self.n = n
         self.start_n = self.n
         self.started = False
+        self.end = end
         self.last_result = 'Still counting'
 
     def run(self, x):
@@ -217,8 +218,11 @@ class timer:
             end_time = time.time()
             delta = end_time - self.start_time
             self.last_result = 'Benchmark - %s runs | time: %s | r/s: %s' % (self.start_n, delta, round(self.start_n / delta, 4))
-            logging.info(self.last_result)
-            raise StopIteration
+            logging.getLogger('vispipe').info(self.last_result)
+            if self.end:
+                raise StopIteration
+            self.n = self.start_n
+            self.start_time = time.time()
         yield self.last_result
 
 
@@ -275,12 +279,10 @@ class accumulator:
         yield -1
 
 
-logging.basicConfig(level=logging.DEBUG,
-        format="%(asctime)s %(levelname)s %(threadName)s: %(message)s")
 pipeline = Pipeline()
 
-img1 = pipeline.add_node('image_highres')
-img2 = pipeline.add_node('image_highres')
+img1 = pipeline.add_node('image')
+img2 = pipeline.add_node('image')
 add = pipeline.add_node('test_addition')
 timern = pipeline.add_node('timer', n=1000)
 
@@ -288,10 +290,8 @@ pipeline.add_conn(img1, 0, add, 0)
 pipeline.add_conn(img2, 0, add, 1)
 pipeline.add_conn(add, 0, timern, 0)
 
-pipeline.run(slow=False)
-
-for thr in pipeline.runner.threads:
-    thr.join()
+pipeline.run(slow=False, use_mp=True)
+pipeline.join()
 
 #it = pipeline.add_node('iter_folders', root_dir='./', recursive=True)
 #pipeline.add_output(it)
@@ -303,8 +303,17 @@ for thr in pipeline.runner.threads:
 #    print('Got value: ', x)
 
 #while True:
+#    print()
+#    for key, queue in [[n.block.name, n.out_queues[0]] for n in pipeline.nodes]:
+#        try:
+#            print(key, 'queue is empty? ', queue[0][0].empty())
+#            while not queue[0][0].empty():
+#                x = queue[0][0].get()
+#        except IndexError:
+#            pass
 #    for thr in pipeline.runner.threads:
 #        print(thr.is_alive())
+#        pass
 #    print()
 #    time.sleep(1)
 #pipeline.clear_pipeline()
