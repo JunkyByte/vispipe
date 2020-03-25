@@ -4,8 +4,10 @@ from functools import partial
 from itertools import chain
 from inspect import signature, isgeneratorfunction
 from typing import Callable, Optional, List, Union, Tuple, Any
-from threading import Thread, Event
-from queue import Queue
+import queue
+import multiprocessing.queues as mpqueues
+import multiprocessing as mp
+import threading
 from ast import literal_eval
 import numpy as np
 import types
@@ -15,6 +17,11 @@ import time
 import logging
 MAXSIZE = 100
 log = logging.getLogger('vispipe')
+log.setLevel(logging.DEBUG)
+log_formatter = logging.Formatter("%(asctime)s [%(levelname)s]: %(message)s")
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(log_formatter)
+log.addHandler(console_handler)
 
 # TODO: Check save load works with outputs
 # TODO: Add drag to resize (or arg to resize) to vis blocks as you can now zoom.
@@ -400,7 +407,7 @@ class Pipeline:
             return []
 
         def _unpack(h, n, x):
-            if isinstance(x, (CloseableQueue, QueueConsumer)):
+            if isinstance(x, (queue.Queue, mpqueues.Queue, QueueConsumer)):
                 return (h, n, x.qsize(), q.maxsize)
             if x and isinstance(x, list):
                 if len(x) == 2 and isinstance(x[1], bool):
@@ -413,14 +420,14 @@ class Pipeline:
             if isinstance(n.out_queues, list) and not any(n.out_queues):
                 continue
 
-            if isinstance(n.out_queues, (CloseableQueue, QueueConsumer)):
+            if isinstance(n.out_queues, (queue.Queue, mpqueues.Queue, QueueConsumer)):
                 q = n.out_queues
                 nodes_queues.append([(hash(n), n.block.name, q.qsize(), q.maxsize)])
             else:
                 nodes_queues.extend([_unpack(hash(n), n.block.name, q) for q in n.out_queues])
         return list(chain.from_iterable(nodes_queues))
 
-    def build(self) -> None:
+    def build(self, use_mp: bool) -> None:
         """
         Note
         ----
@@ -429,7 +436,7 @@ class Pipeline:
 
         Build the pipeline and make it ready to be run.
         It creates the list of associated :class:`.TerminableThread` and :class:`.QueueConsumer`
-        and binds them together using :obj:`CloseableQueue`
+        and binds them together using `CloseableQueue`
 
         To build the pipeline graph we follow the `Kahn's Algorithm for topologic sorting
         <https://en.wikipedia.org/wiki/Topological_sorting#Kahn's_algorithm>`_
@@ -453,10 +460,13 @@ class Pipeline:
                 return error   (graph has at least one cycle)
             else
                 return L   (a topologically sorted order)
-        """
-        self.runner.build_pipeline(self.pipeline, self._outputs if not self.vis_mode else [])
 
-    def run(self, slow=False) -> None:
+        use_mp : bool
+            Whether to use multiprocessing instead of threading.
+        """
+        self.runner.build_pipeline(self.pipeline, self._outputs if not self.vis_mode else [], mp)
+
+    def run(self, slow: bool = False, use_mp: bool = False) -> None:
         """
         Run the pipeline.
 
@@ -464,9 +474,11 @@ class Pipeline:
         ----------
         slow : bool
             Whether to run the pipeline in slow mode, useful for visualization and debugging.
+        use_mp: bool
+            Whether to use multiprocessing instead of threading.
         """
         self.stop()
-        self.build()
+        self.build(use_mp)
         self.runner.run(slow)
 
     def stop(self) -> None:
@@ -526,6 +538,46 @@ class Pipeline:
             self.remove_tag(tag)
 
         return vis_data
+    
+    def join(self, timeout: Optional[float] = None) -> None:
+        """
+        This is builded following `Thread.join` method from `Threading` module.
+        `Refer to the original documentation <https://docs.python.org/3.7/library/multiprocessing.html?#multiprocessing.Process.join>`_
+        which is reported in the following note.
+
+        Note
+        ----
+            Wait until the thread terminates.
+
+            This blocks the calling thread until the thread whose join() method is
+            called terminates -- either normally or through an unhandled exception
+            or until the optional timeout occurs.
+
+            When the timeout argument is present and not None, it should be a
+            floating point number specifying a timeout for the operation in seconds
+            (or fractions thereof). As join() always returns None, you must call
+            is_alive() after join() to decide whether a timeout happened -- if the
+            thread is still alive, the join() call timed out.
+
+            When the timeout argument is not present or None, the operation will
+            block until the thread terminates.
+
+            A thread can be join()ed many times.
+
+            join() raises a RuntimeError if an attempt is made to join the current
+            thread as that would cause a deadlock. It is also an error to join() a
+            thread before it has been started and attempts to do so raises the same
+            exception.
+        """
+        for thr in self.runner.threads:
+            thr.join(timeout)
+
+    def is_alive(self) -> bool:
+        """
+        Returns whether the pipeline is alive.
+        The pipeline is considered alive if at least one of its nodes is running.
+        """
+        return any(thr.is_alive() for thr in self.runner.threads)
 
 
 class PipelineRunner:
@@ -564,7 +616,7 @@ class PipelineRunner:
     def _vis_index(self):
         return min([vis.size() for vis in self.vis_source.values()]) - 1
 
-    def build_pipeline(self, pipeline_def: Graph, outputs: list) -> None:
+    def build_pipeline(self, pipeline_def: Graph, outputs: list, use_mp: bool) -> None:
         if self.built:
             raise Exception('The pipeline is already built')
 
@@ -623,22 +675,22 @@ class PipelineRunner:
 
             # Populate the output queue dictionary
             if is_vis:  # Visualization blocks have an hardcoded single queue as output
-                node.out_queues = CloseableQueue(node.block.max_queue)
+                node.out_queues = get_queue_class(use_mp, node.block.max_queue)
                 out_q = [[node.out_queues]]
             else:
                 for adj in pipeline_def.adj(node, out=True):
-                    node.out_queues[adj[1]].append([CloseableQueue(node.block.max_queue), False])
+                    node.out_queues[adj[1]].append([get_queue_class(use_mp, node.block.max_queue), False])
                 out_q = [[x[0] for x in out] for out in node.out_queues]
 
                 if hash(node) in outputs:
                     log.debug('Output "%s" (%s) has been builded' % (node.name, hash(node)))
-                    q = CloseableQueue(Pipeline.MAX_OUT_SIZE)
+                    q = get_queue_class(use_mp, Pipeline.MAX_OUT_SIZE)
                     out_q.append(q)  # The last element of out_q is the output queue.
                     self.outputs[hash(node)] = OutputConsumer(q)
 
             # Create the thread
             runner = BlockRunner(node.block, in_q, out_q, node.custom_args)
-            thr = TerminableThread(runner.run)
+            thr = get_thread_class(use_mp, runner.run, thread_kwargs={'name': node.block.name})
             thr.daemon = True
             self.threads.append(thr)
 
@@ -687,7 +739,7 @@ class QueueConsumer:
     def __init__(self, q):
         self.in_q = q
         self.out = []
-        self._t = TerminableThread(self._reader)
+        self._t = get_thread_class(self._reader)
         self._t.daemon = True
 
     def is_alive(self):
@@ -740,25 +792,45 @@ class OutputConsumer:
         return x
 
 
-class CloseableQueue(Queue):
-    class Closed(Exception):
-        pass
+def get_queue_class(use_mp, max_size):
+    base_class = mpqueues.Queue if use_mp else queue.Queue
 
-    def __init__(self, maxsize):
-        super(CloseableQueue, self).__init__(maxsize)
-        self.close_ev = Event()
+    class CloseableQueue(base_class):
+        class Closed(Exception):
+            pass
 
-    def put(self, item, block=True, timeout=None):
-        if self.close_ev.is_set():
-            raise CloseableQueue.Closed
-        super().put(item, block, timeout)
+        def __init__(self, maxsize):
+            if isinstance(self, mpqueues.Queue):
+                super(CloseableQueue, self).__init__(maxsize, ctx=mp.get_context())
+                self.close_ev = mp.Event()
+                self.Full = mpqueues.Full
+            else:
+                super(CloseableQueue, self).__init__(maxsize)
+                self.close_ev = threading.Event()
+                self.Full = queue.Full
 
-    def close(self):
-        self.close_ev.set()
-        #super().put(StopIteration, True, timeout=None)
+        def put(self, item):
+            if self.close_ev.is_set():
+                raise self.Closed
+
+            try:
+                # There is a small chance that a node with full output queue is already waiting
+                # to put while the queue is closed. We add a timeout to check the event again.
+                super().put(item, block=True, timeout=1)
+            except self.Full:
+                self.put(item)
+
+        def close(self):
+            self.close_ev.set()
+
+        def clear(self):
+            while not self.empty():
+                self.get()
+                time.sleep(0.1)  # Leave some time to the buffer to eventually prevent a deadlock
+    return CloseableQueue(max_size)
 
 
-def block(f: Callable = None, max_queue: int = 5, output_names: List[str] = None,
+def block(f: Callable = None, max_queue: int = 10, output_names: List[str] = None,
         tag: str = 'None', data_type: str = 'raw', intercept_end: bool = False):
     """
     Decorator function to tag custom blocks to be added to pipeline
@@ -820,7 +892,7 @@ class BlockRunner:
 
         # Create full output if this is an output block
         self.full_out = None
-        if isinstance(self.out_q[-1], CloseableQueue):
+        if isinstance(self.out_q[-1], (queue.Queue, mpqueues.Queue)):
             self.full_out = self.out_q.pop()
 
         self.custom_arg = custom_arg
@@ -891,14 +963,14 @@ class BlockRunner:
                 # with no inputs first and propagating a bunch of StopIteration is enough
                 # we are not sure of that tho. so if the block has any input queue we are
                 # gonna close them, closing a queue will make it throw an exception on put
+                # the closing is done on the end of the function to be sure that the rest
+                # of the function is executed.
                 ret = [StopIteration for _ in range(len(self.out_q))]
-                for q in self.in_q:
-                    q.close()
                 self.terminate = True  # We mark this node to be terminated
-                log.debug('Function "%s" returned a StopIteration' % self.block.name)
+                log.debug('"%s" returned a StopIteration' % self.block.name)
             except Exception as e:  # Other exceptions are logged and a fake output is created
                 ret = [Pipeline._empty for _ in range(len(self.out_q))]
-                log.error('BlockRunner block "%s" has thrown "%s"' % (self.block.name, e))
+                log.debug('BlockRunner block "%s" has thrown "%s"' % (self.block.name, e))
 
         # If the function returned a _skip object we need to process it correctly.
         # We read the data stored inside of it and mark the node to skip next input
@@ -925,10 +997,13 @@ class BlockRunner:
                         try:
                             q.put(v)
                             all_died = False  # If at least one is open keep running
-                        except CloseableQueue.Closed:  # On closed queue exception
+                        except q.Closed:  # On closed queue exception
+                            q.clear()
                             log.debug('"%s" found queue closed' % self.block.name)
 
         if self.terminate or all_died:  # If all outputs died or instructed to terminate
+            for q in self.in_q:
+                q.close()
             raise StopIteration
 
 
@@ -937,33 +1012,39 @@ class FakeQueue:
         raise Exception('This is a fake queue and should be replaced')
 
 
-class TerminableThread(Thread):
-    def __init__(self, f, thread_args=(), thread_kwargs={}, *args, **kwargs):
-        super(TerminableThread, self).__init__(*thread_args, **thread_kwargs)
-        self._killer = Event()
-        self.name = f.__name__
-        self.target = lambda: f(*args, **kwargs)
-        self.slow = False
+def get_thread_class(use_mp, *args, **kwargs):
+    base_class = mp.Process if use_mp else threading.Thread
 
-    def __del__(self):
-        log.info('Deleted Thread Successfully')
+    class TerminableThread(base_class):
+        def __init__(self, f, thread_args=(), thread_kwargs={}, *args, **kwargs):
+            super(TerminableThread, self).__init__(*thread_args, **thread_kwargs)
+            self.target = lambda: f(*args, **kwargs)
+            self.slow = False
+            if isinstance(self, mp.Process):
+                self._killer = mp.Event()
+            else:
+                self._killer = threading.Event()
 
-    def kill(self):
-        self._killer.set()
+        def __del__(self):
+            log.debug('Deleted Thread Successfully')
 
-    def _killed(self):
-        return self._killer.is_set()
+        def kill(self):
+            self._killer.set()
 
-    def run(self):
-        while True:
-            if self._killed():
-                return
+        def _killed(self):
+            return self._killer.is_set()
 
-            try:
-                self.target()
-            except StopIteration:
-                self.kill()
-                return
+        def run(self):
+            while True:
+                if self._killed():
+                    return
 
-            if self.slow:
-                time.sleep(0.5)
+                try:
+                    self.target()
+                except StopIteration:
+                    self.kill()
+
+                if self.slow:
+                    time.sleep(0.5)
+
+    return TerminableThread(*args, **kwargs)
