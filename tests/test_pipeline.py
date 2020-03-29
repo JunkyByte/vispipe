@@ -93,4 +93,5 @@ class TestPipelineMacrosAndBlocks(unittest.TestCase):
             self.assertEqual(value, 10 * 9)  # Thanks Gauss
 
 
-if __name__ == '__main__': unittest.main()
+if __name__ == '__main__':
+    unittest.main()

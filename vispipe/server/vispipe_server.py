@@ -1,10 +1,9 @@
-from vispipe import Pipeline
+from ..vispipe import Pipeline
 from flask_socketio import SocketIO
 from threading import Thread, Event
 from flask import Flask, render_template, session
-from vispipe.server.server_gui import CursesQueueGUI
+from .server_gui import CursesQueueGUI
 import numpy as np
-import cv2
 import traceback
 import os
 import logging

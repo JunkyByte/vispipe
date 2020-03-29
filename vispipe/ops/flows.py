@@ -1,5 +1,5 @@
-from vispipe import Pipeline
-from vispipe import block
+from ..vispipe import Pipeline
+from ..vispipe import block
 """
 Flow generators allow to modify the way a stream of your pipeline is processed.
 """

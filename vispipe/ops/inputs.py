@@ -1,4 +1,4 @@
-from vispipe import block
+from ..vispipe import block
 from glob import iglob
 import numpy as np
 import pickle

@@ -461,7 +461,7 @@ class Pipeline:
             `True` if is last block of its macro.
         """
         for m in self.macro:
-            for i, node_hash in enumerate(m):
+            for i, _ in enumerate(m):
                 if i + 1 == len(m):
                     index = True
                 elif i == 0:
@@ -1171,7 +1171,6 @@ class BlockRunner:
                 self.terminate = True  # We mark this node to be terminated
                 log.debug('"%s" returned a StopIteration' % self.block.name)
             except Exception as e:  # Other exceptions are logged and a fake output is created
-                raise e
                 ret = [Pipeline._empty for _ in range(len(self.out_q))]
                 log.debug('BlockRunner block "%s" has thrown "%s"' % (self.block.name, e))
 
