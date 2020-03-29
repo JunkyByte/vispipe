@@ -1,6 +1,7 @@
 from typing import List, Tuple, Callable
 from inspect import signature, _empty
 import numpy as np
+from functools import partial
 
 
 class Block:
@@ -28,6 +29,10 @@ class Block:
         Whether the block should intercept pipeline end and manually manage termination.
         This is a complex and advanced feature and must be implemented correctly or pipeline
         termination is not assured.
+    allow_macro: bool
+        Whether the block can be part of macro blocks.
+        While this should usually be `True` blocks that intercept the end of pipeline or use
+        :meth:`.vispipe.Pipeline._empty` and :meth:`.vispipe.Pipeline._skip` should set this flag `False`
     """
     @staticmethod
     def serialize_args(args: dict):
@@ -40,13 +45,14 @@ class Block:
         return str(x)
 
     def __init__(self, f: Callable, is_class: bool, max_queue: int, output_names: List[str],
-            tag: str, data_type: str, intercept_end: bool):
+            tag: str, data_type: str, intercept_end: bool, allow_macro: bool):
         self.f = f
         self.name = f.__name__
         self.is_class = is_class
         self.tag = tag
         self.data_type = data_type
         self.intercept_end = intercept_end
+        self.allow_macro = allow_macro
         if self.is_class:
             init_params = signature(self.f).parameters
             if any([v.default == _empty for v in init_params.values()]):
@@ -61,6 +67,11 @@ class Block:
         self.custom_args_type = dict([(k, type(val)) for k, val in self.custom_args.items()])
         self.max_queue = max_queue
         self.output_names = output_names if output_names is not None else ['y']
+
+    def get_function(self, custom_args = {}):
+        if self.is_class:
+            return self.f(**custom_args).run
+        return partial(self.f, **custom_args)
 
     def num_inputs(self):
         return len(self.input_args)
@@ -90,6 +101,7 @@ class Block:
         yield 'tag', self.tag
         yield 'data_type', self.data_type
         yield 'intercept_end', self.intercept_end
+        yield 'allow_macro', self.allow_macro
 
 
 class Node:
@@ -118,6 +130,7 @@ class Node:
     def __init__(self, node_block: Tuple[Block, str], **kwargs):
         self.block = node_block[0]
         self.name = node_block[1]
+        self.is_macro = False
         self.custom_args = kwargs
         self.out_queues = []
         self.clear_out_queues()

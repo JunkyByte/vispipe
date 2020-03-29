@@ -1,6 +1,6 @@
 from .node import Node, Block
 from .graph import Graph
-from functools import partial
+from functools import partial, reduce
 from itertools import chain
 from inspect import signature, isgeneratorfunction
 from typing import Callable, Optional, List, Union, Tuple, Any
@@ -25,11 +25,12 @@ log.addHandler(console_handler)
 
 # TODO: Check save load works with outputs
 # TODO: Add drag to resize (or arg to resize) to vis blocks as you can now zoom.
-# TODO: Macro blocks? to execute multiple nodes subsequently, while it's impractical to run them in a faster way.
-# I suppose that just creating a way to define them can be convenient.
 # TODO: Blocks with inputs undefined? Like tuple together all the inputs, how to?
 # TODO: Variable output size based on arguments.
 # TODO: during vis redirect console to screen?
+# TODO: Add some assertion on ckpt reloading -> If a block is part of macro but not is not allow_macro for ex.
+# TODO: Add some custom exceptions
+# TODO: Add macro block setting during visualization.
 
 
 class Pipeline:
@@ -46,7 +47,12 @@ class Pipeline:
     ----------
     pipeline: Graph
     runner: PipelineRunner
-
+    vis_mode: bool
+        Whether the pipeline is in visualization mode.
+        This is filled during checkpoint loading.
+    macro: List[List[int]]
+        The list of all the macro blocks.
+        Each macro is represented as a list of node hashes.
     """
 
     #: Yield this to specify that a block is not ready to create a new output.
@@ -57,12 +63,15 @@ class Pipeline:
         def __init__(self, x):
             self.x = x
 
-    # TODO: Plot? Should be converted internally to an image
     data_type = ['raw', 'image', 'plot']  #: Supported data_type for visualization blocks.
     vis_tag = 'vis'  #: The tag used for visualization blocks.
 
     #: The maximum size of the output queues. This is set to avoid out of memory with running pipelines.
     MAX_OUT_SIZE = 1000
+
+    #: Whether to use a warning wrapper for blocks that are part of macro blocks.
+    #: Setting this to `False` will speed up pipelines that use macro blocks but will make debugging more difficult.
+    USE_MACRO_WARNINGS = True
 
     _blocks = {}
 
@@ -70,68 +79,11 @@ class Pipeline:
         self.pipeline = Graph(MAXSIZE)
         self.runner = PipelineRunner()
         self._outputs = []
+        self.macro = []
         self.vis_mode = False
 
         if path:
             self.load(path)
-
-    @staticmethod
-    def register_block(func: Callable, is_class: bool, max_queue: int, output_names: List[str],
-            tag: str, data_type: str, intercept_end: bool) -> None:
-        """
-        Register a block in the pipeline list of available blocks, this function is called
-        automatically by the decorator.
-
-        Note
-        ----
-        This is a static method, if you want to refer to it you can use ``Pipeline.register_block``
-
-        Parameters
-        ----------
-        func : Callable
-            The function to be registered.
-        is_class : bool
-            Whether it is a class function.
-        max_queue : int
-            The max size of the queues used for the block.
-        output_names : List[str]
-            See :class:`.Block`
-        tag : str
-            See :class:`.Block`
-        data_type : str
-            See :class:`.Block`
-        """
-        block = Block(func, is_class, max_queue, output_names, tag, data_type, intercept_end)
-        assert block.name not in Pipeline._blocks.keys(), 'The name %s is already registered as a pipeline block' % block.name
-        Pipeline._blocks[block.name] = block
-
-    @staticmethod
-    def get_blocks(serializable: bool = False) -> List[dict]:
-        """
-        Returns all the blocks tagged as a dictionary.
-
-        Note
-        ----
-        This is a static method, if you want to refer to it you can use ``Pipeline.get_blocks``
-
-        Parameters
-        ----------
-        serializable : bool
-            Whether if the dictionary returned must be serializable.
-
-        Returns
-        -------
-        List[dict]:
-            A list of dictionaries representing each block.
-        """
-        blocks = []
-        for block in Pipeline._blocks.values():
-            if serializable:
-                block = block.serialize()
-            else:
-                block = dict(block)
-            blocks.append(block)
-        return blocks
 
     @property
     def nodes(self) -> List[Node]:
@@ -165,6 +117,66 @@ class Pipeline:
             name = self.get_node(k).name
             out[name if name else k] = v
         return out
+
+    @staticmethod
+    def register_block(func: Callable, is_class: bool, max_queue: int, output_names: List[str],
+            tag: str, data_type: str, intercept_end: bool, allow_macro: bool) -> None:
+        """
+        Register a block in the pipeline list of available blocks, this function is called
+        automatically by the decorator.
+
+        Note
+        ----
+        This is a static method, if you want to refer to it you can use ``Pipeline.register_block``
+
+        Parameters
+        ----------
+        func : Callable
+            The function to be registered.
+        is_class : bool
+            Whether it is a class function.
+        max_queue : int
+            The max size of the queues used for the block.
+        output_names : List[str]
+            See :class:`.Block`
+        tag : str
+            See :class:`.Block`
+        data_type : str
+            See :class:`.Block`
+        allow_macro: bool
+            See :class:`.Block`
+        """
+        block = Block(func, is_class, max_queue, output_names, tag, data_type, intercept_end, allow_macro)
+        assert block.name not in Pipeline._blocks.keys(), 'The name %s is already registered as a pipeline block' % block.name
+        Pipeline._blocks[block.name] = block
+
+    @staticmethod
+    def get_blocks(serializable: bool = False) -> List[dict]:
+        """
+        Returns all the blocks tagged as a dictionary.
+
+        Note
+        ----
+        This is a static method, if you want to refer to it you can use ``Pipeline.get_blocks``
+
+        Parameters
+        ----------
+        serializable : bool
+            Whether if the dictionary returned must be serializable.
+
+        Returns
+        -------
+        List[dict]:
+            A list of dictionaries representing each block.
+        """
+        blocks = []
+        for block in Pipeline._blocks.values():
+            if serializable:
+                block = block.serialize()
+            else:
+                block = dict(block)
+            blocks.append(block)
+        return blocks
 
     def get_output(self, node: Union[int, str]):
         """
@@ -208,6 +220,22 @@ class Pipeline:
         node = self.get_node(node_hash)
         return self.pipeline.adj(node, out)
 
+    def get_node(self, node: Union[int, str]):  # While the hash is unique the name may not be
+        """
+        Returns the node that corresponds to name or hash.
+
+        Note
+        ----
+        Names are arbitrary and unicity is NOT verified.
+        Using name to access nodes may lead to undesired results if the name is duplicated.
+
+        Parameters
+        ----------
+        node : Union[int, str]
+            The name or hash of the node you are looking for.
+        """
+        return self.pipeline.get_node(node)
+
     def add_node(self, block_name: str, **kwargs) -> int:
         """
         Adds a new node to the pipeline.
@@ -241,23 +269,7 @@ class Pipeline:
         node = Node((Pipeline._blocks[block_name], name), **kwargs)
         return self.pipeline.insertNode(node)
 
-    def get_node(self, node: Union[int, str]):  # While the hash is unique the name may not be.
-        """
-        Returns the node that corresponds to name or hash.
-
-        Note
-        ----
-        Names are arbitrary and unicity is NOT verified.
-        Using name to access nodes may lead to undesired results if the name is duplicated.
-
-        Parameters
-        ----------
-        node : Union[int, str]
-            The name or hash of the node you are looking for.
-        """
-        return self.pipeline.get_node(node)
-
-    def remove_node(self, node: Union[str, int]):
+    def remove_node(self, node_hash: Union[str, int]):
         """
         Remove a node from the pipeline.
 
@@ -266,9 +278,18 @@ class Pipeline:
         node : Union[str, int]
             The name or hash of the node you want to remove.
         """
-        node = self.get_node(node)
+        node = self.get_node(node_hash)
+        if isinstance(node, str):
+            node_hash = hash(node)
+
         if node in self._outputs:
             self._outputs.remove(node)
+
+        try:
+            self.remove_macro(node_hash)
+        except KeyError:  # If the node is not part of a macro block will throw a KeyError
+            pass
+
         self.pipeline.deleteNode(node)
 
     def add_output(self, output: Union[str, int]):
@@ -293,6 +314,10 @@ class Pipeline:
             raise Exception('The node specified is already an output')
         if node.block.tag == Pipeline.vis_tag:
             raise Exception('Visualization blocks cannot be used as outputs')
+
+        is_macro, index = self.is_macro(output)
+        if is_macro and not index:
+            raise Exception('Only last node of a macro block can be an output')
 
         self._outputs.append(output)
 
@@ -323,14 +348,6 @@ class Pipeline:
         for node_hash in hashes:
             self.remove_node(node_hash)
 
-    def clear_pipeline(self):
-        """
-        Resets the state of the pipeline by deleting all its nodes and clearing its outputs.
-        """
-        self.pipeline.resetGraph()
-        self._outputs = []
-        self.runner.unbuild()
-
     def add_conn(self, from_hash: int, out_index: int, to_hash: int, inp_index: int):
         """
         Add a connection between two nodes of the pipeline.
@@ -347,9 +364,127 @@ class Pipeline:
         inp_index : int
             The index of the input you want to connect (starting from zero).
         """
+        from_is_macro, from_m_index = self.is_macro(from_hash)
+        to_is_macro, to_m_index = self.is_macro(from_hash)
+        if from_is_macro and not from_m_index:
+            raise Exception('The output node is part of a macro block, only last node of a macro can have new connections')
+        if to_is_macro and to_m_index is not False:
+            raise Exception('The input node is part of a macro block, only first node of a macro can have new connections')
         from_node = self.get_node(from_hash)
         to_node = self.get_node(to_hash)
         self.pipeline.insertEdge(from_node, to_node, out_index, inp_index)
+
+    def add_macro(self, start_hash: int, end_hash: int) -> None:
+        """
+        Create a macro block from `start_hash` to `end_hash`, macro blocks will be executed in a faster way internally
+        Only a linearly connected set of nodes can become a macro block.
+        Each block must have `allow_macro` set to `True` to support being part of a macro block.
+        Only the last node of a macro block can be marked as an output and every node intern to a macro cannot have
+        outside connections.
+        `Pipeline._empty` and `Pipeline._skip` of intern nodes will not be correctly handled and an exception will be
+        raised if encountered.
+
+        Parameters
+        ----------
+        start_hash : int
+            The node that starts the macro block.
+        end_hash : int
+            The node that ends the macro block.
+        """
+        if start_hash == end_hash:
+            raise Exception('start and end node coincide')
+        start_node = self.get_node(start_hash)
+        end_node = self.get_node(end_hash)
+        if not end_node.block.allow_macro:  # Manually check end node status
+            raise Exception('End node %s has "allow_macro" set to False and cannot be part of a macro block')
+
+        visited = []  # Will contain all hashes that are part of the macro block
+        current_node = start_node
+        while current_node not in visited:
+            # We need to check that the nodes are linearly connected.
+            # For simplicity we want that each node is connected ONLY to the subsequent one.
+            visited.append(hash(current_node))
+            if not current_node.block.allow_macro:
+                raise Exception('Block "%s" has "allow_macro" set to False and cannot be part \
+                        of a macro block' % current_node.block.name)
+
+            # Checks on connections must be made BEFORE the node switches to new one
+            conn_nodes = set(adj[0] for adj in self.pipeline.adj(current_node, out=True))
+            if not conn_nodes:
+                raise Exception('The two nodes are not connected and cannot be part of the same macro block')
+
+            if len(conn_nodes) > 1 and current_node is not end_node:
+                raise Exception('Block "%s" is connected to multiple blocks and cannot be part \
+                        of a macro block' % current_node.block.name)
+
+            in_conn_nodes = set(adj[0] for adj in self.pipeline.adj(current_node, out=False))
+            if len(in_conn_nodes) > 1 and current_node is not start_node:
+                raise Exception('Block "%s" is connected to multiple blocks and cannot be part \
+                        of a macro block' % current_node.block.name)
+
+            # We can now switch to next node
+            current_node = conn_nodes.pop()
+            if current_node.block.intercept_end and current_node is not start_node:
+                raise Exception('Only first node of a macro block is allowed to intercept the end of the pipeline')
+
+            if current_node.is_macro:
+                raise Exception('The node %s is already part of a macro block.' % hash(current_node))
+
+            if current_node is end_node:  # We reached last node
+                break  # Exit the cycling
+
+            if hash(current_node) in self._outputs:
+                raise Exception('The node %s is already an output, only last node of a macro block is allowed to be an output.')
+
+        visited.append(hash(end_node))
+        for node in [self.get_node(n) for n in visited]:
+            node.is_macro = True
+
+        self.macro.append(visited)
+
+    def is_macro(self, node_hash: int) -> Tuple[bool, Optional[bool]]:
+        """
+        Whether a block is part of a macro block.
+
+        Parameters
+        ----------
+        node_hash : int
+            The node you want to verify.
+
+        Returns
+        -------
+        Tuple[bool, Optional[bool]]:
+            The first boolean represent whether the block is part of a macro block.
+            The second one is:
+            `None` is the block is internal to its macro
+            `False` if is first block of its macro and
+            `True` if is last block of its macro.
+        """
+        for m in self.macro:
+            for i, node_hash in enumerate(m):
+                if i + 1 == len(m):
+                    index = True
+                elif i == 0:
+                    index = False
+                else:
+                    index = None
+                return True, index
+        return False, None
+
+    def remove_macro(self, node_hash: int) -> None:
+        """
+        Remove the macro block the node is part of.
+
+        Parameters
+        ----------
+        node_hash : int
+            The node whose macro block you want to remove.
+        """
+        for m in self.macro:
+            if node_hash in m:
+                self.macro.remove(m)
+                return
+        raise KeyError('The node you passed is not part of a macro')
 
     def set_custom_arg(self, node_hash: int, key: str, value: Any):
         """
@@ -383,6 +518,15 @@ class Pipeline:
         else:
             node.custom_args[key] = arg_type(value)
 
+    def clear_pipeline(self):
+        """
+        Resets the state of the pipeline by deleting all its nodes and clearing its outputs.
+        """
+        self.pipeline.resetGraph()
+        self._outputs = []
+        self.macros = []
+        self.runner.unbuild()
+
     def read_vis(self):
         """
         Reads the current data passing from all the visualization blocks.
@@ -406,7 +550,7 @@ class Pipeline:
         if not self.runner.built:
             return []
 
-        def _unpack(h, n, x):
+        def _unpack(h, n, x) -> list:
             if isinstance(x, (queue.Queue, mpqueues.Queue, QueueConsumer)):
                 return (h, n, x.qsize(), q.maxsize)
             if x and isinstance(x, list):
@@ -464,7 +608,7 @@ class Pipeline:
         use_mp : bool
             Whether to use multiprocessing instead of threading.
         """
-        self.runner.build_pipeline(self.pipeline, self._outputs if not self.vis_mode else [], mp)
+        self.runner.build_pipeline(self.pipeline, self.macro, self._outputs, self.vis_mode, use_mp)
 
     def run(self, slow: bool = False, use_mp: bool = False) -> None:
         """
@@ -504,7 +648,7 @@ class Pipeline:
             The visualization data associated with this pipeline.
         """
         with open(path, 'wb') as f:
-            pickle.dump((self.pipeline, self._outputs, vis_data), f)
+            pickle.dump((self.pipeline, self._outputs, self.macro, vis_data), f)
 
     def load(self, path: str, vis_mode: bool = False, exclude_tags: list = []) -> object:
         """
@@ -532,13 +676,13 @@ class Pipeline:
 
         self.clear_pipeline()
         with open(path, 'rb') as f:
-            self.pipeline, self._outputs, vis_data = pickle.load(f)
+            self.pipeline, self._outputs, self.macro, vis_data = pickle.load(f)
 
         for tag in exclude_tags:
             self.remove_tag(tag)
 
         return vis_data
-    
+
     def join(self, timeout: Optional[float] = None) -> None:
         """
         This is builded following `Thread.join` method from `Threading` module.
@@ -616,9 +760,21 @@ class PipelineRunner:
     def _vis_index(self):
         return min([vis.size() for vis in self.vis_source.values()]) - 1
 
-    def build_pipeline(self, pipeline_def: Graph, outputs: list, use_mp: bool) -> None:
+    def warning_wrapper(self, f):
+        def wrap(*args, **kwargs):
+            ret = f(*args, **kwargs)
+            if ret is Pipeline._empty or isinstance(ret, Pipeline._skip):
+                raise Exception('A macro block returned a Pipeline._empty or a Pipeline._skip object.')
+            return ret
+        return wrap
+
+    def build_pipeline(self, pipeline_def: Graph, macros: List[List], outputs: list, vis_mode: bool, use_mp: bool) -> None:
         if self.built:
             raise Exception('The pipeline is already built')
+
+        if vis_mode:
+            outputs = []
+            macros = []
 
         if len(pipeline_def.v()) == 0:
             return
@@ -643,6 +799,21 @@ class PipelineRunner:
         if any([adj for adj in pipeline.adj_list]):
             raise Exception('The graph has at least one cycle')
 
+        # We extract macro blocks by removing them from ord_graph and storing their blocks and args inside macros.
+        macro_dict = {}
+        if not vis_mode:
+            for macro in macros:
+                # They are ordered
+                start_node = pipeline.get_node(macro[0])  # We won't pop the start node!
+                end_node = pipeline.get_node(macro[-1])
+                macro_dict[start_node] = []
+                for node_hash in macro[1:-1]:
+                    node = pipeline.get_node(node_hash)
+                    ord_graph.remove(node)  # But we pop all the others
+                    macro_dict[start_node].append((node.block, node.custom_args))
+                ord_graph.remove(end_node)
+                macro_dict[start_node].append(end_node)
+
         for node in ord_graph:
             block = node.block
             is_vis = True if block.tag == Pipeline.vis_tag else False
@@ -654,7 +825,6 @@ class PipelineRunner:
                     if state is False:
                         # Set output node queue state to True to prevent other from using it
                         # out_idx -> index of the out, i -> free queue, 1 -> Index of the state bool
-
                         node_out.out_queues[out_idx][i][1] = True
                         return q
                 raise AssertionError
@@ -662,7 +832,7 @@ class PipelineRunner:
             # Helper to create input queues
             def get_input_queues(node):
                 adj_out = pipeline_def.adj(node, out=False)
-                in_q = [FakeQueue() for _ in range(node.block.num_inputs())]
+                in_q = [FakeQueue() for _ in range(block.num_inputs())]
                 for node_out, out_idx, inp_idx, _ in adj_out:
                     free_q = get_free_out_q(node_out, out_idx)
                     in_q[inp_idx] = free_q
@@ -673,13 +843,44 @@ class PipelineRunner:
             if block.num_inputs() != 0:  # If there are inputs
                 in_q = get_input_queues(node)
 
+            def chain_functions(functions):
+                end_f = functions.pop()
+                def wrap(*args):
+                    yield from end_f(*reduce(lambda x, f: _force_tuple(next(f(*x))), functions, args))
+                return wrap
+
+            # Now that we created the inputs if we are dealing with a macro block we need
+            # to use it's output block to calculate the outputs of the whole block.
+            if node in macro_dict.keys():
+                last_node = macro_dict[node][-1]
+                last_block = last_node.block
+                last_custom_args = last_node.custom_args
+                start_name = block.name
+                last_name = last_block.name
+
+                funcs = [block.get_function(node.custom_args)]
+                for macro_block, custom_args in macro_dict[node][:-1]:
+                    # We wrap each function in a warning manager and add them to the list of functions
+                    #funcs.append(macro_block.get_function(custom_args))
+                    f = macro_block.get_function(custom_args)
+                    if Pipeline.USE_MACRO_WARNINGS:
+                        f = self.warning_wrapper(f)
+                    funcs.append(f)
+                funcs.append(last_block.get_function(last_custom_args))
+                f = chain_functions(funcs)
+
+                block = Block(f, False, last_block.max_queue, last_block.output_names,
+                            last_block.tag, last_block.data_type, block.intercept_end, True)
+                node = last_node  # Overwrite the node to the last node
+                node.block.name = '%s -> %s' % (start_name, last_name)
+
             # Populate the output queue dictionary
             if is_vis:  # Visualization blocks have an hardcoded single queue as output
-                node.out_queues = get_queue_class(use_mp, node.block.max_queue)
+                node.out_queues = get_queue_class(use_mp, block.max_queue)
                 out_q = [[node.out_queues]]
             else:
                 for adj in pipeline_def.adj(node, out=True):
-                    node.out_queues[adj[1]].append([get_queue_class(use_mp, node.block.max_queue), False])
+                    node.out_queues[adj[1]].append([get_queue_class(use_mp, block.max_queue), False])
                 out_q = [[x[0] for x in out] for out in node.out_queues]
 
                 if hash(node) in outputs:
@@ -689,8 +890,8 @@ class PipelineRunner:
                     self.outputs[hash(node)] = OutputConsumer(q)
 
             # Create the thread
-            runner = BlockRunner(node.block, in_q, out_q, node.custom_args)
-            thr = get_thread_class(use_mp, runner.run, thread_kwargs={'name': node.block.name})
+            runner = BlockRunner(block, in_q, out_q, node.custom_args, node.is_macro)
+            thr = get_thread_class(use_mp, runner.run, thread_kwargs={'name': block.name})
             thr.daemon = True
             self.threads.append(thr)
 
@@ -831,7 +1032,7 @@ def get_queue_class(use_mp, max_size):
 
 
 def block(f: Callable = None, max_queue: int = 10, output_names: List[str] = None,
-        tag: str = 'None', data_type: str = 'raw', intercept_end: bool = False):
+        tag: str = 'None', data_type: str = 'raw', intercept_end: bool = False, allow_macro: bool = True):
     """
     Decorator function to tag custom blocks to be added to pipeline
 
@@ -854,7 +1055,7 @@ def block(f: Callable = None, max_queue: int = 10, output_names: List[str] = Non
     """
     if f is None:  # Correctly manage decorator duality
         return partial(block, max_queue=max_queue, output_names=output_names, tag=tag,
-                data_type=data_type, intercept_end=intercept_end)
+                data_type=data_type, intercept_end=intercept_end, allow_macro=allow_macro)
 
     if isinstance(f, types.FunctionType):
         if not isgeneratorfunction(f):
@@ -876,7 +1077,7 @@ def block(f: Callable = None, max_queue: int = 10, output_names: List[str] = Non
         output_names = []
 
     Pipeline.register_block(f, is_class, max_queue, output_names,
-            tag, data_type, intercept_end)
+            tag, data_type, intercept_end, allow_macro)
     return f
 
 
@@ -885,10 +1086,11 @@ def _force_tuple(x):
 
 
 class BlockRunner:
-    def __init__(self, block, in_q, out_q, custom_arg):
+    def __init__(self, block, in_q, out_q, custom_arg, is_macro):
         self.block = block
         self.in_q = in_q
         self.out_q = out_q
+        self.is_macro = is_macro
 
         # Create full output if this is an output block
         self.full_out = None
@@ -901,10 +1103,10 @@ class BlockRunner:
         self.terminate = False
 
         # Map the correct function from the block
-        if block.is_class:
-            self.f = block.f(**self.custom_arg).run
+        if is_macro:
+            self.f = block.f
         else:
-            self.f = partial(block.f, **self.custom_arg)
+            self.f = block.get_function(self.custom_arg)
 
     def run(self):
         # Pipeline.empty -> The function is not ready to return anything and its output is skip
@@ -969,6 +1171,7 @@ class BlockRunner:
                 self.terminate = True  # We mark this node to be terminated
                 log.debug('"%s" returned a StopIteration' % self.block.name)
             except Exception as e:  # Other exceptions are logged and a fake output is created
+                raise e
                 ret = [Pipeline._empty for _ in range(len(self.out_q))]
                 log.debug('BlockRunner block "%s" has thrown "%s"' % (self.block.name, e))
 
@@ -1002,6 +1205,8 @@ class BlockRunner:
                             log.debug('"%s" found queue closed' % self.block.name)
 
         if self.terminate or all_died:  # If all outputs died or instructed to terminate
+            if self.full_out:
+                self.full_out.put(StopIteration)
             for q in self.in_q:
                 q.close()
             raise StopIteration

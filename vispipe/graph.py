@@ -85,7 +85,7 @@ class Graph():
         id_a = self.node_ids.lookup(str(hash(node_a)))
         id_b = self.node_ids.lookup(str(hash(node_b)))
         if id_a is None or id_b is None or node_b not in self.vertices or node_a not in self.vertices or id_a == id_b:
-            raise Exception("error: one of the two nodes is not in the graph or trying to connect the same node")
+            raise Exception("One of the two nodes is not in the graph or trying to connect the same node")
         adj_b = self.adj(node_b).copy()
         for el in adj_b:
             direction = el[3]  # get the direction : true if b->node, False if node->b
@@ -99,7 +99,7 @@ class Graph():
     def deleteNode(self, node):  # TODO: Add last_id_used processing
         node_id = self.node_ids.lookup(str(hash(node)))
         if node not in self.vertices:
-            raise Exception("The Node is not in the graph")
+            raise KeyError("The Node is not in the graph")
         self.adj_list[node_id] = set()
         self.node_ids.remove(str(hash(node)))
         self.vertices.remove(node)
@@ -112,7 +112,7 @@ class Graph():
 
     def deleteEdge(self, node_a, node_b, out_idx, in_idx):
         if node_a not in self.vertices or node_b not in self.vertices:
-            raise Exception("error: one of the two nodes not in the graph")
+            raise Exception("One of the two nodes not in the graph")
         node_a_id = self.node_ids.lookup(str(hash(node_a)))
         node_b_id = self.node_ids.lookup(str(hash(node_b)))
         node_a_tuple = (node_b, out_idx, in_idx, True)
@@ -122,7 +122,7 @@ class Graph():
 
     def adj(self, node, out: bool = None):
         if node not in self.vertices:
-            raise Exception("error: node not in the graph")
+            raise KeyError("Node not in the graph")
         node_id = self.node_ids.lookup(str(hash(node)))
         if out is None:
             return self.adj_list[node_id]
@@ -145,7 +145,7 @@ class Graph():
                 if node == hash(el):
                     return el
 
-        raise Exception("Node not in graph")
+        raise KeyError("Node not in graph")
 
     def resetGraph(self):
         vertices_copy = self.vertices.copy()  # cant change set size during iteration

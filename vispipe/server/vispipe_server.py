@@ -27,6 +27,8 @@ class Server:
 
     def __init__(self, PATH_CKPT='./scratch_test.pickle', slow=True, use_curses=True):
         self.pipeline = Pipeline()
+        self.pipeline.vis_mode = True
+
         self.PATH_CKPT = PATH_CKPT
         self.slow = slow
         self.vis_data = None
@@ -175,10 +177,7 @@ class Server:
 
     def run_pipeline(self):
         try:
-            if not self.pipeline.runner.built:
-                self.pipeline.build()
-
-            self.pipeline.run(slow=self.slow)
+            self.pipeline.run(slow=self.slow, use_mp=False)
             self.vis_thread_stop_event.clear()
             if not self.vis_thread.isAlive():
                 self.vis_thread = socketio.start_background_task(self.send_vis,

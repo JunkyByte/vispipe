@@ -1,5 +1,5 @@
 import unittest
-from vispipe import Pipeline
+from vispipe import Pipeline, block
 import logging
 logging.disable(logging.CRITICAL)
 
@@ -59,5 +59,38 @@ class TestPipelineNodesAndConnections(unittest.TestCase):
             self.pipeline.get_node(node_hash)
 
 
-if __name__ == '__main__':
-    unittest.main()
+class TestPipelineMacrosAndBlocks(unittest.TestCase):
+    @block(tag='common', output_names=['y1', 'y2'])
+    def identity_two(x, y):
+        yield x, y
+
+    def setUp(self):
+        self.pipeline = Pipeline()
+        self.inp = self.pipeline.add_node('np_iter_file', path='tests/data/10elementarray.npy')
+        self.k = self.pipeline.add_node('constant', value=2)
+        self.collect = self.pipeline.add_node('identity_two')
+        self.multiply = self.pipeline.add_node('multiply')
+        self.sum = self.pipeline.add_node('accumulate')
+        self.pipeline.add_conn(self.inp, 0, self.collect, 0)
+        self.pipeline.add_conn(self.k, 0, self.collect, 1)
+        self.pipeline.add_conn(self.collect, 0, self.multiply, 0)
+        self.pipeline.add_conn(self.collect, 1, self.multiply, 1)
+        self.pipeline.add_conn(self.multiply, 0, self.sum, 0)
+        self.pipeline.add_output(self.sum)
+
+    def tearDown(self):
+        self.pipeline.clear_pipeline()
+
+    def test_intercept_end_accumulate_with_macro(self):
+        self.pipeline.add_macro(self.collect, self.multiply)
+        self.pipeline.run()
+        for value in self.pipeline.outputs[self.sum]:
+            self.assertEqual(value, 10 * 9)  # Thanks Gauss
+
+    def test_intercept_end_accumulate(self):
+        self.pipeline.run()
+        for value in self.pipeline.outputs[self.sum]:
+            self.assertEqual(value, 10 * 9)  # Thanks Gauss
+
+
+if __name__ == '__main__': unittest.main()

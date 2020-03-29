@@ -201,59 +201,6 @@ class testempty:
 
 
 @vispipe.block
-class timer:
-    def __init__(self, n: int = 1000, end: bool = True):
-        self.n = n
-        self.start_n = self.n
-        self.started = False
-        self.end = end
-        self.last_result = 'Still counting'
-
-    def run(self, x):
-        if not self.started:
-            self.started = True
-            self.start_time = time.time()
-        self.n -= 1
-        if self.n == -1:
-            end_time = time.time()
-            delta = end_time - self.start_time
-            self.last_result = 'Benchmark - %s runs | time: %s | r/s: %s' % (self.start_n, delta, round(self.start_n / delta, 4))
-            logging.getLogger('vispipe').info(self.last_result)
-            if self.end:
-                raise StopIteration
-            self.n = self.start_n
-            self.start_time = time.time()
-        yield self.last_result
-
-
-@vispipe.block(tag='vis', data_type='raw')
-class iterme:
-    instance = None
-
-    def __new__(cls):
-        if iterme.instance is None:
-            iterme.instance = object.__new__(cls)
-        return iterme.instance
-
-    def __init__(self):
-        self.last = None
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        while self.last == self.x:
-            continue
-
-        self.last = self.x
-        return self.x
-
-    def run(self, x):
-        self.x = x
-        yield None
-
-
-@vispipe.block
 class timer_out:
     def __init__(self):
         self.count = 0
@@ -279,43 +226,26 @@ class accumulator:
         yield -1
 
 
-pipeline = Pipeline()
+#pipeline = Pipeline()
 
-img1 = pipeline.add_node('image')
-img2 = pipeline.add_node('image')
-add = pipeline.add_node('test_addition')
-timern = pipeline.add_node('timer', n=1000)
+#img1 = pipeline.add_node('image')
+#img2 = pipeline.add_node('image')
+#add = pipeline.add_node('test_addition')
+#plus1 = pipeline.add_node('test_plus1')
+#plus2 = pipeline.add_node('test_plus100')
+#timern = pipeline.add_node('benchmark', n=1000)
 
-pipeline.add_conn(img1, 0, add, 0)
-pipeline.add_conn(img2, 0, add, 1)
-pipeline.add_conn(add, 0, timern, 0)
+#pipeline.add_conn(img1, 0, add, 0)
+#pipeline.add_conn(img2, 0, add, 1)
+#pipeline.add_conn(add, 0, plus1, 0)
+#pipeline.add_conn(plus1, 0, plus2, 0)
+#pipeline.add_conn(plus2, 0, timern, 0)
 
-pipeline.run(slow=False, use_mp=True)
-pipeline.join()
+#pipeline.add_macro(add, timern)
 
-#it = pipeline.add_node('iter_folders', root_dir='./', recursive=True)
-#pipeline.add_output(it)
+#pipeline.run(slow=False, use_mp=False)
+#pipeline.join()
 
-#pipeline.run(slow=True)
-
-#output_iter = pipeline.outputs[it]
-#for x in output_iter:
-#    print('Got value: ', x)
-
-#while True:
-#    print()
-#    for key, queue in [[n.block.name, n.out_queues[0]] for n in pipeline.nodes]:
-#        try:
-#            print(key, 'queue is empty? ', queue[0][0].empty())
-#            while not queue[0][0].empty():
-#                x = queue[0][0].get()
-#        except IndexError:
-#            pass
-#    for thr in pipeline.runner.threads:
-#        print(thr.is_alive())
-#        pass
-#    print()
-#    time.sleep(1)
 #pipeline.clear_pipeline()
 #pipeline.save('./scratch_test.pickle')
 #pipeline.load('./test.pickle')

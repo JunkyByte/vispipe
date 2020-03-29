@@ -115,7 +115,11 @@ class pickle_file:
         self.file = pickle.load(open(path, 'rb'))
 
     def run(self):
-        yield self.file
+        if self.file is StopIteration:
+            raise StopIteration
+        x = self.file
+        self.file = StopIteration
+        yield x
 
 
 @block(tag='input', max_queue=1)
@@ -150,7 +154,11 @@ class json_file:
         self.file = json.load(open(path))
 
     def run(self):
-        yield self.file
+        if self.file is StopIteration:
+            raise StopIteration
+        x = self.file
+        self.file = StopIteration
+        yield x
 
 
 @block(tag='input', max_queue=1)

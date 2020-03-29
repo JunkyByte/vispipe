@@ -35,6 +35,10 @@ Images manipulation
 -------------------
 .. automodule:: vispipe.ops.images
 
+Utils
+-----
+.. automodule:: vispipe.ops.Utils
+
 Visualization
 -------------
 .. automodule:: vispipe.ops.vis
