@@ -35,7 +35,7 @@ class TestPipelineOutputs(unittest.TestCase):
         self.pipeline.run()
         access_name = self.pipeline.outputs['named_file']
         with self.assertRaises(KeyError):
-            self.pipeline.outputs[self.node]
+            _ = self.pipeline.outputs[self.node]
         access_hash = self.pipeline.get_output(self.node)  # Correctly access the output by hash
         self.assertEqual(access_name, access_hash)
 

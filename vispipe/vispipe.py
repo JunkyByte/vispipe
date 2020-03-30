@@ -8,11 +8,9 @@ import queue
 import multiprocessing.queues as mpqueues
 import multiprocessing as mp
 import threading
-from ast import literal_eval
-import numpy as np
 import types
 import copy
-import pickle
+import dill as pickle
 import time
 import logging
 MAXSIZE = 100
@@ -28,9 +26,10 @@ log.addHandler(console_handler)
 # TODO: Blocks with inputs undefined? Like tuple together all the inputs, how to?
 # TODO: Variable output size based on arguments.
 # TODO: during vis redirect console to screen?
-# TODO: Add some assertion on ckpt reloading -> If a block is part of macro but not is not allow_macro for ex.
+# TODO: Add some assertion on ckpt reloading -> If a block is part of macro but is not allow_macro for ex.
 # TODO: Add some custom exceptions
 # TODO: Add macro block setting during visualization.
+# TODO: Lambdas can't be inspected from visualization
 
 
 class Pipeline:
@@ -59,6 +58,8 @@ class Pipeline:
     _empty = object()
 
     #: Yield an instance of this to specify that a block is busy processing old input, on next call no new data will be passed.
+    _skip = None  # This is a ugly fix for _skip no showing in the docs
+
     class _skip:
         def __init__(self, x):
             self.x = x
@@ -500,23 +501,7 @@ class Pipeline:
             The value to set for this argument.
         """
         node = self.get_node(node_hash)
-        arg_type = node.block.custom_args_type[key]
-        if arg_type in [list, bool, tuple, dict, None, bytes, np.ndarray]:
-            try:
-                parsed = literal_eval(value)
-                if arg_type is np.ndarray:
-                    parsed = np.array(parsed)
-
-                if isinstance(parsed, arg_type):
-                    node.custom_args[key] = parsed
-                else:
-                    raise TypeError('Custom arg "%s" of "%s" with value "%s" is not of type "%s"' %
-                            (key, node.block.name, parsed, arg_type))
-            except (ValueError, SyntaxError):
-                raise ValueError('Cannot parse custom arg "%s" of "%s" with value "%s"' %
-                        (key, node.block.name, value)) from None
-        else:
-            node.custom_args[key] = arg_type(value)
+        node.set_custom_arg(key, value)
 
     def clear_pipeline(self):
         """
@@ -897,7 +882,7 @@ class PipelineRunner:
 
             # Create the thread consumer of the visualization
             if is_vis:
-                self.vis_source[str(hash(node))] = QueueConsumer(node.out_queues)
+                self.vis_source[hash(node)] = QueueConsumer(use_mp, node.out_queues)
         self.built = True
 
     def unbuild(self):
@@ -937,10 +922,10 @@ class PipelineRunner:
 
 
 class QueueConsumer:
-    def __init__(self, q):
+    def __init__(self, use_mp, q):
         self.in_q = q
         self.out = []
-        self._t = get_thread_class(self._reader)
+        self._t = get_thread_class(use_mp, self._reader)
         self._t.daemon = True
 
     def is_alive(self):
@@ -1202,6 +1187,8 @@ class BlockRunner:
                         except q.Closed:  # On closed queue exception
                             q.clear()
                             log.debug('"%s" found queue closed' % self.block.name)
+                    else:
+                        all_died = False
 
         if self.terminate or all_died:  # If all outputs died or instructed to terminate
             if self.full_out:

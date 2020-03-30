@@ -102,7 +102,8 @@ class Server:
     def set_custom_arg(self, data):
         try:
             log.debug('Setting node %s arg %s to value %s' % (data['id'], data['key'], data['value']))
-            self.pipeline.set_custom_arg(data['id'], data['key'], data['value'])
+            node = self.pipeline.get_node(data['id'])
+            node.set_custom_arg(data['key'], data['value'])
             self.update = True
             return {}, 200
         except Exception as e:

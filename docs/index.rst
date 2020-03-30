@@ -5,6 +5,10 @@ VisPipe's documentation!
    :target: https://www.codefactor.io/repository/github/junkybyte/vispipe
    :alt: CodeFactor
 
+.. image:: https://github.com/JunkyByte/vispipe/workflows/Package%20Testing/badge.svg?branch=master
+   :target: https://github.com/JunkyByte/vispipe
+   :alt: Package Testing
+
 -----------
 
 Pipeline Class / block decorator
@@ -37,7 +41,7 @@ Images manipulation
 
 Utils
 -----
-.. automodule:: vispipe.ops.Utils
+.. automodule:: vispipe.ops.utils
 
 Visualization
 -------------

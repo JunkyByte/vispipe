@@ -1,5 +1,6 @@
 from ..vispipe import Pipeline
 from ..vispipe import block
+from typing import Callable
 import numpy as np
 
 
@@ -61,7 +62,7 @@ def np_empty(shape: tuple = None, dtype: np.dtype = None, order: str = 'C'):
     yield np.empty(shape, dtype, order)
 
 
-@block(tag='common', intercept_end=True, output_names=[])
+@block(tag='common', intercept_end=True)
 class accumulate:
     def __init__(self):
         self.sum = 0
@@ -71,6 +72,11 @@ class accumulate:
             yield self.sum
         self.sum += x
         yield Pipeline._empty
+
+
+@block(tag='common')
+def filter(x, func: Callable = lambda x: True):
+    yield x if func(x) else Pipeline._empty
 
 
 @block(tag='common')

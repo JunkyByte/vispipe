@@ -1,7 +1,9 @@
 from typing import List, Tuple, Callable
 from inspect import signature, _empty
-import numpy as np
 from functools import partial
+from types import FunctionType
+from ast import literal_eval
+import numpy as np
 
 
 class Block:
@@ -68,7 +70,7 @@ class Block:
         self.max_queue = max_queue
         self.output_names = output_names if output_names is not None else ['y']
 
-    def get_function(self, custom_args = {}):
+    def get_function(self, custom_args={}):
         if self.is_class:
             return self.f(**custom_args).run
         return partial(self.f, **custom_args)
@@ -83,7 +85,6 @@ class Block:
         x = dict(self)
         del x['f']
         # TODO: Change me to a custom value, using None can cause problems
-        # TODO: Support np array by casting to nested lists
         x['input_args'] = dict((k, v if v != _empty else None)
                                 for k, v in x['input_args'].items())
         x['custom_args_type'] = dict((k, str(v.__name__)) for k, v in x['custom_args_type'].items())
@@ -131,7 +132,7 @@ class Node:
         self.block = node_block[0]
         self.name = node_block[1]
         self.is_macro = False
-        self.custom_args = kwargs
+        self._custom_args = kwargs
         self.out_queues = []
         self.clear_out_queues()
         self._hash = None
@@ -140,6 +141,35 @@ class Node:
         self.out_queues = []
         for _ in range(self.block.num_outputs()):
             self.out_queues.append([])
+
+    @property
+    def custom_args(self):
+        return self._custom_args
+
+    def set_custom_arg(self, key, value):
+        arg_type = self.block.custom_args_type[key]
+        if arg_type in [list, bool, tuple, dict, None, bytes, np.ndarray]:
+            try:
+                parsed = literal_eval(value)
+                if arg_type is np.ndarray:
+                    parsed = np.array(parsed)
+                if isinstance(parsed, arg_type):
+                    self._custom_args[key] = parsed
+                else:
+                    raise TypeError('Custom arg "%s" of "%s" with value "%s" is not of type "%s"' %
+                            (key, self.block.name, parsed, arg_type))
+            except (ValueError, SyntaxError):
+                raise ValueError('Cannot parse custom arg "%s" of "%s" with value "%s"' %
+                        (key, self.block.name, value)) from None
+        elif arg_type is FunctionType:
+            print('is a function')
+            try:
+                self._custom_args[key] = eval(value)
+            except (ValueError, SyntaxError):
+                raise ValueError('Cannot parse custom arg "%s" of "%s" with value "%s"' %
+                        (key, self.block.name, value)) from None
+        else:
+            self._custom_args[key] = arg_type(value)
 
     def __hash__(self):
         if self._hash is None:
