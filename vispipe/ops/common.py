@@ -2,6 +2,7 @@ from ..vispipe import Pipeline
 from ..vispipe import block
 from typing import Callable
 import numpy as np
+import math
 
 
 @block(tag='common')
@@ -127,3 +128,48 @@ def integer_division(x, y):
 @block(tag='common')
 def modulo(x, y):
     yield x % y
+
+
+@block(tag='common')
+def sin(x):
+    yield math.sin(x)
+
+
+@block(tag='common')
+def cos(x):
+    yield math.cos(x)
+
+
+@block(tag='common')
+def tan(x):
+    yield math.tan(x)
+
+
+@block(tag='common')
+def asin(x):
+    yield math.asin(x)
+
+
+@block(tag='common')
+def acos(x):
+    yield math.acos(x)
+
+
+@block(tag='common')
+def atan(x):
+    yield math.atan(x)
+
+
+@block(tag='common')
+def sinh(x):
+    yield math.sinh(x)
+
+
+@block(tag='common')
+def cosh(x):
+    yield math.cosh(x)
+
+
+@block(tag='common')
+def tanh(x):
+    yield math.tanh(x)
