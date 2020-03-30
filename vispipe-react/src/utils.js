@@ -38,9 +38,13 @@ export function onDragStart(event)  // TODO: This function can be refactored wit
 
     if (!this.ischild && this.target.node !== undefined){
         this.alpha = 0.5;
-        APP.app.stage.setChildIndex(this, APP.app.stage.children.length-1);
+        if(APP.app.stage.children.length > 0){
+            APP.app.stage.setChildIndex(this, APP.app.stage.children.length-1);
+        }
     } else {
-        APP.app.stage.setChildIndex(this, APP.app.stage.children.length-2);
+        if(APP.app.stage.children > 0){
+            APP.app.stage.setChildIndex(this, APP.app.stage.children.length-2);
+        }
     }
 }
 

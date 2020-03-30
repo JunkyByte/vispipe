@@ -8,6 +8,7 @@ import $ from "jquery"
 import io from "socket.io-client"
 import Sidebar from './Sidebar';
 import BottomMenu from './BottomMenu';
+import NewSideBar from './NewSideBar';
 
 // var ctx = mycanvas.getContext("2d")
 // ctx.fillRect(0, 0, mycanvas.width, mycanvas.height)
@@ -22,7 +23,7 @@ export let app = new PIXI.Application({
 
 app.renderer.view.style.display = 'block';
 app.renderer.view.style.position = "fixed"
-app.renderer.view.style.left = "193px"
+app.renderer.view.style.left = "204px"
 app.renderer.view.style.bottom = "56px"
 // document.getElementById("root").appendChild(app.view)
 //document.getElementById("container").appendChild(app.view)
@@ -194,7 +195,8 @@ class App extends React.Component {
   render() {
       return (
           <div>
-          <Sidebar depthstep={30}/>
+          {/* <Sidebar depthstep={30}/> */}
+          <NewSideBar depthStep={20}/>
           <BottomMenu/>
           </div>
       )

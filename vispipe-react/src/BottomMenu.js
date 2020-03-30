@@ -14,6 +14,8 @@ const useStyles = makeStyles({
         width : '100%',
         position: "fixed",
         bottom: 0,
+        borderTop: 1,
+        background: 'linear-gradient(45deg, #202125, grey, #202125)',
         zIndex: -10
     },
 })
