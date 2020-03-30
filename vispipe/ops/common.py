@@ -75,7 +75,7 @@ class accumulate:
 
 
 @block(tag='common')
-def filter(x, func: Callable = lambda x: True):
+def filter_func(x, func: Callable = lambda x: True):
     yield x if func(x) else Pipeline._empty
 
 
