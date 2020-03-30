@@ -491,6 +491,11 @@ class Pipeline:
         """
         Set a custom argument of a node.
 
+        Note
+        ----
+        This is not intended to be used from visualization, no unserialization will be done,
+        value will be directly assigned to correct node argument.
+
         Parameters
         ----------
         node_hash : int
@@ -501,7 +506,7 @@ class Pipeline:
             The value to set for this argument.
         """
         node = self.get_node(node_hash)
-        node.set_custom_arg(key, value)
+        node[key] = value
 
     def clear_pipeline(self):
         """
