@@ -98,7 +98,7 @@ class Graph():
 
     def deleteNode(self, node):  # TODO: Add last_id_used processing
         node_id = self.node_ids.lookup(str(hash(node)))
-        if node not in self.vertices or not node_id:
+        if node not in self.vertices or node_id is None:
             raise KeyError("The Node is not in the graph")
         self.adj_list[node_id] = set()
         self.node_ids.remove(str(hash(node)))
