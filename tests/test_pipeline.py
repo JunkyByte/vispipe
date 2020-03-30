@@ -58,6 +58,26 @@ class TestPipelineNodesAndConnections(unittest.TestCase):
         with self.assertRaises(KeyError):
             self.pipeline.get_node(node_hash)
 
+    def test_clear_pipeline(self):
+        self.inp = self.pipeline.add_node('np_iter_file', path='tests/data/10elementarray.npy')
+        self.k = self.pipeline.add_node('constant', value=2)
+        self.collect = self.pipeline.add_node('identity_two')
+        self.multiply = self.pipeline.add_node('multiply')
+        self.sum = self.pipeline.add_node('accumulate')
+        self.pipeline.add_conn(self.inp, 0, self.collect, 0)
+        self.pipeline.add_conn(self.k, 0, self.collect, 1)
+        self.pipeline.add_conn(self.collect, 0, self.multiply, 0)
+        self.pipeline.add_conn(self.collect, 1, self.multiply, 1)
+        self.pipeline.add_conn(self.multiply, 0, self.sum, 0)
+        self.pipeline.add_output(self.sum)
+        self.pipeline.add_macro(self.collect, self.multiply)
+        self.pipeline.clear_pipeline()
+        self.assertFalse(self.pipeline.nodes)
+        self.assertFalse(self.pipeline.macros)
+        self.assertFalse(self.pipeline._outputs)
+        self.assertFalse(self.pipeline.runner.threads)
+        self.assertFalse(self.pipeline.runner.vis_source)
+
 
 class TestPipelineMacrosAndBlocks(unittest.TestCase):
     @block(tag='common', output_names=['y1', 'y2'])
@@ -91,6 +111,15 @@ class TestPipelineMacrosAndBlocks(unittest.TestCase):
         self.pipeline.run()
         for value in self.pipeline.outputs[self.sum]:
             self.assertEqual(value, 10 * 9)  # Thanks Gauss
+
+    def test_assertions_macro(self):
+        # Should assert because self collect is connected to other stuff as well
+        with self.assertRaises(Exception):
+            self.pipeline.add_macro(self.inp, self.collect)
+
+        self.pipeline.add_output(self.collect)
+        with self.assertRaises(Exception):
+            self.pipeline.add_macro(self.collect, self.muliply)
 
 
 if __name__ == '__main__':

@@ -30,6 +30,8 @@ log.addHandler(console_handler)
 # TODO: Add some custom exceptions
 # TODO: Add macro block setting during visualization.
 # TODO: Lambdas can't be inspected from visualization
+# TODO: Add docstring into visualization when hovering blocks
+# TODO: Realtime custom arg setting ?
 
 
 class Pipeline:
@@ -399,11 +401,15 @@ class Pipeline:
         if not end_node.block.allow_macro:  # Manually check end node status
             raise Exception('End node %s has "allow_macro" set to False and cannot be part of a macro block')
 
+        if start_hash in self._outputs:
+            raise Exception('Start node is an output, only last node of a macro block is allowed to be an output')
+
         visited = []  # Will contain all hashes that are part of the macro block
         current_node = start_node
         while current_node not in visited:
             # We need to check that the nodes are linearly connected.
             # For simplicity we want that each node is connected ONLY to the subsequent one.
+
             visited.append(hash(current_node))
             if not current_node.block.allow_macro:
                 raise Exception('Block "%s" has "allow_macro" set to False and cannot be part \
@@ -423,6 +429,9 @@ class Pipeline:
                 raise Exception('Block "%s" is connected to multiple blocks and cannot be part \
                         of a macro block' % current_node.block.name)
 
+            if current_node is end_node:  # We reached last node
+                break  # Exit the cycling
+
             # We can now switch to next node
             current_node = conn_nodes.pop()
             if current_node.block.intercept_end and current_node is not start_node:
@@ -431,13 +440,9 @@ class Pipeline:
             if current_node.is_macro:
                 raise Exception('The node %s is already part of a macro block.' % hash(current_node))
 
-            if current_node is end_node:  # We reached last node
-                break  # Exit the cycling
-
-            if hash(current_node) in self._outputs:
+            if hash(current_node) in self._outputs and current_node is not end_node:
                 raise Exception('The node %s is already an output, only last node of a macro block is allowed to be an output.')
 
-        visited.append(hash(end_node))
         for node in [self.get_node(n) for n in visited]:
             node.is_macro = True
 
@@ -743,12 +748,14 @@ class PipelineRunner:
             return {}  # This will prevent a crash while waiting for queues to be ready
 
         for key, consumer in self.vis_source.items():
-            vis[key] = consumer.read(idx)
+            value = consumer.read(idx)
+            if value is not IndexError:
+                vis[key] = value
 
         return vis
 
     def _vis_index(self):
-        return min([vis.size() for vis in self.vis_source.values()]) - 1
+        return min(filter(lambda x: x > 0, [vis.size() for vis in self.vis_source.values()])) - 1
 
     def warning_wrapper(self, f):
         def wrap(*args, **kwargs):
@@ -957,7 +964,7 @@ class QueueConsumer:
         return len(self.out)
 
     def read(self, idx):
-        value = None
+        value = IndexError
         if len(self.out) > idx:
             value = self.out[idx]
             del self.out[:idx]
