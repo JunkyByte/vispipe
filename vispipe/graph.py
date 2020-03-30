@@ -149,8 +149,13 @@ class Graph():
 
     def resetGraph(self):
         vertices_copy = self.vertices.copy()  # cant change set size during iteration
-        for node in vertices_copy:
-            self.deleteNode(node)
+        try:
+            for node in vertices_copy:
+                self.deleteNode(node)
+        except Exception as e:
+            print(len(self.vertices))
+            raise e
+        self.last_id_used = 0
 
 
 def main():

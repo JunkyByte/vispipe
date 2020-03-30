@@ -25,7 +25,7 @@ def key(x, key: str = ''):
 
 
 @block(tag='common')
-def slice(x, value: slice = ''):
+def index_slice(x, value: slice = ''):
     yield value
 
 

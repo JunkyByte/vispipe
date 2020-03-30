@@ -13,7 +13,7 @@ import copy
 import dill as pickle
 import time
 import logging
-MAXSIZE = 100
+MAXSIZE = 10000
 log = logging.getLogger('vispipe')
 log.setLevel(logging.DEBUG)
 log_formatter = logging.Formatter("%(asctime)s [%(levelname)s]: %(message)s")

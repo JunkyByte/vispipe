@@ -226,7 +226,12 @@ class accumulator:
         yield -1
 
 
-#pipeline = Pipeline()
+pipeline = Pipeline()
+
+for i in range(10000):
+    pipeline.add_node('image')
+
+pipeline.clear_pipeline()
 
 #img1 = pipeline.add_node('image')
 #img2 = pipeline.add_node('image')

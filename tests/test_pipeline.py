@@ -107,6 +107,10 @@ class TestPipelineMacrosAndBlocks(unittest.TestCase):
         for value in self.pipeline.outputs[self.sum]:
             self.assertEqual(value, 10 * 9)  # Thanks Gauss
 
+    def test_large(self):
+        for i in range(9990):
+            node = self.pipeline.add_node('constant')
+
     def test_intercept_end_accumulate(self):
         self.pipeline.run()
         for value in self.pipeline.outputs[self.sum]:
