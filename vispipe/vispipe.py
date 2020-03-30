@@ -13,7 +13,6 @@ import copy
 import dill as pickle
 import time
 import logging
-MAXSIZE = 10000
 log = logging.getLogger('vispipe')
 log.setLevel(logging.DEBUG)
 log_formatter = logging.Formatter("%(asctime)s [%(levelname)s]: %(message)s")
@@ -56,6 +55,7 @@ class Pipeline:
         The list of all the macro blocks.
         Each macro is represented as a list of node hashes.
     """
+    MAXSIZE = 100
 
     #: Yield this to specify that a block is not ready to create a new output.
     _empty = object()
@@ -80,7 +80,7 @@ class Pipeline:
     _blocks = {}
 
     def __init__(self, path: Optional[str] = None):
-        self.pipeline = Graph(MAXSIZE)
+        self.pipeline = Graph(self.MAXSIZE)
         self.runner = PipelineRunner()
         self._outputs = []
         self.macro = []

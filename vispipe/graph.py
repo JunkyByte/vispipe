@@ -30,6 +30,7 @@ class Graph():
         Used to iterate only over the subset of nodes that are in the pipeline.
     """
     def __init__(self, num_vertices: int):
+        num_vertices = num_vertices * 20
         self.adj_list = []  # list of set of (node, out_idx, in_idx, bool) where bool True -> to node. False -> from node
         self.vertices = set()
         self.available_ids = set()
@@ -98,7 +99,7 @@ class Graph():
 
     def deleteNode(self, node):  # TODO: Add last_id_used processing
         node_id = self.node_ids.lookup(str(hash(node)))
-        if node not in self.vertices or node_id is None:
+        if node not in self.vertices or node_id is None:  # Is none as 0 is False
             raise KeyError("The Node is not in the graph")
         self.adj_list[node_id] = set()
         self.node_ids.remove(str(hash(node)))
@@ -149,12 +150,8 @@ class Graph():
 
     def resetGraph(self):
         vertices_copy = self.vertices.copy()  # cant change set size during iteration
-        try:
-            for node in vertices_copy:
-                self.deleteNode(node)
-        except Exception as e:
-            print(len(self.vertices))
-            raise e
+        for node in vertices_copy:
+            self.deleteNode(node)
         self.last_id_used = 0
 
 

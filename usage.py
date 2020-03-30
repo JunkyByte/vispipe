@@ -228,7 +228,7 @@ class accumulator:
 
 pipeline = Pipeline()
 
-for i in range(10000):
+for i in range(100):
     pipeline.add_node('image')
 
 pipeline.clear_pipeline()
