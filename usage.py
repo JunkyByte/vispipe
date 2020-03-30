@@ -119,11 +119,6 @@ def test_addition(input1, input2):
 
 
 @vispipe.block
-def sin(input1):
-    yield math.sin(input1)
-
-
-@vispipe.block
 def custom_high_gain_test(input1):
     yield input1
 
