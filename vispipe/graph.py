@@ -89,7 +89,7 @@ class Graph():
         adj_b = self.adj(node_b).copy()
         for el in adj_b:
             direction = el[3]  # get the direction : true if b->node, False if node->b
-            if direction is False:
+            if not direction:
                 node_in_idx = el[2]
                 if node_in_idx == in_idx:
                     self.deleteEdge(el[0], node_b, el[1], el[2])
@@ -98,7 +98,7 @@ class Graph():
 
     def deleteNode(self, node):  # TODO: Add last_id_used processing
         node_id = self.node_ids.lookup(str(hash(node)))
-        if node not in self.vertices:
+        if node not in self.vertices or not node_id:
             raise KeyError("The Node is not in the graph")
         self.adj_list[node_id] = set()
         self.node_ids.remove(str(hash(node)))

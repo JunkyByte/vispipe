@@ -32,6 +32,7 @@ log.addHandler(console_handler)
 # TODO: Lambdas can't be inspected from visualization
 # TODO: Add docstring into visualization when hovering blocks
 # TODO: Realtime custom arg setting ?
+# TODO: Pass font style from vis blocks
 
 
 class Pipeline:
@@ -755,7 +756,10 @@ class PipelineRunner:
         return vis
 
     def _vis_index(self):
-        return min(filter(lambda x: x > 0, [vis.size() for vis in self.vis_source.values()])) - 1
+        try:
+            return min(filter(lambda x: x > 0, [vis.size() for vis in self.vis_source.values()])) - 1
+        except ValueError:
+            return -1
 
     def warning_wrapper(self, f):
         def wrap(*args, **kwargs):
@@ -967,7 +971,7 @@ class QueueConsumer:
         value = IndexError
         if len(self.out) > idx:
             value = self.out[idx]
-            del self.out[:idx]
+            del self.out[:idx + 1]
         return value
 
 

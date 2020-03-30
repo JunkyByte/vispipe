@@ -153,7 +153,7 @@ class Server:
                             try:
                                 value = np.around(value, 2)
                             except Exception:
-                                log.error('The value is a numpy array or list that is not roundable')
+                                log.warning('The value is a numpy array or list that is not roundable')
                         elif isinstance(value, float):
                             value = round(value, 2)
                         value = str(value)

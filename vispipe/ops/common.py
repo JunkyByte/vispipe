@@ -5,7 +5,27 @@ import numpy as np
 
 
 @block(tag='common')
-def constant(value: int = 0):
+def string(value: str = ''):
+    yield value
+
+
+@block(tag='common')
+def constant(value: float = 0):
+    yield value
+
+
+@block(tag='common')
+def index(x, index: int = 0):
+    yield x[index]
+
+
+@block(tag='common')
+def key(x, key: str = ''):
+    yield x[key]
+
+
+@block(tag='common')
+def slice(x, value: slice = ''):
     yield value
 
 

@@ -128,7 +128,7 @@ class VisNode extends Node {
         var style = new PIXI.TextStyle({
             fontFamily: FONT,
             breakWords: true,
-            fontSize: VIS_FONT_SIZE,
+            fontSize: VIS_FONT_SIZE * 2,
             wordWrap: true,
             align: 'left',
             fill: TEXT_COLOR,
