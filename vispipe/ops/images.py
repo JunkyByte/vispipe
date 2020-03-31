@@ -6,7 +6,7 @@ import numpy as np
 
 @block
 def random_image(size: tuple = (28, 28)):
-    yield np.concatenate([np.random.randint(0, 255, size=size + (3,)), np.ones(size + (1,)) * 255], axis=-1)
+    return np.concatenate([np.random.randint(0, 255, size=size + (3,)), np.ones(size + (1,)) * 255], axis=-1)
 
 
 @block

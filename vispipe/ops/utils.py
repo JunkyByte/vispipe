@@ -41,9 +41,9 @@ class benchmark:
             if not self.end:  # Prepare to end
                 self.n = self.start_n
                 self.start_time = time.time()
-            yield msg
+            return msg
 
         if self.n < -1:
             raise StopIteration
 
-        yield Pipeline._empty
+        return Pipeline._empty

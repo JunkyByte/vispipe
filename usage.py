@@ -28,7 +28,7 @@ def no_input():
 
 @vispipe.block
 def test_plus100(x):
-    yield x + 100
+    return x + 100
 
 
 @vispipe.block
@@ -68,12 +68,12 @@ def test_identity_2_out(input1):
 
 @vispipe.block
 def test_plus1(input1):
-    yield input1 + 1
+    return input1 + 1
 
 
 @vispipe.block
 def test_addition(input1, input2):
-    yield input1 + input2
+    return input1 + input2
 
 
 @vispipe.block
@@ -181,12 +181,12 @@ class accumulator:
 
 pipeline = Pipeline()
 
-img1 = pipeline.add_node('image')
-img2 = pipeline.add_node('image')
+img1 = pipeline.add_node('random_image')
+img2 = pipeline.add_node('random_image')
 add = pipeline.add_node('test_addition')
 plus1 = pipeline.add_node('test_plus1')
 plus2 = pipeline.add_node('test_plus100')
-timern = pipeline.add_node('benchmark', n=1000)
+timern = pipeline.add_node('benchmark', n=100_000, log=True)
 
 pipeline.add_conn(img1, 0, add, 0)
 pipeline.add_conn(img2, 0, add, 1)
@@ -197,7 +197,7 @@ pipeline.add_conn(plus2, 0, timern, 0)
 pipeline.add_macro(add, timern)
 
 pipeline.run(slow=False, use_mp=False)
-#pipeline.join()
+pipeline.join()
 
 #pipeline.clear_pipeline()
 #pipeline.save('./scratch_test.pickle')

@@ -14,6 +14,7 @@ import dill as pickle
 import time
 import logging
 log = logging.getLogger('vispipe')
+log.setLevel(logging.DEBUG)
 log_formatter = logging.Formatter("%(asctime)s [%(levelname)s]: %(message)s")
 console_handler = logging.StreamHandler()
 console_handler.setFormatter(log_formatter)
@@ -402,15 +403,6 @@ class Pipeline:
                 raise Exception('Block "%s" has "allow_macro" set to False and cannot be part \
                         of a macro block' % current_node.block.name)
 
-            # Checks on connections must be made BEFORE the node switches to new one
-            conn_nodes = set(adj[0] for adj in self.pipeline.adj(current_node, out=True))
-            if not conn_nodes:
-                raise Exception('The two nodes are not connected and cannot be part of the same macro block')
-
-            if len(conn_nodes) > 1 and current_node is not end_node:
-                raise Exception('Block "%s" is connected to multiple blocks and cannot be part \
-                        of a macro block' % current_node.block.name)
-
             in_conn_nodes = set(adj[0] for adj in self.pipeline.adj(current_node, out=False))
             if len(in_conn_nodes) > 1 and current_node is not start_node:
                 raise Exception('Block "%s" is connected to multiple blocks and cannot be part \
@@ -418,6 +410,14 @@ class Pipeline:
 
             if current_node is end_node:  # We reached last node
                 break  # Exit the cycling
+
+            conn_nodes = set(adj[0] for adj in self.pipeline.adj(current_node, out=True))
+            if len(conn_nodes) > 1:
+                raise Exception('Block "%s" is connected to multiple blocks and cannot be part \
+                        of a macro block' % current_node.block.name)
+
+            if not conn_nodes:
+                raise Exception('The two nodes are not connected and cannot be part of the same macro block')
 
             # We can now switch to next node
             current_node = conn_nodes.pop()
@@ -832,8 +832,9 @@ class PipelineRunner:
 
             def chain_functions(functions):
                 end_f = functions.pop()
+
                 def wrap(*args):
-                    yield from end_f(*reduce(lambda x, f: _force_tuple(next(f(*x))), functions, args))
+                    return end_f(*reduce(lambda x, f: _force_tuple(f(*x)), functions, args))
                 return wrap
 
             # Now that we created the inputs if we are dealing with a macro block we need
@@ -1045,8 +1046,8 @@ def block(f: Callable = None, max_queue: int = 10, output_names: List[str] = Non
                 data_type=data_type, intercept_end=intercept_end, allow_macro=allow_macro)
 
     if isinstance(f, types.FunctionType):
-        if not isgeneratorfunction(f):
-            raise TypeError('The function you tagged is not a generator')
+        #if not isgeneratorfunction(f):
+        #    raise TypeError('The function you tagged is not a generator')
         if signature(f).parameters and list(signature(f).parameters.keys())[0] == 'self':
             raise TypeError(
                 'The function you passed is a class method, we only support functions right now')
@@ -1055,8 +1056,8 @@ def block(f: Callable = None, max_queue: int = 10, output_names: List[str] = Non
         # Is a custom class so we need to process it differently (instantiate)
         assert hasattr(
             f, 'run'), 'The class %s you decorated must have a run method' % f.__name__
-        if not isgeneratorfunction(f.run):
-            raise TypeError('The function you tagged is not a generator')
+        #if not isgeneratorfunction(f.run):
+        #    raise TypeError('The function you tagged is not a generator')
         is_class = True
 
     assert data_type in Pipeline.data_type
@@ -1135,7 +1136,7 @@ class BlockRunner:
                     q.put(StopIteration)
 
             try:  # We are finally ready to call our function
-                ret = next(self.f(*x))
+                ret = self.f(*x)
 
                 # We need to get a tuple for correct sorting of outputs, so we force it
                 # But if the output has length 1 and is an actual tuple this is gonna break it
