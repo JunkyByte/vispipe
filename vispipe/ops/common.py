@@ -227,7 +227,6 @@ def filter_func(x, func: Callable = lambda x: True):
 @block(tag='common')
 def add(x, y):
     """
-    x + y
     """
     yield x + y
 
@@ -235,7 +234,6 @@ def add(x, y):
 @block(tag='common')
 def subtract(x, y):
     """
-    x - y
     """
     yield x - y
 
@@ -243,7 +241,6 @@ def subtract(x, y):
 @block(tag='common')
 def multiply(x, y):
     """
-    x * y
     """
     yield x * y
 
@@ -251,7 +248,6 @@ def multiply(x, y):
 @block(tag='common')
 def divide(x, y):
     """
-    x / y
     """
     yield x / y
 
@@ -275,7 +271,6 @@ def modulo(x, y):
 @block(tag='common')
 def sin(x):
     """
-    sin(x)
     """
     yield math.sin(x)
 
@@ -283,7 +278,6 @@ def sin(x):
 @block(tag='common')
 def cos(x):
     """
-    cos(x)
     """
     yield math.cos(x)
 
@@ -291,7 +285,6 @@ def cos(x):
 @block(tag='common')
 def tan(x):
     """
-    tan(x)
     """
     yield math.tan(x)
 
@@ -299,7 +292,6 @@ def tan(x):
 @block(tag='common')
 def asin(x):
     """
-    asin(x)
     """
     yield math.asin(x)
 
@@ -307,7 +299,6 @@ def asin(x):
 @block(tag='common')
 def acos(x):
     """
-    acos(x)
     """
     yield math.acos(x)
 
@@ -315,7 +306,6 @@ def acos(x):
 @block(tag='common')
 def atan(x):
     """
-    atan(x)
     """
     yield math.atan(x)
 
@@ -323,7 +313,6 @@ def atan(x):
 @block(tag='common')
 def sinh(x):
     """
-    sinh(x)
     """
     yield math.sinh(x)
 
@@ -331,7 +320,6 @@ def sinh(x):
 @block(tag='common')
 def cosh(x):
     """
-    cosh(x)
     """
     yield math.cosh(x)
 
@@ -339,6 +327,5 @@ def cosh(x):
 @block(tag='common')
 def tanh(x):
     """
-    tanh(x)
     """
     yield math.tanh(x)

@@ -520,7 +520,7 @@ class Pipeline:
         """
         self.pipeline.resetGraph()
         self._outputs = []
-        self.macros = []
+        self.macro = []
         self.runner.unbuild()
 
     def read_vis(self):

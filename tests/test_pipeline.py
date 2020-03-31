@@ -73,13 +73,13 @@ class TestPipelineNodesAndConnections(unittest.TestCase):
         self.pipeline.add_macro(self.collect, self.multiply)
         self.pipeline.clear_pipeline()
         self.assertFalse(self.pipeline.nodes)
-        self.assertFalse(self.pipeline.macros)
+        self.assertFalse(self.pipeline.macro)
         self.assertFalse(self.pipeline._outputs)
         self.assertFalse(self.pipeline.runner.threads)
         self.assertFalse(self.pipeline.runner.vis_source)
 
 
-class TestPipelineMacrosAndBlocks(unittest.TestCase):
+class TestPipelineMacrosAndBlocksAndSaveLoad(unittest.TestCase):
     @block(tag='common', output_names=['y1', 'y2'])
     def identity_two(x, y):
         yield x, y
@@ -103,6 +103,33 @@ class TestPipelineMacrosAndBlocks(unittest.TestCase):
 
     def test_intercept_end_accumulate_with_macro(self):
         self.pipeline.add_macro(self.collect, self.multiply)
+        self.pipeline.run()
+        for value in self.pipeline.outputs[self.sum]:
+            self.assertEqual(value, 10 * 9)  # Thanks Gauss
+
+    def test_save_is_equal(self):
+        self.pipeline.add_macro(self.collect, self.multiply)
+        self.pipeline.run()
+        for value in self.pipeline.outputs[self.sum]:
+            self.assertEqual(value, 10 * 9)  # Thanks Gauss
+
+        self.pipeline.save('tests/data/test_save.pickle')
+
+        p2 = Pipeline('tests/data/test_save.pickle')
+        self.assertEqual(set([hash(n) for n in self.pipeline.nodes]), set([hash(n) for n in p2.nodes]))
+        self.assertEqual(set(*self.pipeline.macro), set(*p2.macro))
+        self.assertEqual(set(self.pipeline._outputs), set(p2._outputs))
+        self.assertEqual(set(self.pipeline.runner.vis_source), set(p2.runner.vis_source))
+
+    def test_end_after_save_load(self):
+        self.pipeline.add_macro(self.collect, self.multiply)
+        self.pipeline.run()
+        for value in self.pipeline.outputs[self.sum]:
+            self.assertEqual(value, 10 * 9)  # Thanks Gauss
+
+        self.pipeline.save('tests/data/test_save.pickle')
+        self.pipeline.clear_pipeline()
+        self.pipeline = Pipeline('tests/data/test_save.pickle')
         self.pipeline.run()
         for value in self.pipeline.outputs[self.sum]:
             self.assertEqual(value, 10 * 9)  # Thanks Gauss
