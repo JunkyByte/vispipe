@@ -18,14 +18,21 @@ var viewport = new Viewport.Viewport({
 })
 app.stage.addChild(viewport);
 viewport
-    .drag({wheel: false, mouseButtons: 'left', keyToPress: ['ControlLeft', 'ControlRight']})
+    .drag({wheel: false, mouseButtons: 'left', keyToPress: ['ControlLeft', 'ControlRight', 'ShiftLeft', 'ShiftRight']})
     .pinch()
     .wheel()
     .clamp({right: true, bottom: true})
     .decelerate({friction: 0.85})
     .clampZoom({minWidth: 300, minHeight: 300, maxWidth: 2500, maxHeight: 2500})
 viewport.plugins.get('wheel').pause()
-window.addEventListener('wheel', function(ev) { if (ev.ctrlKey) {
+
+if (navigator.userAgent.search("Firefox") > -1){  // My ctrl not working, gonna use shift
+    var key = 'shiftKey';
+} else {
+    var key = 'ctrlKey';
+}
+
+window.addEventListener('wheel', function(ev) { if (ev[key]) {
     viewport.plugins.get('wheel').resume();
     clearTimeout(ev.wheeling);
     ev.wheeling = setTimeout(function() {

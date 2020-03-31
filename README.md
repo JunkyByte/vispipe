@@ -18,7 +18,7 @@ pip install vispipe
 
 ## Usage
 A bunch of examples of the different features of the package.
-Refer to the documentation #TODO ADD LINK# to get a better view of each function arguments.
+Refer to the documentation to get a better view of each function arguments.
 
 ### Blocks
 A block is a generator function with a single shot yield tagged with the decorator called (guess what) `block`.
