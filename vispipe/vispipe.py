@@ -14,24 +14,10 @@ import dill as pickle
 import time
 import logging
 log = logging.getLogger('vispipe')
-log.setLevel(logging.DEBUG)
 log_formatter = logging.Formatter("%(asctime)s [%(levelname)s]: %(message)s")
 console_handler = logging.StreamHandler()
 console_handler.setFormatter(log_formatter)
 log.addHandler(console_handler)
-
-# TODO: Check save load works with outputs
-# TODO: Add drag to resize (or arg to resize) to vis blocks as you can now zoom.
-# TODO: Blocks with inputs undefined? Like tuple together all the inputs, how to?
-# TODO: Variable output size based on arguments.
-# TODO: during vis redirect console to screen?
-# TODO: Add some assertion on ckpt reloading -> If a block is part of macro but is not allow_macro for ex.
-# TODO: Add some custom exceptions
-# TODO: Add macro block setting during visualization.
-# TODO: Lambdas can't be inspected from visualization
-# TODO: Add docstring into visualization when hovering blocks
-# TODO: Realtime custom arg setting ?
-# TODO: Pass font style from vis blocks
 
 
 class Pipeline:
