@@ -1,8 +1,5 @@
 from ..vispipe import Pipeline
 from ..vispipe import block
-"""
-Flow generators allow to modify the way a stream of your pipeline is processed.
-"""
 
 
 @block(tag='flows', intercept_end=True)
@@ -10,7 +7,7 @@ class iterator:
     """
     Iterates over its input, will not accept new inputs until it reaches a StopIteration.
 
-    Yields
+    returns
     ------
         Elements of the iterable object you passed as input.
     """
@@ -27,7 +24,7 @@ class iterator:
         except StopIteration:
             self.iterator = None
             y = Pipeline._empty
-        yield y
+        return y
 
 
 @block(tag='flows', intercept_end=True)
@@ -40,7 +37,7 @@ class batchify:
     size : int
         The size of each bach.
 
-    Yields
+    returns
     ------
         Batch of inputs of the size specified.
     """
@@ -54,5 +51,5 @@ class batchify:
         if len(self.buffer) == self.size or x is StopIteration:
             x = self.buffer
             self.buffer = []
-            yield x if x is not StopIteration else x[:-1]
-        yield Pipeline._empty
+            return x if x is not StopIteration else x[:-1]
+        return Pipeline._empty

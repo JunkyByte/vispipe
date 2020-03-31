@@ -8,7 +8,7 @@ import logging
 class benchmark:
     """
     Benchmark the flow of the pipeline up to this point.
-    Will yield the result once it reaches the number of iteration requested.
+    Will return the result once it reaches the number of iteration requested.
 
     Parameters
     ----------

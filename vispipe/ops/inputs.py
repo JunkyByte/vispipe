@@ -4,15 +4,12 @@ import numpy as np
 import pickle
 import os
 import json
-"""
-Input generators for your pipeline.
-"""
 
 
 @block(tag='input')
 class np_iter_file:
     """
-    Yields the raw buffer, line by line from a numpy file.
+    returns the raw buffer, line by line from a numpy file.
     This is similar to stacking a ``numpy_flow`` into an ``iterator``.
     This is a finite generator and will stop the pipeline on end.
 
@@ -22,7 +19,7 @@ class np_iter_file:
         The path to the file you want to load.
 
 
-    Yields
+    returns
     ------
         The Content of the loaded array line by line.
     """
@@ -30,13 +27,13 @@ class np_iter_file:
         self.file = iter(np.load(path))
 
     def run(self):
-        yield next(self.file)
+        return next(self.file)
 
 
 @block(tag='input', max_queue=1)
 class np_file:
     """
-    Yields the full raw buffer once from a numpy file.
+    returns the full raw buffer once from a numpy file.
 
     Parameters
     ----------
@@ -44,7 +41,7 @@ class np_file:
         The path to the file you want to load.
 
 
-    Yields
+    returns
     ------
         The Content of the loaded array.
     """
@@ -56,26 +53,26 @@ class np_file:
             raise StopIteration
         x = self.file
         self.file = StopIteration
-        yield x
+        return x
 
 
 @block(tag='input', max_queue=1)
 def np_flow(path):
     """
-    Yields the raw buffer from the path provided as input.
+    returns the raw buffer from the path provided as input.
     This is an infinite generator and will never raise a StopIteration
 
-    Yields
+    returns
     ------
         The full content of the loaded array from the path you provided.
     """
-    yield np.load(path)
+    return np.load(path)
 
 
 @block(tag='input')
 class pickle_iter_file:
     """
-    Yields the raw buffer, line by line from a pickle file.
+    returns the raw buffer, line by line from a pickle file.
     This is similar to stacking a ``numpy_flow`` into an ``iterator``.
     This is a finite generator and will stop the pipeline on end.
 
@@ -85,7 +82,7 @@ class pickle_iter_file:
         The path to the file you want to load.
 
 
-    Yields
+    returns
     ------
         The Content of the loaded pickle line by line.
     """
@@ -93,13 +90,13 @@ class pickle_iter_file:
         self.file = iter(pickle.load(open(path, 'rb')))
 
     def run(self):
-        yield next(self.file)
+        return next(self.file)
 
 
 @block(tag='input')
 class pickle_file:
     """
-    Yields the full raw buffer once from a pickle file.
+    returns the full raw buffer once from a pickle file.
 
     Parameters
     ----------
@@ -107,7 +104,7 @@ class pickle_file:
         The path to the file you want to load.
 
 
-    Yields
+    returns
     ------
         The Content of the loaded pickle.
     """
@@ -119,26 +116,26 @@ class pickle_file:
             raise StopIteration
         x = self.file
         self.file = StopIteration
-        yield x
+        return x
 
 
 @block(tag='input', max_queue=1)
 def pickle_flow(path):
     """
-    Yields the raw buffer from the path provided as input.
+    returns the raw buffer from the path provided as input.
     This is an infinite generator and will never raise a StopIteration.
 
-    Yields
+    returns
     ------
         The full content of the loaded pickle from the path you provided.
     """
-    yield pickle.load(open(path, 'rb'))
+    return pickle.load(open(path, 'rb'))
 
 
 @block(tag='input')
 class json_file:
     """
-    Yields the full raw buffer once from a json file.
+    returns the full raw buffer once from a json file.
 
     Parameters
     ----------
@@ -146,7 +143,7 @@ class json_file:
         The path to the file you want to load.
 
 
-    Yields
+    returns
     ------
         The Content of the loaded json.
     """
@@ -158,27 +155,27 @@ class json_file:
             raise StopIteration
         x = self.file
         self.file = StopIteration
-        yield x
+        return x
 
 
 @block(tag='input', max_queue=1)
 def json_flow(path):
     """
-    Yields the raw buffer from the path provided as input.
+    returns the raw buffer from the path provided as input.
     This is an infinite generator and will never raise a StopIteration.
 
-    Yields
+    returns
     ------
         The full content of the loaded json from the path you provided.
     """
-    yield json.load(open(path))
+    return json.load(open(path))
 
 
 @block(tag='input', max_queue=10)
 class iter_folders:
     def __init__(self, root_dir: str = '', extension: str = '', recursive: bool = False):
         """
-        Yields the absolute path of all the files with a specified extension in a folder.
+        returns the absolute path of all the files with a specified extension in a folder.
         It can be recursive, the paths will be relative to the folder specified.
         (e.g. if you want absolute paths specify an absolute root_dir)
 
@@ -196,4 +193,4 @@ class iter_folders:
                 f.endswith(extension) and os.path.isfile(f))
 
     def run(self):
-        yield next(self.files)
+        return next(self.files)

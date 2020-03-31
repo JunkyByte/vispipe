@@ -21,13 +21,13 @@ A bunch of examples of the different features of the package.
 Refer to the documentation to get a better view of each function arguments.
 
 ### Blocks
-A block is a generator function with a single shot yield tagged with the decorator called (guess what) `block`.
+A block is a function tagged with the decorator called (guess what) `block`.
 ```python
 from vispipe import block
 
 @block
 def identity_block(x):
-    yield x
+    return x
 ```
 
 Or a class with a `run` method.
@@ -40,7 +40,7 @@ class identity_class_block:
 	pass
 
     def run(self, x):
-        yield x
+        return x
 ```
 
 A block can have multiple inputs.
@@ -48,12 +48,12 @@ A block can have multiple inputs.
 ```python
 @block
 def add(x, y):
-    yield x + y
+    return x + y
 
 # Or none
 @block
 def just_a_one():
-    yield 1
+    return 1
 ```
 
 All the inputs we defined right now are 'real' inputs and will be filled
@@ -64,7 +64,7 @@ We may want to have static arguments as well, an input will become a static argu
 @block
 def add_constant(x, k: int = 42):
     # x will be a 'real' input while k will be a static argument
-    yield x + k
+    return x + k
 ```
 
 Now that you know how blocks work let's see how to create a pipeline, add and connect them.
@@ -141,11 +141,11 @@ class benchmark:
 	self.n -= 1
 	if self.n == -1:  # After 1000 iterations we return delta time
 	    delta = time.time() - self.start_time
-	    yield delta
+	    return delta
 	
 	# (...) missing code to manage the ending
 	
-	yield Pipeline._empty  # Otherwise we are not ready to return an output
+	return Pipeline._empty  # Otherwise we are not ready to return an output
 ```
 
 `Pipeline._skip(value)` allows to return a value while also skipping the next input.
@@ -169,4 +169,19 @@ class iterator:
 	    self.iterator = None
 	    y = Pipeline._empty
 
-	yield y
+	return y
+```
+
+### Macro Blocks
+Macro blocks are a convenient way to speed up a set of linearly connected blocks.
+Blocks that are part of a macro will be run together (instead of connected with queues).
+While this limits the flexibility of a part of the pipeline the functions will run a lot faster as they completely
+skip the communication overhead.
+(Please refer to documentation for a better explanation of this functionality)
+
+```python
+# (...)
+p.add_macro(start_hash, end_hash)  # Will add a macro from start hash to end hash.
+
+p.remove_macro(node_hash) # Will delete the macro the node belongs to.
+```

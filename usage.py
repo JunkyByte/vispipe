@@ -8,22 +8,22 @@ import logging
 
 @vispipe.block
 def three_args(arg1=5, arg2='ciao', arglonglong='7x7'):
-    yield arg1
+    return arg1
 
 
 @vispipe.block
 def some_list():
-    yield [0, 1, 2, 3, 4, 5, 42]
+    return [0, 1, 2, 3, 4, 5, 42]
 
 
 @vispipe.block
 def five_args(arg1=5, arg2='ciao', arglong='7x7', longveryarg=1023, onemore=-100.3):
-    yield 1
+    return 1
 
 
 @vispipe.block
 def no_input():
-    yield 1
+    return 1
 
 
 @vispipe.block
@@ -33,37 +33,37 @@ def test_plus100(x):
 
 @vispipe.block
 def multiply100(x):
-    yield x * 100
+    return x * 100
 
 
 @vispipe.block
 def rand():
-    yield np.random.randn()
+    return np.random.randn()
 
 
 @vispipe.block
 def nparray(arr: np.array = np.array([[0, 1, 2], [3, 4, 5], [6, 7, 8]])):
-    yield arr
+    return arr
 
 
 @vispipe.block
 def randint():
-    yield np.random.randint(0, 255)
+    return np.random.randint(0, 255)
 
 
 @vispipe.block
 def rand_range(minn=-1., maxx=1.):
-    yield (np.random.random() * (maxx - minn)) - minn
+    return (np.random.random() * (maxx - minn)) - minn
 
 
 @vispipe.block
 def test_identity(input1):
-    yield input1
+    return input1
 
 
 @vispipe.block(output_names=['y1', 'y2'])
 def test_identity_2_out(input1):
-    yield input1, input1 + 1
+    return input1, input1 + 1
 
 
 @vispipe.block
@@ -78,49 +78,49 @@ def test_addition(input1, input2):
 
 @vispipe.block
 def custom_high_gain_test(input1):
-    yield input1
+    return input1
 
 
 @vispipe.block
 def another_1(input1):
-    yield 0
+    return 0
 
 
 @vispipe.block
 def another_2(input1):
-    yield 0
+    return 0
 
 
 @vispipe.block
 def another_3(input1):
-    yield 0
+    return 0
 
 
 @vispipe.block
 def another_4(input1):
-    yield 0
+    return 0
 
 
 @vispipe.block
 def in_5(input1, input2, input3, input4, input5):
-    yield 0
+    return 0
 
 
 @vispipe.block
 def in_2(input1, input2):
-    yield 0
+    return 0
 
 
 @vispipe.block
 def in_3(input1, input2, input3):
-    yield 0
+    return 0
 
 
 @vispipe.block
 def print_test(input1):
     msg = 'Value: %s' % input1
     print(msg)
-    yield msg
+    return msg
 
 
 @vispipe.block
@@ -132,7 +132,7 @@ class classex:
         print('I am a print block CLASS and last value was %s while now is %s' % (
             self.last_element, input1))
         self.last_element = input1
-        yield None
+        return None
 
 
 @vispipe.block
@@ -146,11 +146,11 @@ class testempty:
             val = self.sum
             self.sum = 0
             self.count = 0
-            yield val
+            return val
         else:
             self.sum += input1
             self.count += 1
-            yield vispipe.pipeline._empty
+            return vispipe.pipeline._empty
 
 
 @vispipe.block
@@ -162,7 +162,7 @@ class timer_out:
         self.count += 1
         if self.count == 5:
             raise StopIteration
-        yield x
+        return x
 
 
 @vispipe.block(intercept_end=True, max_queue=1)
@@ -174,9 +174,9 @@ class accumulator:
         if x is StopIteration:
             self.i += 1
             if self.i < 5:
-                yield Pipeline._skip(self.i - 1)
-            yield self.i - 1
-        yield -1
+                return Pipeline._skip(self.i - 1)
+            return self.i - 1
+        return -1
 
 
 pipeline = Pipeline()

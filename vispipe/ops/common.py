@@ -15,7 +15,7 @@ def string(value: str = ''):
     value : str
         The string value.
     """
-    yield value
+    return value
 
 
 @block(tag='common')
@@ -28,13 +28,13 @@ def constant(value: float = 0):
     value : float
         The float value.
     """
-    yield value
+    return value
 
 
 @block(tag='common')
 def index(x, index: int = 0):
     """
-    Yields its input indexed by index value.
+    returns its input indexed by index value.
 
     [TODO:description]
 
@@ -43,33 +43,33 @@ def index(x, index: int = 0):
     index : int
         The index value.
     """
-    yield x[index]
+    return x[index]
 
 
 @block(tag='common')
 def key(x, key: str = ''):
     """
-    Yields its input indexed by key
+    returns its input indexed by key
 
     Parameters
     ----------
     key : str
         The key value.
     """
-    yield x[key]
+    return x[key]
 
 
 @block(tag='common')
 def index_slice(x, slice_value: slice = ''):
     """
-    Yield its input sliced by value
+    return its input sliced by value
 
     Parameters
     ----------
     slice_value : slice
         The slice value.
     """
-    yield x[slice_value]
+    return x[slice_value]
 
 
 @block(tag='common')
@@ -82,11 +82,11 @@ def np_cast(x, np_type: str = 'float32'):
     np_type : str
         The numpy type you want to cast to.
 
-    Yields
+    returns
     ------
         Its input as a numpy array of type specified.
     """
-    yield np.array(x).astype(np_type)
+    return np.array(x).astype(np_type)
 
 
 @block(tag='common')
@@ -99,14 +99,14 @@ def np_reshape(x, shape: tuple = (28, 28)):
     shape : tuple
         The shape value
     """
-    yield np.reshape(x, shape)
+    return np.reshape(x, shape)
 
 
 @block(tag='common')
 def np_linspace(start: float = 0, stop: float = 0, num: int = 50, endpoint: bool = True,
         retstep: bool = False, dtype: np.dtype = None):
     """
-    Yields a numpy linear space.
+    returns a numpy linear space.
     Refer to numpy linspace function for argument description
 
     Parameters
@@ -118,13 +118,13 @@ def np_linspace(start: float = 0, stop: float = 0, num: int = 50, endpoint: bool
     retstep : bool
     dtype : np.dtype
     """
-    yield np.linspace(start, stop, num, endpoint, retstep, dtype)
+    return np.linspace(start, stop, num, endpoint, retstep, dtype)
 
 
 @block(tag='common')
 def np_randn(shape: tuple = (1,)):
     """
-    Yields random numbers with shape specified from a normal distribution.
+    returns random numbers with shape specified from a normal distribution.
     See numpy random randn function for more details.
 
     Parameters
@@ -132,13 +132,13 @@ def np_randn(shape: tuple = (1,)):
     shape : tuple
         The output shape.
     """
-    yield np.random.randn(*shape)
+    return np.random.randn(*shape)
 
 
 @block(tag='common')
 def np_randint(low: int = 0, high: int = None, size: int = None, dtype: str = 'l'):
     """
-    Yields random integers with low / high and size specified.
+    returns random integers with low / high and size specified.
     Refer to numpy random randint documentation for more details.
 
     Parameters
@@ -148,13 +148,13 @@ def np_randint(low: int = 0, high: int = None, size: int = None, dtype: str = 'l
     size : int
     dtype : str
     """
-    yield np.random.randint(low, high, size, dtype)
+    return np.random.randint(low, high, size, dtype)
 
 
 @block(tag='common')
 def np_ones(shape: tuple = None, dtype: np.dtype = None, order: str = 'C'):
     """
-    Yields a numpy array of the shape specified filled with ones.
+    returns a numpy array of the shape specified filled with ones.
     Refer to numpy documentation for more details.
 
     Parameters
@@ -163,13 +163,13 @@ def np_ones(shape: tuple = None, dtype: np.dtype = None, order: str = 'C'):
     dtype : np.dtype
     order : str
     """
-    yield np_ones(shape, dtype, order)
+    return np_ones(shape, dtype, order)
 
 
 @block(tag='common')
 def np_zeros(shape: tuple = None, dtype: np.dtype = None, order: str = 'C'):
     """
-    Yields a numpy array of the shape specified filled with zeros.
+    returns a numpy array of the shape specified filled with zeros.
     Refer to numpy documentation for more details.
 
     Parameters
@@ -178,13 +178,13 @@ def np_zeros(shape: tuple = None, dtype: np.dtype = None, order: str = 'C'):
     dtype : np.dtype
     order : str
     """
-    yield np.zeros(shape, dtype, order)
+    return np.zeros(shape, dtype, order)
 
 
 @block(tag='common')
 def np_empty(shape: tuple = None, dtype: np.dtype = None, order: str = 'C'):
     """
-    Yields an empty numpy array of the shape specified.
+    returns an empty numpy array of the shape specified.
     Refer to numpy documentation for more details.
 
     Parameters
@@ -193,63 +193,63 @@ def np_empty(shape: tuple = None, dtype: np.dtype = None, order: str = 'C'):
     dtype : np.dtype
     order : str
     """
-    yield np.empty(shape, dtype, order)
+    return np.empty(shape, dtype, order)
 
 
 @block(tag='common', intercept_end=True)
 class accumulate:
     """
-    Yields the summed value of its inputs every time it receives a StopIteration.
+    returns the summed value of its inputs every time it receives a StopIteration.
     """
     def __init__(self):
         self.sum = 0
 
     def run(self, x):
         if x is StopIteration:
-            yield self.sum
+            return self.sum
         self.sum += x
-        yield Pipeline._empty
+        return Pipeline._empty
 
 
 @block(tag='common')
 def filter_func(x, func: Callable = lambda x: True):
     """
-    Yields its inputs filtered by func function.
+    returns its inputs filtered by func function.
 
     Parameters
     ----------
     func : Callable
         The function you want to filter with, should return a boolean.
     """
-    yield x if func(x) else Pipeline._empty
+    return x if func(x) else Pipeline._empty
 
 
 @block(tag='common')
 def add(x, y):
     """
     """
-    yield x + y
+    return x + y
 
 
 @block(tag='common')
 def subtract(x, y):
     """
     """
-    yield x - y
+    return x - y
 
 
 @block(tag='common')
 def multiply(x, y):
     """
     """
-    yield x * y
+    return x * y
 
 
 @block(tag='common')
 def divide(x, y):
     """
     """
-    yield x / y
+    return x / y
 
 
 @block(tag='common')
@@ -257,7 +257,7 @@ def integer_division(x, y):
     """
     x // y
     """
-    yield x // y
+    return x // y
 
 
 @block(tag='common')
@@ -265,67 +265,67 @@ def modulo(x, y):
     """
     x % y
     """
-    yield x % y
+    return x % y
 
 
 @block(tag='common')
 def sin(x):
     """
     """
-    yield math.sin(x)
+    return math.sin(x)
 
 
 @block(tag='common')
 def cos(x):
     """
     """
-    yield math.cos(x)
+    return math.cos(x)
 
 
 @block(tag='common')
 def tan(x):
     """
     """
-    yield math.tan(x)
+    return math.tan(x)
 
 
 @block(tag='common')
 def asin(x):
     """
     """
-    yield math.asin(x)
+    return math.asin(x)
 
 
 @block(tag='common')
 def acos(x):
     """
     """
-    yield math.acos(x)
+    return math.acos(x)
 
 
 @block(tag='common')
 def atan(x):
     """
     """
-    yield math.atan(x)
+    return math.atan(x)
 
 
 @block(tag='common')
 def sinh(x):
     """
     """
-    yield math.sinh(x)
+    return math.sinh(x)
 
 
 @block(tag='common')
 def cosh(x):
     """
     """
-    yield math.cosh(x)
+    return math.cosh(x)
 
 
 @block(tag='common')
 def tanh(x):
     """
     """
-    yield math.tanh(x)
+    return math.tanh(x)

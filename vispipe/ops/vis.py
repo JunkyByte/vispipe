@@ -36,7 +36,7 @@ class vis_image:
             ratio = x.shape[1 - arg] / x.shape[arg]
             new_size = self.max_size * np.eye[arg] + self.max_size * np.eye[1 - arg] * ratio
             x = cv2.resize(x, tuple(new_size.astype(np.int)))
-        yield x
+        return x
 
 
 @block(tag='vis', max_queue=1, data_type='raw')
@@ -44,7 +44,7 @@ def vis_text(input1):
     """
     Visualize raw text.
     """
-    yield input1
+    return input1
 
 
 @block(tag='vis', max_queue=1, data_type='raw')
@@ -53,7 +53,7 @@ def vis_shape(input1):
     Visualize shape of object (if supported).
     This is equivalent to calling `input.shape` and passing it to a raw visualization buffer.
     """
-    yield input1.shape
+    return input1.shape
 
 
 class plot:
@@ -101,7 +101,7 @@ class plot:
             self.fig.canvas.draw()
 
         self.fig.canvas.flush_events()
-        yield self.fig
+        return self.fig
 
 
 @block(tag='vis', max_queue=1, data_type='plot')

@@ -82,7 +82,7 @@ class TestPipelineNodesAndConnections(unittest.TestCase):
 class TestPipelineMacrosAndBlocksAndSaveLoad(unittest.TestCase):
     @block(tag='common', output_names=['y1', 'y2'])
     def identity_two(x, y):
-        yield x, y
+        return x, y
 
     def setUp(self):
         self.pipeline = Pipeline()

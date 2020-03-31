@@ -44,10 +44,10 @@ class Pipeline:
     """
     MAXSIZE = 100
 
-    #: Yield this to specify that a block is not ready to create a new output.
+    #: Return this to specify that a block is not ready to create a new output.
     _empty = object()
 
-    #: Yield an instance of this to specify that a block is busy processing old input, on next call no new data will be passed.
+    #: Return an instance of this to specify that a block is busy processing old input, on next call no new data will be passed.
     _skip = None  # This is a ugly fix for _skip no showing in the docs
 
     class _skip:
