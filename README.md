@@ -119,3 +119,54 @@ p.load(file_path)
 # Or more concisely
 p = Pipeline(path=file_path)
 ```
+
+### Advanced Block creation
+#### `Pipeline._empty` and `Pipeline.skip` objecs
+You may have noticed that the flexibility of the blocks we created is pretty limited, we need to return a value at each call and we will always receive an input.
+To overcome this there are two particular objects that get treated in a particular way:
+
+`Pipeline._empty` allows to specify that we do not want to return any result yet.
+```python
+# The example is based on the benchmark block from ops/utils.py
+@block
+class benchmark:
+    def __init__(self):
+	self.n = 1000
+	self.start_time = None
+
+    def run(self, x):
+	if self.start_time is None:
+	    self.start_time = time.time()
+	
+	self.n -= 1
+	if self.n == -1:  # After 1000 iterations we return delta time
+	    delta = time.time() - self.start_time
+	    yield delta
+	
+	# (...) missing code to manage the ending
+	
+	yield Pipeline._empty  # Otherwise we are not ready to return an output
+```
+
+`Pipeline._skip(value)` allows to return a value while also skipping the next input.
+This is particularly useful when you need to iterate over an input.
+```python
+# The example is based on iterator from ops/flows.py
+@block
+class iterator:
+    def __init__(self):
+	self.iterator = None
+
+    def run(self, x):
+	if self.iterator is None:
+	    self.iterator = iter(x)
+
+	try:
+	    # As we can still iterate we return a skip object containing the next value
+	    y = Pipeline._skip(next(self.iterator))
+	except StopIteration:
+	    # If we finished the iterator we return an empty so that we can wait for next input
+	    self.iterator = None
+	    y = Pipeline._empty
+
+	yield y

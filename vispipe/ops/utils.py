@@ -22,15 +22,13 @@ class benchmark:
     """
     def __init__(self, n: int = 1000, end: bool = True, log: bool = False):
         self.n = n
-        self.start_n = self.n
-        self.started = False
         self.end = end
         self.log = log
-        self.finished = False
+        self.start_n = self.n
+        self.start_time = None
 
     def run(self, x):
-        if not self.started:  # Start the timer
-            self.started = True
+        if self.start_time is None:  # Start the timer
             self.start_time = time.time()
 
         self.n -= 1
@@ -40,9 +38,7 @@ class benchmark:
             if self.log:
                 logging.getLogger('vispipe').info(msg)
 
-            if self.end:  # Prepare to end
-                self.finished = True
-            else:  # Restart the timer
+            if not self.end:  # Prepare to end
                 self.n = self.start_n
                 self.start_time = time.time()
             yield msg

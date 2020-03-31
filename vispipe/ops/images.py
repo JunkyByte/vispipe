@@ -1,6 +1,18 @@
 from ..vispipe import Pipeline
 from ..vispipe import block
 import cv2
+import numpy as np
+
+
+@block
+def random_image(size: tuple = (28, 28)):
+    yield np.concatenate([np.random.randint(0, 255, size=size + (3,)), np.ones(size + (1,)) * 255], axis=-1)
+
+
+@block
+def image_rgb(r, g, b, size: tuple = (28, 28)):
+    ones = np.ones(size + (1,))
+    yield np.concatenate([r * ones, g * ones, b * ones, ones * 255], axis=-1)
 
 
 @block(tag='images')
