@@ -41,7 +41,7 @@ class accumulator:
 #add = pipeline.add_node('test_addition')
 #plus1 = pipeline.add_node('test_plus1')
 #plus2 = pipeline.add_node('test_plus100')
-#timern = pipeline.add_node('benchmark', n=100_000, log=True)
+#timern = pipeline.add_node('benchmark', n=100000, log=True)
 
 #pipeline.add_conn(img1, 0, add, 0)
 #pipeline.add_conn(img2, 0, add, 1)
