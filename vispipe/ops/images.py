@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 
 
-@block
+@block(tag='images')
 def random_image(size: tuple = (28, 28)):
     """
     Create a random image of shape specified.
@@ -17,7 +17,7 @@ def random_image(size: tuple = (28, 28)):
     return np.concatenate([np.random.randint(0, 255, size=size + (3,)), np.ones(size + (1,)) * 255], axis=-1)
 
 
-@block
+@block(tag='images')
 def image_rgb(r, g, b, size: tuple = (28, 28)):
     """
     Create an image with fixed color for r, g, b input channels (0 to 255).

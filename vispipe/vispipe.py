@@ -2,7 +2,7 @@ from .node import Node, Block
 from .graph import Graph
 from functools import partial, reduce
 from itertools import chain
-from inspect import signature, isgeneratorfunction
+from inspect import signature
 from typing import Callable, Optional, List, Union, Tuple, Any
 import queue
 import multiprocessing.queues as mpqueues
@@ -725,12 +725,12 @@ class PipelineRunner:
         self.vis_source = {}
         self.outputs = {}
 
-    def read_vis(self):
+    def read_vis(self, sync=True):
         if not self.vis_source:
             return {}
 
         vis = {}
-        idx = self._vis_index()
+        idx = self._vis_index(sync=sync)
         if idx < 0:
             return {}  # This will prevent a crash while waiting for queues to be ready
 
@@ -741,9 +741,12 @@ class PipelineRunner:
 
         return vis
 
-    def _vis_index(self):
+    def _vis_index(self, sync=True):
+        sizes = [vis.size() for vis in self.vis_source.values()]
+        if not sync:
+            sizes = filter(lambda x: x > 0, sizes)
         try:
-            return min(filter(lambda x: x > 0, [vis.size() for vis in self.vis_source.values()])) - 1
+            return min(sizes) - 1
         except ValueError:
             return -1
 
@@ -1046,8 +1049,6 @@ def block(f: Callable = None, max_queue: int = 10, output_names: List[str] = Non
                 data_type=data_type, intercept_end=intercept_end, allow_macro=allow_macro)
 
     if isinstance(f, types.FunctionType):
-        #if not isgeneratorfunction(f):
-        #    raise TypeError('The function you tagged is not a generator')
         if signature(f).parameters and list(signature(f).parameters.keys())[0] == 'self':
             raise TypeError(
                 'The function you passed is a class method, we only support functions right now')
@@ -1056,8 +1057,6 @@ def block(f: Callable = None, max_queue: int = 10, output_names: List[str] = Non
         # Is a custom class so we need to process it differently (instantiate)
         assert hasattr(
             f, 'run'), 'The class %s you decorated must have a run method' % f.__name__
-        #if not isgeneratorfunction(f.run):
-        #    raise TypeError('The function you tagged is not a generator')
         is_class = True
 
     assert data_type in Pipeline.data_type

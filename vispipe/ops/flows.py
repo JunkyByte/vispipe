@@ -1,5 +1,6 @@
 from ..vispipe import Pipeline
 from ..vispipe import block
+import numpy as np
 
 
 @block(tag='flows', intercept_end=True)
@@ -36,20 +37,22 @@ class batchify:
     ----------
     size : int
         The size of each bach.
+    to_array: bool
+        Whether you want the output as a np array or not.
 
     returns
     ------
         Batch of inputs of the size specified.
     """
-
-    def __init__(self, size: int = 2):
-        self.buffer = []
+    def __init__(self, size: int = 2, to_array: bool = True):
         self.size = size
+        self.to_array = to_array
+        self.buffer = []
 
     def run(self, x):
         self.buffer.append(x)
         if len(self.buffer) == self.size or x is StopIteration:
-            x = self.buffer
+            x = np.array(self.buffer) if self.to_array else self.buffer
             self.buffer = []
             return x if x is not StopIteration else x[:-1]
         return Pipeline._empty

@@ -76,12 +76,16 @@ class CursesQueueGUI:
         self.screen, self.queue_win, self.log_win = wrapper(MainWindow)
 
         mh = CursesHandler(self.log_win)
-        formatter = logging.Formatter(' %(asctime) -25s - %(name) -15s - %(levelname) -10s - %(message)s')
-        formatterDisplay = logging.Formatter('  %(asctime)-8s|%(name)-12s|%(levelname)-6s|%(message)-s', '%H:%M:%S')
-        mh.setFormatter(formatterDisplay)
+        log_formatter = logging.Formatter("%(asctime)s [%(levelname)s]: %(message)s")
+        mh.setFormatter(log_formatter)
+
+        logger = logging.getLogger('vispipe')
+        logger.handlers = []
+
         logger = logging.getLogger('gui-vispipe')
         logger.handlers = []
         logger.addHandler(mh)
+
         sys.stdout = mh
         sys.stderr = mh
 
@@ -102,8 +106,6 @@ class CursesQueueGUI:
         self.screen.refresh()
 
     def signal_handler(self, sig, frame):
-        print('[ Press Enter to exit ]')
-        self.screen.getch()
         curses.endwin()
         sys.exit(0)
 

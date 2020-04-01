@@ -211,16 +211,14 @@ class Pipeline {
     }
 
     spawn_node(block){
+        console.log(block.custom_args)
         var self = this;
         socket.emit('new_node', block, function() {
             var closure = block;  // Creates closure for block
             return function(response, status) {
                 if (status === 200){
-                    block = closure;
-                    block = new Block(block.name, block.input_args, block.custom_args,
-                                      block.custom_args_type, block.output_names,
-                                      block.tag, block.data_type);
-                    self.spawn_node_visual(block, response.id)
+                    let newblock = $.extend(true,{}, closure);
+                    self.spawn_node_visual(newblock, response.id);
                 } else {
                     console.log(response);
                 }
@@ -406,6 +404,8 @@ class PopupMenu {
         this.currentNode = this.target.node;
         var block = this.target.node.block;
         var custom_args = block.custom_args;
+        console.log(block)
+        console.log(custom_args, this.currentNode.id)
         var custom_args_type = block.custom_args_type;
         var value, type, height;
         var x = CUSTOM_ARG_SIZE - 215;

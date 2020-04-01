@@ -185,6 +185,7 @@ $(document).ready(function(){
                               block_dict.tag, block_dict.data_type);
             obj = pipeline.spawn_node_visual(block, nodes[i]);
 
+            pos = viewport.center
             if (vis_data[nodes[i]] !== undefined){
                 pos = new PIXI.Point(vis_data[nodes[i]][0], vis_data[nodes[i]][1]);
             }

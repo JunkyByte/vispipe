@@ -46,14 +46,14 @@ class Server:
         socketio.on_event('disconnect', self.disconnect)
 
         self.gui = None
-        if use_curses:
+        if use_curses and os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
             self.gui = CursesQueueGUI()
             if not self.gui_thread.isAlive():
                 logging.info('Launching terminal queue visualization')
                 self.gui_thread = Thread(target=self.set_qsize)
                 self.gui_thread.daemon = True
                 self.gui_thread.start()
-            time.sleep(0.2)
+            time.sleep(1)
 
         socketio.run(app)
 
