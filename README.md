@@ -20,3 +20,4 @@ pip install vispipe
 
 ## [Usage](docs/docs_md/usage.md)
 ## [Visualization](docs/docs_md/visualization.md)
+## [Documentation](https://junkybyte.github.io/vispipe/)
