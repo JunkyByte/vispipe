@@ -1,0 +1,240 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Visualization &mdash; VisPipe  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> VisPipe
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">Visualization</a><ul>
+<li><a class="reference internal" href="#add-nodes">Add Nodes</a></li>
+<li><a class="reference internal" href="#add-connections">Add Connections</a></li>
+<li><a class="reference internal" href="#set-custom-arguments">Set custom arguments</a></li>
+<li><a class="reference internal" href="#add-outputs">Add outputs</a></li>
+<li><a class="reference internal" href="#add-visualization">Add visualization</a></li>
+</ul>
+</li>
+</ul>
+</div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">VisPipe</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+      <li>Visualization</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/docs_md/visualization.md.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="visualization">
+<h1>Visualization<a class="headerlink" href="#visualization" title="Permalink to this headline">¶</a></h1>
+<p>The visualization can be useful to build pipelines in an easier way, to have your custom
+blocks inside the visualization you should import the <code class="docutils literal notranslate"><span class="pre">.py</span></code> files and launch the server
+from there:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">vispipe</span> <span class="kn">import</span> <span class="n">Server</span>
+<span class="kn">import</span> <span class="nn">my_custom_blocks</span>
+<span class="kn">import</span> <span class="nn">my_other_custom_blocks</span>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="c1"># slow=True is recommended and will run the pipeline slowly to allow visualization</span>
+    <span class="c1"># path is the checkpoint path you want to use</span>
+    <span class="n">Server</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">slow</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Once the server is launched connect to <code class="docutils literal notranslate"><span class="pre">localhost:5000</span></code>.</p>
+<div class="section" id="add-nodes">
+<h2>Add Nodes<a class="headerlink" href="#add-nodes" title="Permalink to this headline">¶</a></h2>
+<p>The nodes have a tag that can be specified during declaration, you will find these tags during visualization.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@block</span><span class="p">(</span><span class="n">tag</span><span class="o">=</span><span class="s1">&#39;my_custom_tag&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">f</span><span class="p">():</span>
+    <span class="c1"># (...)</span>
+</pre></div>
+</div>
+<p>To spawn a node simply click it on the right side menu.
+You can create switch between tags using the right top side arrows.</p>
+</div>
+<div class="section" id="add-connections">
+<h2>Add Connections<a class="headerlink" href="#add-connections" title="Permalink to this headline">¶</a></h2>
+<a class="reference external image-reference" href="https://media.giphy.com/media/idSuAhb6Wa6rRvzIkT/giphy.gif"><img alt="Missing gif" src="https://media.giphy.com/media/idSuAhb6Wa6rRvzIkT/giphy.gif" /></a>
+</div>
+<div class="section" id="set-custom-arguments">
+<h2>Set custom arguments<a class="headerlink" href="#set-custom-arguments" title="Permalink to this headline">¶</a></h2>
+<a class="reference external image-reference" href="https://media.giphy.com/media/USEG1wMYmUL12AUD2C/giphy.gif"><img alt="Missing gif" src="https://media.giphy.com/media/USEG1wMYmUL12AUD2C/giphy.gif" /></a>
+</div>
+<div class="section" id="add-outputs">
+<h2>Add outputs<a class="headerlink" href="#add-outputs" title="Permalink to this headline">¶</a></h2>
+<a class="reference external image-reference" href="https://media.giphy.com/media/VdQsT8i1gj2CUMH07D/giphy.gif"><img alt="Missing gif" src="https://media.giphy.com/media/VdQsT8i1gj2CUMH07D/giphy.gif" /></a>
+</div>
+<div class="section" id="add-visualization">
+<h2>Add visualization<a class="headerlink" href="#add-visualization" title="Permalink to this headline">¶</a></h2>
+<p><span class="raw-html-m2r"><img src="https://media.giphy.com/media/RGdYD6vdMbNVQP0sUO/giphy.gif" width="480"/></span></p>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, JunkyByte
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

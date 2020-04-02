@@ -1,0 +1,1607 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>VisPipe’s documentation! &mdash; VisPipe  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="#" class="icon icon-home"> VisPipe
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">VisPipe’s documentation!</a></li>
+<li><a class="reference internal" href="#module-vispipe.vispipe">Pipeline Class / block decorator</a></li>
+<li><a class="reference internal" href="#blocks">Blocks</a><ul>
+<li><a class="reference internal" href="#module-vispipe.ops.inputs">Inputs</a></li>
+<li><a class="reference internal" href="#module-vispipe.ops.flows">Flows</a></li>
+<li><a class="reference internal" href="#module-vispipe.ops.common">Common data manipulation</a></li>
+<li><a class="reference internal" href="#module-vispipe.ops.images">Images manipulation</a></li>
+<li><a class="reference internal" href="#module-vispipe.ops.utils">Utils</a></li>
+<li><a class="reference internal" href="#module-vispipe.ops.vis">Visualization</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#additional-documentation">Additional Documentation</a></li>
+<li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+</ul>
+</div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">VisPipe</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="#">Docs</a> &raquo;</li>
+        
+      <li>VisPipe’s documentation!</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="vispipe-s-documentation">
+<h1>VisPipe’s documentation!<a class="headerlink" href="#vispipe-s-documentation" title="Permalink to this headline">¶</a></h1>
+<a class="reference external image-reference" href="https://www.codefactor.io/repository/github/junkybyte/vispipe"><img alt="CodeFactor" src="https://www.codefactor.io/repository/github/junkybyte/vispipe/badge?s=b4f0ed72fedffa8ed8cbc9bc9887a0db528a24b2" /></a>
+<a class="reference external image-reference" href="https://github.com/JunkyByte/vispipe"><img alt="Package Testing" src="https://github.com/JunkyByte/vispipe/workflows/Package%20Testing/badge.svg?branch=master" /></a>
+</div>
+<hr class="docutils" />
+<div class="section" id="module-vispipe.vispipe">
+<span id="pipeline-class-block-decorator"></span><h1>Pipeline Class / block decorator<a class="headerlink" href="#module-vispipe.vispipe" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="vispipe.vispipe.Pipeline">
+<em class="property">class </em><code class="sig-name descname">Pipeline</code><span class="sig-paren">(</span><em class="sig-param">path: Optional[str] = None</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.vispipe.Pipeline" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pipeline class that is used to represent pipelines.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – The path from which load a pipeline checkpoint.
+If not specified an empty pipeline is created.</p>
+</dd>
+</dl>
+<dl class="attribute">
+<dt id="vispipe.vispipe.Pipeline.pipeline">
+<code class="sig-name descname">pipeline</code><a class="headerlink" href="#vispipe.vispipe.Pipeline.pipeline" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#vispipe.graph.Graph" title="vispipe.graph.Graph">Graph</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="vispipe.vispipe.Pipeline.runner">
+<code class="sig-name descname">runner</code><a class="headerlink" href="#vispipe.vispipe.Pipeline.runner" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#vispipe.vispipe.PipelineRunner" title="vispipe.vispipe.PipelineRunner">PipelineRunner</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="vispipe.vispipe.Pipeline.vis_mode">
+<code class="sig-name descname">vis_mode</code><a class="headerlink" href="#vispipe.vispipe.Pipeline.vis_mode" title="Permalink to this definition">¶</a></dt>
+<dd><p>Whether the pipeline is in visualization mode.
+This is filled during checkpoint loading.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="vispipe.vispipe.Pipeline.macro">
+<code class="sig-name descname">macro</code><a class="headerlink" href="#vispipe.vispipe.Pipeline.macro" title="Permalink to this definition">¶</a></dt>
+<dd><p>The list of all the macro blocks.
+Each macro is represented as a list of node hashes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>List[List[int]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="vispipe.vispipe.Pipeline._empty">
+<code class="sig-name descname">_empty</code><em class="property"> = &lt;object object&gt;</em><a class="headerlink" href="#vispipe.vispipe.Pipeline._empty" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return this to specify that a block is not ready to create a new output.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="vispipe.vispipe.Pipeline._skip">
+<em class="property">class </em><code class="sig-name descname">_skip</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.vispipe.Pipeline._skip" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return an instance of this to specify that a block is busy processing old input, on next call no new data will be passed.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="vispipe.vispipe.Pipeline.data_type">
+<code class="sig-name descname">data_type</code><em class="property"> = ['raw', 'image', 'plot']</em><a class="headerlink" href="#vispipe.vispipe.Pipeline.data_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Supported data_type for visualization blocks.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="vispipe.vispipe.Pipeline.vis_tag">
+<code class="sig-name descname">vis_tag</code><em class="property"> = 'vis'</em><a class="headerlink" href="#vispipe.vispipe.Pipeline.vis_tag" title="Permalink to this definition">¶</a></dt>
+<dd><p>The tag used for visualization blocks.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="vispipe.vispipe.Pipeline.MAX_OUT_SIZE">
+<code class="sig-name descname">MAX_OUT_SIZE</code><em class="property"> = 1000</em><a class="headerlink" href="#vispipe.vispipe.Pipeline.MAX_OUT_SIZE" title="Permalink to this definition">¶</a></dt>
+<dd><p>The maximum size of the output queues. This is set to avoid out of memory with running pipelines.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="vispipe.vispipe.Pipeline.USE_MACRO_WARNINGS">
+<code class="sig-name descname">USE_MACRO_WARNINGS</code><em class="property"> = True</em><a class="headerlink" href="#vispipe.vispipe.Pipeline.USE_MACRO_WARNINGS" title="Permalink to this definition">¶</a></dt>
+<dd><p>Whether to use a warning wrapper for blocks that are part of macro blocks.
+Setting this to <cite>False</cite> will speed up pipelines that use macro blocks but will make debugging more difficult.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="vispipe.vispipe.Pipeline.nodes">
+<em class="property">property </em><code class="sig-name descname">nodes</code><a class="headerlink" href="#vispipe.vispipe.Pipeline.nodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the list of <a class="reference internal" href="#vispipe.node.Node" title="vispipe.node.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a> that are part of the pipeline.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>The list of nodes.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>List[<a class="reference internal" href="#vispipe.node.Node" title="vispipe.node.Node">Node</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vispipe.vispipe.Pipeline.outputs">
+<em class="property">property </em><code class="sig-name descname">outputs</code><a class="headerlink" href="#vispipe.vispipe.Pipeline.outputs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a dictionary that maps the output node name to the output node iterator class.
+If the name of the node was not specified (it can happen if you use hashes to create
+outputs) the mapping will use the hash as name.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Dictionary containing the outputs of the pipeline.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vispipe.vispipe.Pipeline.register_block">
+<em class="property">static </em><code class="sig-name descname">register_block</code><span class="sig-paren">(</span><em class="sig-param">func: Callable, is_class: bool, max_queue: int, output_names: List[str], tag: str, data_type: str, intercept_end: bool, allow_macro: bool</em><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#vispipe.vispipe.Pipeline.register_block" title="Permalink to this definition">¶</a></dt>
+<dd><p>Register a block in the pipeline list of available blocks, this function is called
+automatically by the decorator.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This is a static method, if you want to refer to it you can use <code class="docutils literal notranslate"><span class="pre">Pipeline.register_block</span></code></p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>func</strong> (<em>Callable</em>) – The function to be registered.</p></li>
+<li><p><strong>is_class</strong> (<em>bool</em>) – Whether it is a class function.</p></li>
+<li><p><strong>max_queue</strong> (<em>int</em>) – The max size of the queues used for the block.</p></li>
+<li><p><strong>output_names</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>) – See <a class="reference internal" href="#vispipe.node.Block" title="vispipe.node.Block"><code class="xref py py-class docutils literal notranslate"><span class="pre">Block</span></code></a></p></li>
+<li><p><strong>tag</strong> (<em>str</em>) – See <a class="reference internal" href="#vispipe.node.Block" title="vispipe.node.Block"><code class="xref py py-class docutils literal notranslate"><span class="pre">Block</span></code></a></p></li>
+<li><p><strong>data_type</strong> (<em>str</em>) – See <a class="reference internal" href="#vispipe.node.Block" title="vispipe.node.Block"><code class="xref py py-class docutils literal notranslate"><span class="pre">Block</span></code></a></p></li>
+<li><p><strong>allow_macro</strong> (<em>bool</em>) – See <a class="reference internal" href="#vispipe.node.Block" title="vispipe.node.Block"><code class="xref py py-class docutils literal notranslate"><span class="pre">Block</span></code></a></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vispipe.vispipe.Pipeline.get_blocks">
+<em class="property">static </em><code class="sig-name descname">get_blocks</code><span class="sig-paren">(</span><em class="sig-param">serializable: bool = False</em><span class="sig-paren">)</span> &#x2192; List[dict]<a class="headerlink" href="#vispipe.vispipe.Pipeline.get_blocks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns all the blocks tagged as a dictionary.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This is a static method, if you want to refer to it you can use <code class="docutils literal notranslate"><span class="pre">Pipeline.get_blocks</span></code></p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>serializable</strong> (<em>bool</em>) – Whether if the dictionary returned must be serializable.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A list of dictionaries representing each block.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>List[dict]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vispipe.vispipe.Pipeline.get_output">
+<code class="sig-name descname">get_output</code><span class="sig-paren">(</span><em class="sig-param">node: Union[int, str]</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.vispipe.Pipeline.get_output" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the output node iterator class with name or hash you specified.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>While its suggested to use <cite>Pipeline.outputs[node]</cite> to access a particular output
+this method can be convenient if you want to access a node by its hash even if it
+hash a specified name (in the outputs you can access it only by name).</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>node</strong> (<em>Union</em><em>[</em><em>int</em><em>, </em><em>str</em><em>]</em>) – The hash or name of the node you are looking for.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vispipe.vispipe.Pipeline.connections">
+<code class="sig-name descname">connections</code><span class="sig-paren">(</span><em class="sig-param">node_hash: int</em>, <em class="sig-param">out=None</em><span class="sig-paren">)</span> &#x2192; List[Tuple]<a class="headerlink" href="#vispipe.vispipe.Pipeline.connections" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the list of connections of a particular node.
+Each connections is a tuple of type <code class="docutils literal notranslate"><span class="pre">(other_hash,</span> <span class="pre">out_idx,</span> <span class="pre">inp_idx,</span> <span class="pre">bool)</span></code>
+where bool is <code class="docutils literal notranslate"><span class="pre">True</span></code> if the connection is to <code class="docutils literal notranslate"><span class="pre">other</span></code>, <code class="docutils literal notranslate"><span class="pre">False</span></code> otherwise.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>node_hash</strong> (<em>int</em>) – The hash of the node.</p></li>
+<li><p><strong>out</strong> (<em>Union</em><em>[</em><em>bool</em><em>, </em><em>None</em><em>]</em>) – If <code class="docutils literal notranslate"><span class="pre">None</span></code> returns all the connections of the node.
+If <code class="docutils literal notranslate"><span class="pre">True</span></code> returns all the output connections.
+If <code class="docutils literal notranslate"><span class="pre">False</span></code> returns all the input connections.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The list of connections.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>List[Tuple]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vispipe.vispipe.Pipeline.get_node">
+<code class="sig-name descname">get_node</code><span class="sig-paren">(</span><em class="sig-param">node: Union[int, str]</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.vispipe.Pipeline.get_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the node that corresponds to name or hash.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Names are arbitrary and unicity is NOT verified.
+Using name to access nodes may lead to undesired results if the name is duplicated.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>node</strong> (<em>Union</em><em>[</em><em>int</em><em>, </em><em>str</em><em>]</em>) – The name or hash of the node you are looking for.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vispipe.vispipe.Pipeline.add_node">
+<code class="sig-name descname">add_node</code><span class="sig-paren">(</span><em class="sig-param">block_name: str</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span> &#x2192; int<a class="headerlink" href="#vispipe.vispipe.Pipeline.add_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds a new node to the pipeline.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>block_name</strong> (<em>str</em>) – The name of the block you want to add.
+You can append <cite>‘/name’</cite> to specify a name that will be used to identify the node as an output.
+For example <cite>‘sin/sin_preprocessing’</cite> is a valid name for a node called <cite>sin</cite> with name
+initialized to <cite>‘sin_preprocessing’</cite></p></li>
+<li><p><strong>**kwargs</strong> – Used to specify custom arguments for the block.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Names are arbitrary and unicity is NOT verified.
+Creating multiple nodes with same name can produce unexpected results.
+Be sure to use unique names for output nodes.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>The hash of the created node</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vispipe.vispipe.Pipeline.remove_node">
+<code class="sig-name descname">remove_node</code><span class="sig-paren">(</span><em class="sig-param">node_hash: Union[str, int]</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.vispipe.Pipeline.remove_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove a node from the pipeline.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>node</strong> (<em>Union</em><em>[</em><em>str</em><em>, </em><em>int</em><em>]</em>) – The name or hash of the node you want to remove.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vispipe.vispipe.Pipeline.add_output">
+<code class="sig-name descname">add_output</code><span class="sig-paren">(</span><em class="sig-param">output: Union[str, int]</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.vispipe.Pipeline.add_output" title="Permalink to this definition">¶</a></dt>
+<dd><p>Mark a node as output, outputs will be the entry point of the pipeline during execution.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If an output is not consumed during pipeline execution it can stall once its queue
+is full. Ideally all nodes marked as output are consumed.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>output</strong> (<em>Union</em><em>[</em><em>str</em><em>, </em><em>int</em><em>]</em>) – The name or hash of the node you want to mark as an output.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vispipe.vispipe.Pipeline.remove_output">
+<code class="sig-name descname">remove_output</code><span class="sig-paren">(</span><em class="sig-param">output: Union[str, int]</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.vispipe.Pipeline.remove_output" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove an output from the pipeline.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>output</strong> (<em>Union</em><em>[</em><em>str</em><em>, </em><em>int</em><em>]</em>) – The name or hash of the node you want to remove from the list of outputs.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vispipe.vispipe.Pipeline.remove_tag">
+<code class="sig-name descname">remove_tag</code><span class="sig-paren">(</span><em class="sig-param">tag: str</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.vispipe.Pipeline.remove_tag" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove all nodes with a particular tag.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>tag</strong> (<em>str</em>) – The tag you want to remove.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vispipe.vispipe.Pipeline.add_conn">
+<code class="sig-name descname">add_conn</code><span class="sig-paren">(</span><em class="sig-param">from_hash: int</em>, <em class="sig-param">out_index: int</em>, <em class="sig-param">to_hash: int</em>, <em class="sig-param">inp_index: int</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.vispipe.Pipeline.add_conn" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a connection between two nodes of the pipeline.
+An output can have multiple connections while an input can have only one.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>from_hash</strong> (<em>int</em>) – The hash of the output node you are connecting.</p></li>
+<li><p><strong>out_index</strong> (<em>int</em>) – The index of the output you want to connect (starting from zero).</p></li>
+<li><p><strong>to_hash</strong> (<em>int</em>) – The hash of the input node you are connecting to.</p></li>
+<li><p><strong>inp_index</strong> (<em>int</em>) – The index of the input you want to connect (starting from zero).</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vispipe.vispipe.Pipeline.add_macro">
+<code class="sig-name descname">add_macro</code><span class="sig-paren">(</span><em class="sig-param">start_hash: int</em>, <em class="sig-param">end_hash: int</em><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#vispipe.vispipe.Pipeline.add_macro" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a macro block from <cite>start_hash</cite> to <cite>end_hash</cite>, macro blocks will be executed in a faster way internally
+Only a linearly connected set of nodes can become a macro block.
+Each block must have <cite>allow_macro</cite> set to <cite>True</cite> to support being part of a macro block.
+Only the last node of a macro block can be marked as an output and every node intern to a macro cannot have
+outside connections.
+<cite>Pipeline._empty</cite> and <cite>Pipeline._skip</cite> of intern nodes will not be correctly handled and an exception will be
+raised if encountered.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start_hash</strong> (<em>int</em>) – The node that starts the macro block.</p></li>
+<li><p><strong>end_hash</strong> (<em>int</em>) – The node that ends the macro block.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vispipe.vispipe.Pipeline.is_macro">
+<code class="sig-name descname">is_macro</code><span class="sig-paren">(</span><em class="sig-param">node_hash: int</em><span class="sig-paren">)</span> &#x2192; Tuple[bool, Optional[bool]]<a class="headerlink" href="#vispipe.vispipe.Pipeline.is_macro" title="Permalink to this definition">¶</a></dt>
+<dd><p>Whether a block is part of a macro block.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>node_hash</strong> (<em>int</em>) – The node you want to verify.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The first boolean represent whether the block is part of a macro block.
+The second one is:
+<cite>None</cite> is the block is internal to its macro
+<cite>False</cite> if is first block of its macro and
+<cite>True</cite> if is last block of its macro.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Tuple[bool, Optional[bool]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vispipe.vispipe.Pipeline.remove_macro">
+<code class="sig-name descname">remove_macro</code><span class="sig-paren">(</span><em class="sig-param">node_hash: int</em><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#vispipe.vispipe.Pipeline.remove_macro" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove the macro block the node is part of.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>node_hash</strong> (<em>int</em>) – The node whose macro block you want to remove.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vispipe.vispipe.Pipeline.set_custom_arg">
+<code class="sig-name descname">set_custom_arg</code><span class="sig-paren">(</span><em class="sig-param">node_hash: int</em>, <em class="sig-param">key: str</em>, <em class="sig-param">value: Any</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.vispipe.Pipeline.set_custom_arg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set a custom argument of a node.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This is not intended to be used from visualization, no unserialization will be done,
+value will be directly assigned to correct node argument.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>node_hash</strong> (<em>int</em>) – The hash of the node.</p></li>
+<li><p><strong>key</strong> (<em>str</em>) – The name of the argument you want to set.</p></li>
+<li><p><strong>value</strong> (<em>Any</em>) – The value to set for this argument.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vispipe.vispipe.Pipeline.clear_pipeline">
+<code class="sig-name descname">clear_pipeline</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.vispipe.Pipeline.clear_pipeline" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resets the state of the pipeline by deleting all its nodes and clearing its outputs.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="vispipe.vispipe.Pipeline.read_vis">
+<code class="sig-name descname">read_vis</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.vispipe.Pipeline.read_vis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reads the current data passing from all the visualization blocks.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>The current visualization data.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vispipe.vispipe.Pipeline.read_qsize">
+<code class="sig-name descname">read_qsize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.vispipe.Pipeline.read_qsize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reads the current queues size from all the blocks.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>A list of tuples of form (hash, block_name, current_size, max_size).</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>List[Tuple]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vispipe.vispipe.Pipeline.build">
+<code class="sig-name descname">build</code><span class="sig-paren">(</span><em class="sig-param">use_mp: bool</em><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#vispipe.vispipe.Pipeline.build" title="Permalink to this definition">¶</a></dt>
+<dd><div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This will automatically be called by running the pipeline.
+You should not need to call this method.</p>
+</div>
+<p>Build the pipeline and make it ready to be run.
+It creates the list of associated <code class="xref py py-class docutils literal notranslate"><span class="pre">TerminableThread</span></code> and <code class="xref py py-class docutils literal notranslate"><span class="pre">QueueConsumer</span></code>
+and binds them together using <cite>CloseableQueue</cite></p>
+<p>To build the pipeline graph we follow the <a class="reference external" href="https://en.wikipedia.org/wiki/Topological_sorting#Kahn's_algorithm">Kahn’s Algorithm for topologic sorting</a>
+applied to the nodes that have their inputs satisfied.</p>
+<p>Pseudo Code (from link):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>----- Kahn&#39;s algorithm for topologic sorting. -----
+L ← Empty list that will contain the sorted elements
+S ← Set of all nodes with no incoming edge
+
+while S is non-empty do
+    remove a node n from S
+    add n to tail of L
+    for each node m with an edge e from n to m do
+        remove edge e from the graph
+        if m has no other incoming edges then
+            insert m into S
+
+if graph has edges then
+    return error   (graph has at least one cycle)
+else
+    return L   (a topologically sorted order)
+</pre></div>
+</div>
+<dl class="simple">
+<dt>use_mp<span class="classifier">bool</span></dt><dd><p>Whether to use multiprocessing instead of threading.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vispipe.vispipe.Pipeline.run">
+<code class="sig-name descname">run</code><span class="sig-paren">(</span><em class="sig-param">slow: bool = False</em>, <em class="sig-param">use_mp: bool = False</em><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#vispipe.vispipe.Pipeline.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run the pipeline.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>slow</strong> (<em>bool</em>) – Whether to run the pipeline in slow mode, useful for visualization and debugging.</p></li>
+<li><p><strong>use_mp</strong> (<em>bool</em>) – Whether to use multiprocessing instead of threading.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vispipe.vispipe.Pipeline.stop">
+<code class="sig-name descname">stop</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#vispipe.vispipe.Pipeline.stop" title="Permalink to this definition">¶</a></dt>
+<dd><p>Stops the pipeline.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="vispipe.vispipe.Pipeline.save">
+<code class="sig-name descname">save</code><span class="sig-paren">(</span><em class="sig-param">path: str</em>, <em class="sig-param">vis_data: dict = {}</em><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#vispipe.vispipe.Pipeline.save" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save the pipeline to file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>) – The path of the file you want to save the pipeline to.</p></li>
+<li><p><strong>vis_data</strong> (<em>dict</em>) – The visualization data associated with this pipeline.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vispipe.vispipe.Pipeline.load">
+<code class="sig-name descname">load</code><span class="sig-paren">(</span><em class="sig-param">path: str</em>, <em class="sig-param">vis_mode: bool = False</em>, <em class="sig-param">exclude_tags: list = []</em><span class="sig-paren">)</span> &#x2192; object<a class="headerlink" href="#vispipe.vispipe.Pipeline.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads a pipeline checkpoint from a previously created <cite>.pickle</cite> file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>) – The path to the pickle file.</p></li>
+<li><p><strong>vis_mode</strong> (<em>bool</em>) – Visualization mode, can cause memory leaks if no visualization is actually connected.
+If <cite>False</cite> all the visualization blocks will be automatically removed. For this reason you should not save
+the pipeline once you loaded it or you will lose the visualization part.</p></li>
+<li><p><strong>exclude_tags</strong> (<em>list</em>) – Tags to exclude from the checkpoint. All the nodes with these tags will be removed from the pipeline.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The visualization data loaded in the checkpoint, you can ignore it if you are not using visualization.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>object</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vispipe.vispipe.Pipeline.join">
+<code class="sig-name descname">join</code><span class="sig-paren">(</span><em class="sig-param">timeout: Optional[float] = None</em><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#vispipe.vispipe.Pipeline.join" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is builded following <cite>Thread.join</cite> method from <cite>Threading</cite> module.
+<a class="reference external" href="https://docs.python.org/3.7/library/multiprocessing.html?#multiprocessing.Process.join">Refer to the original documentation</a>
+which is reported in the following note.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Wait until the thread terminates.</p>
+<p>This blocks the calling thread until the thread whose join() method is
+called terminates – either normally or through an unhandled exception
+or until the optional timeout occurs.</p>
+<p>When the timeout argument is present and not None, it should be a
+floating point number specifying a timeout for the operation in seconds
+(or fractions thereof). As join() always returns None, you must call
+is_alive() after join() to decide whether a timeout happened – if the
+thread is still alive, the join() call timed out.</p>
+<p>When the timeout argument is not present or None, the operation will
+block until the thread terminates.</p>
+<p>A thread can be join()ed many times.</p>
+<p>join() raises a RuntimeError if an attempt is made to join the current
+thread as that would cause a deadlock. It is also an error to join() a
+thread before it has been started and attempts to do so raises the same
+exception.</p>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="vispipe.vispipe.Pipeline.is_alive">
+<code class="sig-name descname">is_alive</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; bool<a class="headerlink" href="#vispipe.vispipe.Pipeline.is_alive" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns whether the pipeline is alive.
+The pipeline is considered alive if at least one of its nodes is running.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="vispipe.vispipe.PipelineRunner">
+<em class="property">class </em><code class="sig-name descname">PipelineRunner</code><a class="headerlink" href="#vispipe.vispipe.PipelineRunner" title="Permalink to this definition">¶</a></dt>
+<dd><p>The class used to build and run pipelines.</p>
+<dl class="attribute">
+<dt id="vispipe.vispipe.PipelineRunner.built">
+<code class="sig-name descname">built</code><a class="headerlink" href="#vispipe.vispipe.PipelineRunner.built" title="Permalink to this definition">¶</a></dt>
+<dd><p>Whether the pipeline has already been built and can be run or not.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="vispipe.vispipe.PipelineRunner.threads">
+<code class="sig-name descname">threads</code><a class="headerlink" href="#vispipe.vispipe.PipelineRunner.threads" title="Permalink to this definition">¶</a></dt>
+<dd><p>The list of the threads associated to our pipeline.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>List[TerminableThread]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="vispipe.vispipe.PipelineRunner.vis_source">
+<code class="sig-name descname">vis_source</code><a class="headerlink" href="#vispipe.vispipe.PipelineRunner.vis_source" title="Permalink to this definition">¶</a></dt>
+<dd><p>The list of consumers used for visualization.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>dict[QueueConsumer]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="vispipe.vispipe.block">
+<code class="sig-name descname">block</code><span class="sig-paren">(</span><em class="sig-param">f: Callable = None</em>, <em class="sig-param">max_queue: int = 10</em>, <em class="sig-param">output_names: List[str] = None</em>, <em class="sig-param">tag: str = 'None'</em>, <em class="sig-param">data_type: str = 'raw'</em>, <em class="sig-param">intercept_end: bool = False</em>, <em class="sig-param">allow_macro: bool = True</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.vispipe.block" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decorator function to tag custom blocks to be added to pipeline</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>f</strong> (<em>Callable</em>) – The function generator (or class) you are decorating (will be populated by the decorator)</p></li>
+<li><p><strong>max_queue</strong> (<em>int</em>) – Max queue length for the output of the block</p></li>
+<li><p><strong>output_names</strong> (<em>str</em>) – List of names for each output</p></li>
+<li><p><strong>tag</strong> (<em>str</em>) – Tag to organize decorated blocks</p></li>
+<li><p><strong>data_type</strong> (<em>str</em>) – For visualization blocks you have to specify the format of data you want to visualize</p></li>
+<li><p><strong>intercept_end</strong> (<em>bool</em>) – Whether the block should intercept pipeline end and manually manage termination.
+This is a complex and advanced feature and must be implemented correctly or pipeline
+termination is not assured.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="blocks">
+<h1>Blocks<a class="headerlink" href="#blocks" title="Permalink to this headline">¶</a></h1>
+<p>The following is documentation for prebuilt blocks of the pipeline.
+You can use these blocks directly by adding them to the pipeline.</p>
+<div class="section" id="module-vispipe.ops.inputs">
+<span id="inputs"></span><h2>Inputs<a class="headerlink" href="#module-vispipe.ops.inputs" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="vispipe.ops.inputs.np_iter_file">
+<em class="property">class </em><code class="sig-name descname">np_iter_file</code><span class="sig-paren">(</span><em class="sig-param">path: str = ''</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.inputs.np_iter_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>returns the raw buffer, line by line from a numpy file.
+This is similar to stacking a <code class="docutils literal notranslate"><span class="pre">numpy_flow</span></code> into an <code class="docutils literal notranslate"><span class="pre">iterator</span></code>.
+This is a finite generator and will stop the pipeline on end.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>) – The path to the file you want to load.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>The Content of the loaded array line by line.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="vispipe.ops.inputs.np_file">
+<em class="property">class </em><code class="sig-name descname">np_file</code><span class="sig-paren">(</span><em class="sig-param">path: str = ''</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.inputs.np_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>returns the full raw buffer once from a numpy file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>) – The path to the file you want to load.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>The Content of the loaded array.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="vispipe.ops.inputs.np_flow">
+<code class="sig-name descname">np_flow</code><span class="sig-paren">(</span><em class="sig-param">path</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.inputs.np_flow" title="Permalink to this definition">¶</a></dt>
+<dd><p>returns the raw buffer from the path provided as input.
+This is an infinite generator and will never raise a StopIteration</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p></p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>The full content of the loaded array from the path you provided.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="vispipe.ops.inputs.pickle_iter_file">
+<em class="property">class </em><code class="sig-name descname">pickle_iter_file</code><span class="sig-paren">(</span><em class="sig-param">path: str = ''</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.inputs.pickle_iter_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>returns the raw buffer, line by line from a pickle file.
+This is similar to stacking a <code class="docutils literal notranslate"><span class="pre">numpy_flow</span></code> into an <code class="docutils literal notranslate"><span class="pre">iterator</span></code>.
+This is a finite generator and will stop the pipeline on end.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>) – The path to the file you want to load.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>The Content of the loaded pickle line by line.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="vispipe.ops.inputs.pickle_file">
+<em class="property">class </em><code class="sig-name descname">pickle_file</code><span class="sig-paren">(</span><em class="sig-param">path: str = ''</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.inputs.pickle_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>returns the full raw buffer once from a pickle file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>) – The path to the file you want to load.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>The Content of the loaded pickle.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="vispipe.ops.inputs.pickle_flow">
+<code class="sig-name descname">pickle_flow</code><span class="sig-paren">(</span><em class="sig-param">path</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.inputs.pickle_flow" title="Permalink to this definition">¶</a></dt>
+<dd><p>returns the raw buffer from the path provided as input.
+This is an infinite generator and will never raise a StopIteration.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p></p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>The full content of the loaded pickle from the path you provided.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="vispipe.ops.inputs.json_file">
+<em class="property">class </em><code class="sig-name descname">json_file</code><span class="sig-paren">(</span><em class="sig-param">path: str = ''</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.inputs.json_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>returns the full raw buffer once from a json file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>) – The path to the file you want to load.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>The Content of the loaded json.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="vispipe.ops.inputs.json_flow">
+<code class="sig-name descname">json_flow</code><span class="sig-paren">(</span><em class="sig-param">path</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.inputs.json_flow" title="Permalink to this definition">¶</a></dt>
+<dd><p>returns the raw buffer from the path provided as input.
+This is an infinite generator and will never raise a StopIteration.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p></p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>The full content of the loaded json from the path you provided.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-vispipe.ops.flows">
+<span id="flows"></span><h2>Flows<a class="headerlink" href="#module-vispipe.ops.flows" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="vispipe.ops.flows.iterator">
+<em class="property">class </em><code class="sig-name descname">iterator</code><a class="headerlink" href="#vispipe.ops.flows.iterator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Iterates over its input, will not accept new inputs until it reaches a StopIteration.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p></p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>Elements of the iterable object you passed as input.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="vispipe.ops.flows.batchify">
+<em class="property">class </em><code class="sig-name descname">batchify</code><span class="sig-paren">(</span><em class="sig-param">size: int = 2</em>, <em class="sig-param">to_array: bool = True</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.flows.batchify" title="Permalink to this definition">¶</a></dt>
+<dd><p>Concatenates subsequent inputs together until it reaches the size requested.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>size</strong> (<em>int</em>) – The size of each bach.</p></li>
+<li><p><strong>to_array</strong> (<em>bool</em>) – Whether you want the output as a np array or not.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Batch of inputs of the size specified.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-vispipe.ops.common">
+<span id="common-data-manipulation"></span><h2>Common data manipulation<a class="headerlink" href="#module-vispipe.ops.common" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="vispipe.ops.common.string">
+<code class="sig-name descname">string</code><span class="sig-paren">(</span><em class="sig-param">value: str = ''</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.common.string" title="Permalink to this definition">¶</a></dt>
+<dd><p>A constant string.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>value</strong> (<em>str</em>) – The string value.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="vispipe.ops.common.constant">
+<code class="sig-name descname">constant</code><span class="sig-paren">(</span><em class="sig-param">value: float = 0</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.common.constant" title="Permalink to this definition">¶</a></dt>
+<dd><p>A constant float.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>value</strong> (<em>float</em>) – The float value.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="vispipe.ops.common.index">
+<code class="sig-name descname">index</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">index: int = 0</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.common.index" title="Permalink to this definition">¶</a></dt>
+<dd><p>returns its input indexed by index value.</p>
+<p>[TODO:description]</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>index</strong> (<em>int</em>) – The index value.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="vispipe.ops.common.key">
+<code class="sig-name descname">key</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">key: str = ''</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.common.key" title="Permalink to this definition">¶</a></dt>
+<dd><p>returns its input indexed by key</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>key</strong> (<em>str</em>) – The key value.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="vispipe.ops.common.index_slice">
+<code class="sig-name descname">index_slice</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">slice_value: slice = ''</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.common.index_slice" title="Permalink to this definition">¶</a></dt>
+<dd><p>return its input sliced by value</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>slice_value</strong> (<em>slice</em>) – The slice value.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="vispipe.ops.common.np_cast">
+<code class="sig-name descname">np_cast</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">np_type: str = 'float32'</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.common.np_cast" title="Permalink to this definition">¶</a></dt>
+<dd><p>Cast input to any numpy type.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>np_type</strong> (<em>str</em>) – The numpy type you want to cast to.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Its input as a numpy array of type specified.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="vispipe.ops.common.np_reshape">
+<code class="sig-name descname">np_reshape</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">shape: tuple = (28</em>, <em class="sig-param">28)</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.common.np_reshape" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reshape its input to shape value</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>shape</strong> (<em>tuple</em>) – The shape value</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="vispipe.ops.common.np_linspace">
+<code class="sig-name descname">np_linspace</code><span class="sig-paren">(</span><em class="sig-param">start: float = 0</em>, <em class="sig-param">stop: float = 0</em>, <em class="sig-param">num: int = 50</em>, <em class="sig-param">endpoint: bool = True</em>, <em class="sig-param">retstep: bool = False</em>, <em class="sig-param">dtype: numpy.dtype = None</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.common.np_linspace" title="Permalink to this definition">¶</a></dt>
+<dd><p>returns a numpy linear space.
+Refer to numpy linspace function for argument description</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start</strong> (<em>float</em>) – </p></li>
+<li><p><strong>stop</strong> (<em>float</em>) – </p></li>
+<li><p><strong>num</strong> (<em>int</em>) – </p></li>
+<li><p><strong>endpoint</strong> (<em>bool</em>) – </p></li>
+<li><p><strong>retstep</strong> (<em>bool</em>) – </p></li>
+<li><p><strong>dtype</strong> (<em>np.dtype</em>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="vispipe.ops.common.np_randn">
+<code class="sig-name descname">np_randn</code><span class="sig-paren">(</span><em class="sig-param">shape: tuple = (1</em>, <em class="sig-param">)</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.common.np_randn" title="Permalink to this definition">¶</a></dt>
+<dd><p>returns random numbers with shape specified from a normal distribution.
+See numpy random randn function for more details.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>shape</strong> (<em>tuple</em>) – The output shape.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="vispipe.ops.common.np_randint">
+<code class="sig-name descname">np_randint</code><span class="sig-paren">(</span><em class="sig-param">low: int = 0</em>, <em class="sig-param">high: int = None</em>, <em class="sig-param">size: int = None</em>, <em class="sig-param">dtype: str = 'l'</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.common.np_randint" title="Permalink to this definition">¶</a></dt>
+<dd><p>returns random integers with low / high and size specified.
+Refer to numpy random randint documentation for more details.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>low</strong> (<em>int</em>) – </p></li>
+<li><p><strong>high</strong> (<em>int</em>) – </p></li>
+<li><p><strong>size</strong> (<em>int</em>) – </p></li>
+<li><p><strong>dtype</strong> (<em>str</em>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="vispipe.ops.common.np_ones">
+<code class="sig-name descname">np_ones</code><span class="sig-paren">(</span><em class="sig-param">shape: tuple = None</em>, <em class="sig-param">dtype: numpy.dtype = None</em>, <em class="sig-param">order: str = 'C'</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.common.np_ones" title="Permalink to this definition">¶</a></dt>
+<dd><p>returns a numpy array of the shape specified filled with ones.
+Refer to numpy documentation for more details.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>shape</strong> (<em>tuple</em>) – </p></li>
+<li><p><strong>dtype</strong> (<em>np.dtype</em>) – </p></li>
+<li><p><strong>order</strong> (<em>str</em>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="vispipe.ops.common.np_zeros">
+<code class="sig-name descname">np_zeros</code><span class="sig-paren">(</span><em class="sig-param">shape: tuple = None</em>, <em class="sig-param">dtype: numpy.dtype = None</em>, <em class="sig-param">order: str = 'C'</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.common.np_zeros" title="Permalink to this definition">¶</a></dt>
+<dd><p>returns a numpy array of the shape specified filled with zeros.
+Refer to numpy documentation for more details.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>shape</strong> (<em>tuple</em>) – </p></li>
+<li><p><strong>dtype</strong> (<em>np.dtype</em>) – </p></li>
+<li><p><strong>order</strong> (<em>str</em>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="vispipe.ops.common.np_empty">
+<code class="sig-name descname">np_empty</code><span class="sig-paren">(</span><em class="sig-param">shape: tuple = None</em>, <em class="sig-param">dtype: numpy.dtype = None</em>, <em class="sig-param">order: str = 'C'</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.common.np_empty" title="Permalink to this definition">¶</a></dt>
+<dd><p>returns an empty numpy array of the shape specified.
+Refer to numpy documentation for more details.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>shape</strong> (<em>tuple</em>) – </p></li>
+<li><p><strong>dtype</strong> (<em>np.dtype</em>) – </p></li>
+<li><p><strong>order</strong> (<em>str</em>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="vispipe.ops.common.accumulate">
+<em class="property">class </em><code class="sig-name descname">accumulate</code><a class="headerlink" href="#vispipe.ops.common.accumulate" title="Permalink to this definition">¶</a></dt>
+<dd><p>returns the summed value of its inputs every time it receives a StopIteration.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="vispipe.ops.common.filter_func">
+<code class="sig-name descname">filter_func</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">func: Callable = &lt;function &lt;lambda&gt;&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.common.filter_func" title="Permalink to this definition">¶</a></dt>
+<dd><p>returns its inputs filtered by func function.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>func</strong> (<em>Callable</em>) – The function you want to filter with, should return a boolean.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="vispipe.ops.common.add">
+<code class="sig-name descname">add</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">y</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.common.add" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="vispipe.ops.common.subtract">
+<code class="sig-name descname">subtract</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">y</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.common.subtract" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="vispipe.ops.common.multiply">
+<code class="sig-name descname">multiply</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">y</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.common.multiply" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="vispipe.ops.common.divide">
+<code class="sig-name descname">divide</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">y</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.common.divide" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="vispipe.ops.common.integer_division">
+<code class="sig-name descname">integer_division</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">y</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.common.integer_division" title="Permalink to this definition">¶</a></dt>
+<dd><p>x // y</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="vispipe.ops.common.modulo">
+<code class="sig-name descname">modulo</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">y</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.common.modulo" title="Permalink to this definition">¶</a></dt>
+<dd><p>x % y</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="vispipe.ops.common.sin">
+<code class="sig-name descname">sin</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.common.sin" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="vispipe.ops.common.cos">
+<code class="sig-name descname">cos</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.common.cos" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="vispipe.ops.common.tan">
+<code class="sig-name descname">tan</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.common.tan" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="vispipe.ops.common.asin">
+<code class="sig-name descname">asin</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.common.asin" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="vispipe.ops.common.acos">
+<code class="sig-name descname">acos</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.common.acos" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="vispipe.ops.common.atan">
+<code class="sig-name descname">atan</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.common.atan" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="vispipe.ops.common.sinh">
+<code class="sig-name descname">sinh</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.common.sinh" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="vispipe.ops.common.cosh">
+<code class="sig-name descname">cosh</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.common.cosh" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="vispipe.ops.common.tanh">
+<code class="sig-name descname">tanh</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.common.tanh" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-vispipe.ops.images">
+<span id="images-manipulation"></span><h2>Images manipulation<a class="headerlink" href="#module-vispipe.ops.images" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="vispipe.ops.images.random_image">
+<code class="sig-name descname">random_image</code><span class="sig-paren">(</span><em class="sig-param">size: tuple = (28</em>, <em class="sig-param">28)</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.images.random_image" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a random image of shape specified.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>size</strong> (<em>tuple</em>) – The size of the random image.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="vispipe.ops.images.image_rgb">
+<code class="sig-name descname">image_rgb</code><span class="sig-paren">(</span><em class="sig-param">r</em>, <em class="sig-param">g</em>, <em class="sig-param">b</em>, <em class="sig-param">size: tuple = (28</em>, <em class="sig-param">28)</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.images.image_rgb" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an image with fixed color for r, g, b input channels (0 to 255).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>size</strong> (<em>tuple</em>) – The size of the image you want.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="vispipe.ops.images.resize_cv2">
+<code class="sig-name descname">resize_cv2</code><span class="sig-paren">(</span><em class="sig-param">image</em>, <em class="sig-param">width: int = 224</em>, <em class="sig-param">height: int = 224</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.images.resize_cv2" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resize input image to resolution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>width</strong> (<em>int</em>) – The width of the output image.</p></li>
+<li><p><strong>height</strong> (<em>int</em>) – The height of the output image.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>The image resized to specified resolution.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="vispipe.ops.images.change_contrast">
+<code class="sig-name descname">change_contrast</code><span class="sig-paren">(</span><em class="sig-param">image</em>, <em class="sig-param">contrast: float = 1.0</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.images.change_contrast" title="Permalink to this definition">¶</a></dt>
+<dd><p>Change the constrast of an image.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>contrast</strong> (<em>float</em>) – The contrast you want to set. [0; 1.0] recommended.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="vispipe.ops.images.change_brightness">
+<code class="sig-name descname">change_brightness</code><span class="sig-paren">(</span><em class="sig-param">image</em>, <em class="sig-param">brightness: float = 50</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.images.change_brightness" title="Permalink to this definition">¶</a></dt>
+<dd><p>Change the brightness of an image.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>brightness</strong> (<em>float</em>) – The brightness to set.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-vispipe.ops.utils">
+<span id="utils"></span><h2>Utils<a class="headerlink" href="#module-vispipe.ops.utils" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="vispipe.ops.utils.benchmark">
+<em class="property">class </em><code class="sig-name descname">benchmark</code><span class="sig-paren">(</span><em class="sig-param">n: int = 1000</em>, <em class="sig-param">end: bool = True</em>, <em class="sig-param">log: bool = False</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.utils.benchmark" title="Permalink to this definition">¶</a></dt>
+<dd><p>Benchmark the flow of the pipeline up to this point.
+Will return the result once it reaches the number of iteration requested.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n</strong> (<em>int</em>) – The number of outputs the pipeline will pass to this block before it outputs.
+the statistics.</p></li>
+<li><p><strong>end</strong> (<em>bool</em>) – Whether to kill the pipeline once it finished the first benchmark.</p></li>
+<li><p><strong>log</strong> (<em>bool</em>) – Whether to log the message as well.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-vispipe.ops.vis">
+<span id="visualization"></span><h2>Visualization<a class="headerlink" href="#module-vispipe.ops.vis" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="vispipe.ops.vis.vis_text">
+<code class="sig-name descname">vis_text</code><span class="sig-paren">(</span><em class="sig-param">input1</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.vis.vis_text" title="Permalink to this definition">¶</a></dt>
+<dd><p>Visualize raw text.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="vispipe.ops.vis.vis_shape">
+<code class="sig-name descname">vis_shape</code><span class="sig-paren">(</span><em class="sig-param">input1</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.vis.vis_shape" title="Permalink to this definition">¶</a></dt>
+<dd><p>Visualize shape of object (if supported).
+This is equivalent to calling <cite>input.shape</cite> and passing it to a raw visualization buffer.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="vispipe.ops.vis.plt_scatter">
+<em class="property">class </em><code class="sig-name descname">plt_scatter</code><span class="sig-paren">(</span><em class="sig-param">show_axis: bool = True</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.vis.plt_scatter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Visualize a scatter plot, equivalent to <cite>matplotlib.pyplot.scatter</cite> on the <cite>x</cite> and <cite>y</cite> inputs.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>show_axis</strong> (<em>bool</em>) – Whether to show the axis of the plot.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="vispipe.ops.vis.plt_plot">
+<em class="property">class </em><code class="sig-name descname">plt_plot</code><span class="sig-paren">(</span><em class="sig-param">show_axis: bool = True</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.ops.vis.plt_plot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Visualize a plot, equivalent to <cite>matplotlib.pyplot.plot</cite> on the <cite>x</cite> and <cite>y</cite> inputs.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>show_axis</strong> (<em>bool</em>) – Whether to show the axis of the plot.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="additional-documentation">
+<h1>Additional Documentation<a class="headerlink" href="#additional-documentation" title="Permalink to this headline">¶</a></h1>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The following documentation is for parts of the library you should not usually interact with directly, the documentation is attached for completeness.</p>
+</div>
+<span class="target" id="module-vispipe.node"></span><dl class="class">
+<dt id="vispipe.node.Block">
+<em class="property">class </em><code class="sig-name descname">Block</code><span class="sig-paren">(</span><em class="sig-param">f: Callable, is_class: bool, max_queue: int, output_names: List[str], tag: str, data_type: str, intercept_end: bool, allow_macro: bool</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.node.Block" title="Permalink to this definition">¶</a></dt>
+<dd><p>The class used to represent one generator function (or class) that has been tagged with the
+block decorator provided by <a class="reference internal" href="#vispipe.vispipe.block" title="vispipe.vispipe.block"><code class="xref py py-func docutils literal notranslate"><span class="pre">vispipe.block()</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>f</strong> (<em>Callable</em>) – The function (or class with run function) this block represent.</p></li>
+<li><p><strong>is_class</strong> (<em>bool</em>) – If the function tagged is actually a class.</p></li>
+<li><p><strong>max_queue</strong> (<em>int</em>) – The maximum size of the queues of this block.</p></li>
+<li><p><strong>output_names</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>) – The names used by the outputs of your function. The length of this list is used as the number
+of outputs of the function.</p></li>
+<li><p><strong>tag</strong> (<em>str</em>) – A string tag used to group the blocks (useful during visualization).</p></li>
+<li><p><strong>data_type</strong> (<em>str</em>) – If a visualization block this field is used to specify the kind of data you want to visualize.
+Check <a class="reference internal" href="#vispipe.vispipe.Pipeline" title="vispipe.vispipe.Pipeline"><code class="xref py py-class docutils literal notranslate"><span class="pre">vispipe.Pipeline</span></code></a> for a list of the supported types.</p></li>
+<li><p><strong>intercept_end</strong> (<em>bool</em>) – Whether the block should intercept pipeline end and manually manage termination.
+This is a complex and advanced feature and must be implemented correctly or pipeline
+termination is not assured.</p></li>
+<li><p><strong>allow_macro</strong> (<em>bool</em>) – Whether the block can be part of macro blocks.
+While this should usually be <cite>True</cite> blocks that intercept the end of pipeline or use
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">vispipe.Pipeline._empty()</span></code> and <code class="xref py py-meth docutils literal notranslate"><span class="pre">vispipe.Pipeline._skip()</span></code> should set this flag <cite>False</cite></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="vispipe.node.Node">
+<em class="property">class </em><code class="sig-name descname">Node</code><span class="sig-paren">(</span><em class="sig-param">node_block: Tuple[vispipe.node.Block, str], **kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.node.Node" title="Permalink to this definition">¶</a></dt>
+<dd><p>The class used to represent a node of the pipeline.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>node_block</strong> (<em>Tuple</em><em>[</em><a class="reference internal" href="#vispipe.node.Block" title="vispipe.node.Block"><em>Block</em></a><em>, </em><em>str</em><em>]</em>) – The block of the pipeline the node represent and the name used to initialize the node.</p>
+</dd>
+</dl>
+<dl class="attribute">
+<dt id="vispipe.node.Node.block">
+<code class="sig-name descname">block</code><a class="headerlink" href="#vispipe.node.Node.block" title="Permalink to this definition">¶</a></dt>
+<dd><p>The block of the the pipeline the node represent.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#vispipe.node.Block" title="vispipe.node.Block">Block</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="vispipe.node.Node.custom_args">
+<code class="sig-name descname">custom_args</code><a class="headerlink" href="#vispipe.node.Node.custom_args" title="Permalink to this definition">¶</a></dt>
+<dd><p>The custom arguments used for calling the block funtion during execution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="vispipe.node.Node._hash">
+<code class="sig-name descname">_hash</code><a class="headerlink" href="#vispipe.node.Node._hash" title="Permalink to this definition">¶</a></dt>
+<dd><p>Custom hash used to reload the pipeline checkpoints.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="vispipe.node.Node.out_queues">
+<code class="sig-name descname">out_queues</code><a class="headerlink" href="#vispipe.node.Node.out_queues" title="Permalink to this definition">¶</a></dt>
+<dd><p>The list of output queues used to process the outputs of the node.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>List[Queue]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="vispipe.node.Node.name">
+<code class="sig-name descname">name</code><a class="headerlink" href="#vispipe.node.Node.name" title="Permalink to this definition">¶</a></dt>
+<dd><p>The name of the node, used for output management</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Optional[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<span class="target" id="module-vispipe.graph"></span><dl class="class">
+<dt id="vispipe.graph.Graph">
+<em class="property">class </em><code class="sig-name descname">Graph</code><span class="sig-paren">(</span><em class="sig-param">num_vertices: int</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.graph.Graph" title="Permalink to this definition">¶</a></dt>
+<dd><p>The class used to represent the abstract structure of a pipeline, it’s nodes and connections.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>num_vertices</strong> (<em>int</em>) – The max number of vertices (nodes) we want to represent. It is usually fixed to a large number,
+it cannot be changed in a later moment.</p>
+</dd>
+</dl>
+<dl class="attribute">
+<dt id="vispipe.graph.Graph.adj_list">
+<code class="sig-name descname">adj_list</code><a class="headerlink" href="#vispipe.graph.Graph.adj_list" title="Permalink to this definition">¶</a></dt>
+<dd><p>The adj_list is used to track connections between nodes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>List[set]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="vispipe.graph.Graph.vertices">
+<code class="sig-name descname">vertices</code><a class="headerlink" href="#vispipe.graph.Graph.vertices" title="Permalink to this definition">¶</a></dt>
+<dd><p>The vertices (nodes) of the graph.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>set</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="vispipe.graph.Graph.available_ids">
+<code class="sig-name descname">available_ids</code><a class="headerlink" href="#vispipe.graph.Graph.available_ids" title="Permalink to this definition">¶</a></dt>
+<dd><p>Ids that are free to use for new nodes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>set</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="vispipe.graph.Graph.node_ids">
+<code class="sig-name descname">node_ids</code><a class="headerlink" href="#vispipe.graph.Graph.node_ids" title="Permalink to this definition">¶</a></dt>
+<dd><p>The hasmap used to track unique identifiers of the nodes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#vispipe.hashmap.Hash" title="vispipe.hashmap.Hash">Hash</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="vispipe.graph.Graph.num_vertices">
+<code class="sig-name descname">num_vertices</code><a class="headerlink" href="#vispipe.graph.Graph.num_vertices" title="Permalink to this definition">¶</a></dt>
+<dd><p>The max number of vertices (nodes) we want to represent. It is usually fixed to a large number, it cannot change after
+instantiation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="vispipe.graph.Graph.last_id_used">
+<code class="sig-name descname">last_id_used</code><a class="headerlink" href="#vispipe.graph.Graph.last_id_used" title="Permalink to this definition">¶</a></dt>
+<dd><p>Used to iterate only over the subset of nodes that are in the pipeline.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<span class="target" id="module-vispipe.hashmap"></span><dl class="class">
+<dt id="vispipe.hashmap.Hash">
+<em class="property">class </em><code class="sig-name descname">Hash</code><span class="sig-paren">(</span><em class="sig-param">maxsize: int</em><span class="sig-paren">)</span><a class="headerlink" href="#vispipe.hashmap.Hash" title="Permalink to this definition">¶</a></dt>
+<dd><p>The class used to assign unique identifiers to the nodes of the pipeline.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>maxsize</strong> (<em>int</em>) – The maximum number of identifiers that can exist.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<div class="toctree-wrapper compound">
+</div>
+</div>
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+</ul>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, JunkyByte
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

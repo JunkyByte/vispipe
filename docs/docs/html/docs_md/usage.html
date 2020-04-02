@@ -1,0 +1,373 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Usage &mdash; VisPipe  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> VisPipe
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">Usage</a><ul>
+<li><a class="reference internal" href="#blocks">Blocks</a></li>
+<li><a class="reference internal" href="#pipeline-building">Pipeline Building</a></li>
+<li><a class="reference internal" href="#saving-and-reloading">Saving and reloading</a></li>
+<li><a class="reference internal" href="#advanced-block-creation">Advanced Block creation</a><ul>
+<li><a class="reference internal" href="#pipeline-empty-and-pipeline-skip-objecs"><code class="docutils literal notranslate"><span class="pre">Pipeline._empty</span></code> and <code class="docutils literal notranslate"><span class="pre">Pipeline.skip</span></code> objecs</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#macro-blocks">Macro Blocks</a></li>
+<li><a class="reference internal" href="#an-example">An example</a></li>
+</ul>
+</li>
+</ul>
+</div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">VisPipe</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+      <li>Usage</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/docs_md/usage.md.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="usage">
+<h1>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h1>
+<p>A bunch of examples of the different features of the package.
+Refer to the documentation to get a better view of each function arguments.</p>
+<div class="section" id="blocks">
+<h2>Blocks<a class="headerlink" href="#blocks" title="Permalink to this headline">¶</a></h2>
+<p>A block is a function tagged with the decorator called (guess what) <code class="docutils literal notranslate"><span class="pre">block</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">vispipe</span> <span class="kn">import</span> <span class="n">block</span>
+
+<span class="nd">@block</span>
+<span class="k">def</span> <span class="nf">identity_block</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">x</span>
+</pre></div>
+</div>
+<p>Or a class with a <code class="docutils literal notranslate"><span class="pre">run</span></code> method.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@block</span>
+<span class="k">class</span> <span class="nc">identity_class_block</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="c1"># you can have attributes stored and used by run method</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">useless_value</span> <span class="o">=</span> <span class="mi">42</span>
+    <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">x</span>
+</pre></div>
+</div>
+<p>A block can have multiple inputs.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@block</span>
+<span class="k">def</span> <span class="nf">add</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">x</span> <span class="o">+</span> <span class="n">y</span>
+
+<span class="c1"># Or none</span>
+<span class="nd">@block</span>
+<span class="k">def</span> <span class="nf">just_a_one</span><span class="p">():</span>
+    <span class="k">return</span> <span class="mi">1</span>
+</pre></div>
+</div>
+<p>All the inputs we defined right now are ‘real’ inputs and will be filled
+by connecting the block to other blocks of the pipeline.
+We may want to have static arguments as well, an input will become a static argument once we assign a default value to it. If you want to use the visualization you should also specify the type so that they can be parsed correctly.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@block</span>
+<span class="k">def</span> <span class="nf">add_constant</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">k</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">42</span><span class="p">):</span>
+    <span class="c1"># x will be a &#39;real&#39; input while k will be a static argument</span>
+    <span class="k">return</span> <span class="n">x</span> <span class="o">+</span> <span class="n">k</span>
+</pre></div>
+</div>
+<p>Now that you know how blocks work let’s see how to create a pipeline, add and connect them.</p>
+</div>
+<div class="section" id="pipeline-building">
+<h2>Pipeline Building<a class="headerlink" href="#pipeline-building" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">vispipe</span> <span class="kn">import</span> <span class="n">Pipeline</span>
+
+<span class="c1"># Create a pipeline</span>
+<span class="n">p</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">()</span>
+
+<span class="c1"># Add nodes by name</span>
+<span class="n">ones</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="s1">&#39;just_a_one&#39;</span><span class="p">)</span>
+<span class="n">adder</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="s1">&#39;add_constant&#39;</span><span class="p">,</span> <span class="n">k</span> <span class="o">=</span> <span class="mi">10</span><span class="p">)</span>  <span class="c1"># We can specify the value of static arguments during add_node</span>
+<span class="c1"># The add_node function will return the unique identifier for the node, it is an integer and</span>
+<span class="c1"># corresponds to the hash of the node, you will use it to interact with the node.</span>
+
+<span class="c1"># Connect nodes</span>
+<span class="c1"># syntax: add_conn(from_hash, output_index, to_hash, input_index)</span>
+<span class="n">p</span><span class="o">.</span><span class="n">add_conn</span><span class="p">(</span><span class="n">ones</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">adder</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+<span class="c1"># We have a working pipeline now! Let&#39;s start it</span>
+<span class="n">p</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="c1"># We can wait for it to end using</span>
+<span class="n">p</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># It supports timeout argument similarly to Threading std library</span>
+
+<span class="c1"># In this case the pipeline will run indefinitely and we have not way to interact with it.</span>
+<span class="c1"># Let&#39;s Add an output to it</span>
+<span class="n">p</span><span class="o">.</span><span class="n">add_output</span><span class="p">(</span><span class="n">adder</span><span class="p">)</span>
+
+<span class="c1"># If we now run it we can iterate over the outputs of adder</span>
+<span class="n">p</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">outputs</span><span class="p">[</span><span class="n">adder</span><span class="p">]:</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+<span class="o">&gt;&gt;&gt;</span> <span class="mi">11</span>  <span class="c1"># It will add 10 that is our constant to 1 which is the just_a_one output.</span>
+<span class="c1"># (...)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="mi">11</span>  <span class="c1"># It will run indefinitely as there&#39;s no ending.</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="saving-and-reloading">
+<h2>Saving and reloading<a class="headerlink" href="#saving-and-reloading" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Once we are happy with our pipeline we can save it to pickle</span>
+<span class="n">p</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+
+<span class="c1"># And reload it in a later stage</span>
+<span class="n">p</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">()</span>
+<span class="n">p</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+
+<span class="c1"># Or more concisely</span>
+<span class="n">p</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">file_path</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="advanced-block-creation">
+<h2>Advanced Block creation<a class="headerlink" href="#advanced-block-creation" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="pipeline-empty-and-pipeline-skip-objecs">
+<h3><code class="docutils literal notranslate"><span class="pre">Pipeline._empty</span></code> and <code class="docutils literal notranslate"><span class="pre">Pipeline.skip</span></code> objecs<a class="headerlink" href="#pipeline-empty-and-pipeline-skip-objecs" title="Permalink to this headline">¶</a></h3>
+<p>You may have noticed that the flexibility of the blocks we created is pretty limited, we need to return a value at each call and we will always receive an input.
+To overcome this there are two particular objects that get treated in a particular way:</p>
+<p><code class="docutils literal notranslate"><span class="pre">Pipeline._empty</span></code> allows to specify that we do not want to return any result yet.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># The example is based on the benchmark block from ops/utils.py</span>
+<span class="nd">@block</span>
+<span class="k">class</span> <span class="nc">benchmark</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="mi">1000</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">start_time</span> <span class="o">=</span> <span class="bp">None</span>
+
+    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_time</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">-=</span> <span class="mi">1</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>  <span class="c1"># After 1000 iterations we return delta time</span>
+        <span class="n">delta</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_time</span>
+        <span class="k">return</span> <span class="n">delta</span>
+
+    <span class="c1"># (...) missing code to manage the ending</span>
+
+    <span class="k">return</span> <span class="n">Pipeline</span><span class="o">.</span><span class="n">_empty</span>  <span class="c1"># Otherwise we are not ready to return an output</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">Pipeline._skip(value)</span></code> allows to return a value while also skipping the next input.
+This is particularly useful when you need to iterate over an input.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># The example is based on iterator from ops/flows.py</span>
+<span class="nd">@block</span>
+<span class="k">class</span> <span class="nc">iterator</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">iterator</span> <span class="o">=</span> <span class="bp">None</span>
+
+    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">iterator</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">iterator</span> <span class="o">=</span> <span class="nb">iter</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c1"># As we can still iterate we return a skip object containing the next value</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="o">.</span><span class="n">_skip</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">iterator</span><span class="p">))</span>
+    <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>
+        <span class="c1"># If we finished the iterator we return an empty so that we can wait for next input</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">iterator</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="o">.</span><span class="n">_empty</span>
+
+    <span class="k">return</span> <span class="n">y</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="macro-blocks">
+<h2>Macro Blocks<a class="headerlink" href="#macro-blocks" title="Permalink to this headline">¶</a></h2>
+<p>Macro blocks are a convenient way to speed up a set of linearly connected blocks.
+Blocks that are part of a macro will be run together (instead of connected with queues).
+While this limits the flexibility of a part of the pipeline the functions will run a lot faster as they completely
+skip the communication overhead.
+(Please refer to documentation for a better explanation of this functionality)</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># (...)</span>
+<span class="n">p</span><span class="o">.</span><span class="n">add_macro</span><span class="p">(</span><span class="n">start_hash</span><span class="p">,</span> <span class="n">end_hash</span><span class="p">)</span>  <span class="c1"># Will add a macro from start hash to end hash.</span>
+
+<span class="n">p</span><span class="o">.</span><span class="n">remove_macro</span><span class="p">(</span><span class="n">node_hash</span><span class="p">)</span> <span class="c1"># Will delete the macro the node belongs to.</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="an-example">
+<h2>An example<a class="headerlink" href="#an-example" title="Permalink to this headline">¶</a></h2>
+<p>Loads the mnist dataset from a numpy array + the labels associated.
+It then reshape the images to be actual <code class="docutils literal notranslate"><span class="pre">(28,</span> <span class="pre">28)</span></code>, resize them to another resolution
+and creates batches from them.</p>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, JunkyByte
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
