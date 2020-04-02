@@ -106,6 +106,9 @@ class CursesQueueGUI:
         self.screen.refresh()
 
     def signal_handler(self, sig, frame):
+        curses.nocbreak()
+        self.screen.keypad(0)
+        curses.echo()
         curses.endwin()
         sys.exit(0)
 
