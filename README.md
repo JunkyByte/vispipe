@@ -21,3 +21,7 @@ pip install vispipe
 ## [Usage](docs/docs_md/usage.md)
 ## [Visualization](docs/docs_md/visualization.md)
 ## [Documentation](https://junkybyte.github.io/vispipe/)
+
+## Collaboration:
+Feel free to write an issue if you would like to help on this project, there are ready to build features with their own issues already open.
+Feel free to open issues to let me know what you think of the whole project, as there's not a general direction yet every feedback is more than welcome.
