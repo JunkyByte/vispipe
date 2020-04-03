@@ -173,4 +173,30 @@ p.remove_macro(node_hash) # Will delete the macro the node belongs to.
 Loads the mnist dataset from a numpy array + the labels associated.
 It then reshape the images to be actual `(28, 28)`, resize them to another resolution
 and creates batches from them.
+```python
+# Create pipeline
+p = Pipeline()
 
+# Create nodes
+load_images = p.add_node('np_iter_file', path='tests/data/mnist.npy')
+load_labels = p.add_node('np_iter_file', path='tests/data/mnist_labels.npy')
+reshape = p.add_node('np_reshape', shape=(28, 28))
+resize = p.add_node('resize_cv2', width=56, height=56)
+batch_images = p.add_node('batchify/images', size=32)
+batch_labels = p.add_node('batchify/labels', size=32)
+
+# Add connections
+p.add_conn(load_images, 0, reshape, 0)
+p.add_conn(reshape, 0, resize, 0)
+p.add_conn(resize, 0, batch_images, 0)
+p.add_conn(load_labels, 0, batch_labels, 0)
+
+# Set outputs
+p.add_output(batch_images)
+p.add_output(batch_labels)
+
+# Run it
+p.run(slow=False, use_mp=False)
+for batch_x, batch_y in zip(p.outputs['images'], p.outputs['labels']):
+    print(batch_x.shape, batch_y.shape)
+```
