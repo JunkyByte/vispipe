@@ -79,6 +79,7 @@ class Pipeline:
     @property
     def nodes(self) -> List[Node]:
         """
+
         Returns the list of :class:`.Node` that are part of the pipeline.
 
         Returns
@@ -278,7 +279,7 @@ class Pipeline:
 
         try:
             self.remove_macro(node_hash)
-        except KeyError:  # If the node is not part of a macro block will throw a KeyError
+        except KeyError:
             pass
 
         self.pipeline.deleteNode(node)
@@ -307,7 +308,7 @@ class Pipeline:
             raise Exception('Visualization blocks cannot be used as outputs')
 
         is_macro, index = self.is_macro(output)
-        if is_macro and not index:
+        if is_macro and index is not True:
             raise Exception('Only last node of a macro block can be an output')
 
         self._outputs.append(output)
@@ -356,7 +357,7 @@ class Pipeline:
             The index of the input you want to connect (starting from zero).
         """
         from_is_macro, from_m_index = self.is_macro(from_hash)
-        to_is_macro, to_m_index = self.is_macro(from_hash)
+        to_is_macro, to_m_index = self.is_macro(to_hash)
         if from_is_macro and not from_m_index:
             raise Exception('The output node is part of a macro block, only last node of a macro can have new connections')
         if to_is_macro and to_m_index is not False:
@@ -365,7 +366,7 @@ class Pipeline:
         to_node = self.get_node(to_hash)
         self.pipeline.insertEdge(from_node, to_node, out_index, inp_index)
 
-    def add_macro(self, start_hash: int, end_hash: int) -> None:
+    def add_macro(self, start_hash: int, end_hash: int) -> List[int]:
         """
         Create a macro block from `start_hash` to `end_hash`, macro blocks will be executed in a faster way internally
         Only a linearly connected set of nodes can become a macro block.
@@ -381,6 +382,11 @@ class Pipeline:
             The node that starts the macro block.
         end_hash : int
             The node that ends the macro block.
+
+        Returns
+        -------
+        List[int]:
+            The list of nodes that were added as macro.
         """
         if start_hash == end_hash:
             raise Exception('start and end node coincide')
@@ -425,15 +431,17 @@ class Pipeline:
                 raise Exception('Only first node of a macro block is allowed to intercept the end of the pipeline')
 
             if current_node.is_macro:
-                raise Exception('The node %s is already part of a macro block.' % hash(current_node))
+                raise Exception('The node %s is already part of a macro block.' % current_node.block.name)
 
             if hash(current_node) in self._outputs and current_node is not end_node:
-                raise Exception('The node %s is already an output, only last node of a macro block is allowed to be an output.')
+                raise Exception('The node %s is already an output, only last node of a macro block is allowed to be an output.' %
+                        current_node.block.name)
 
         for node in [self.get_node(n) for n in visited]:
             node.is_macro = True
 
         self.macro.append(visited)
+        return visited
 
     def is_macro(self, node_hash: int) -> Tuple[bool, Optional[bool]]:
         """
@@ -453,18 +461,19 @@ class Pipeline:
             `False` if is first block of its macro and
             `True` if is last block of its macro.
         """
+        index = None
         for m in self.macro:
-            for i, _ in enumerate(m):
-                if i + 1 == len(m):
-                    index = True
-                elif i == 0:
-                    index = False
-                else:
-                    index = None
-                return True, index
+            if node_hash in m:
+                for i, h in enumerate(m):
+                    if node_hash == h:
+                        if i + 1 == len(m):
+                            index = True
+                        elif i == 0:
+                            index = False
+                        return True, index
         return False, None
 
-    def remove_macro(self, node_hash: int) -> None:
+    def remove_macro(self, node_hash: int) -> List[int]:
         """
         Remove the macro block the node is part of.
 
@@ -472,11 +481,18 @@ class Pipeline:
         ----------
         node_hash : int
             The node whose macro block you want to remove.
+
+        Returns
+        -------
+        List[int]:
+            The list of nodes that were removed from the macro.
         """
         for m in self.macro:
             if node_hash in m:
                 self.macro.remove(m)
-                return
+                for node_hash in m:
+                    self.get_node(node_hash).is_macro = False
+                return m
         raise KeyError('The node you passed is not part of a macro')
 
     def set_custom_arg(self, node_hash: int, key: str, value: Any):
