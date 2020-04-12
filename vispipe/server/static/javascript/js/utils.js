@@ -49,7 +49,7 @@ function onDragStart(event)  // TODO: This function can be refactored with bette
 function onDragEnd(event)
 {
     this._clicked = true;
-    this.__double = setTimeout(() => { this._clicked = false; }, 150);
+    this.__double = setTimeout(_ => { this._clicked = false; }, 150);
 
     // Close drag logic
     this.alpha = 1;
@@ -64,16 +64,8 @@ function onDragEnd(event)
             var output = (this.child.type === 'output') ? this.child : target_conn;
             var input_node = input.parent.node;
             var output_node = output.parent.node;
-            // If we connect a input node which is already connected we need to remap
-            // its connection to the new output
-            // If we connect a output node which is already connected we need to APPEND
-            // its new connection
-            var line = create_connection(input, output)  // Create the visual connection
-            viewport.addChildAt(line, viewport.children.length);
-            update_line(line, this.start_pos, viewport.toWorld(event.data.global));
+            pipeline.add_connection(output_node, output, input_node, input, this.start_pos, viewport.toWorld(event.data.global));
             viewport.removeChild(this.ischild)  // Delete temp line
-            pipeline.add_connection(output_node.id, output.index,  // TODO: This is not checked server side but client side
-                                    input_node.id, input.index);
         } else {
             this.ischild.destroy();
         }

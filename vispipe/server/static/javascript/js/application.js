@@ -57,6 +57,8 @@ var TEXT_COLOR = 'white';
 var BUTTON_COLOR = 0x5DBCD2;
 var BLOCK_COLOR = 0x5DBCD2;
 var BLOCK_OUT_COLOR = 0xFF7256;
+var BLOCK_MACRO_COLOR = 0x24D870;
+var BLOCK_BOTH_COLOR = 0xE5A23C;
 var INPUT_COLOR = 0x3fc32a;
 var OUTPUT_COLOR = 0xc32a2a;
 var INPUT_TEXT_COLOR = 0xd2757b;
@@ -150,18 +152,25 @@ $(document).ready(function(){
         if (pipeline.DYNAMIC_NODES.length !== 0){
             return;
         }
-        var vis_data = msg.vis_data;            
+
         var pipeline_def = msg.pipeline;
+        if (Object.keys(pipeline_def).length === 0){
+            return;
+        }
+
+        var vis_data = msg.vis_data;            
         var blocks = pipeline_def.blocks;
         var custom_args = pipeline_def.custom_args;
         var connections = pipeline_def.connections;
         var nodes = [];
         var outs = [];
         var names = [];
+        var macros = [];
         for (var i=0; i<pipeline_def.nodes.length; i++){
             nodes.push(pipeline_def.nodes[i][0])
             outs.push(pipeline_def.nodes[i][1])
-            names.push(pipeline_def.nodes[i][2])
+            macros.push(pipeline_def.nodes[i][2])
+            names.push(pipeline_def.nodes[i][3])
         }
 
         // Create connections dict
@@ -193,7 +202,8 @@ $(document).ready(function(){
             node = pipeline.find_node(nodes[i]);
             node.name = names[i]
             node.is_output = outs[i];
-            node.set_output(outs[i]);
+            node.is_macro = macros[i];
+            node.update_color()
 
             for (j=0; j<Object.keys(custom_args[i]).length; j++){
                 key = Object.keys(custom_args[i])[j];

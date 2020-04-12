@@ -153,6 +153,18 @@ class TestPipelineMacrosAndBlocksAndSaveLoad(unittest.TestCase):
         with self.assertRaises(Exception):
             self.pipeline.add_macro(self.collect, self.muliply)
 
+    def test_ismacro_function(self):
+        self.pipeline.add_macro(self.collect, self.multiply)
+        is_macro, index = self.pipeline.is_macro(self.collect)
+        self.assertTrue(is_macro)
+        self.assertFalse(index)
+        is_macro, index = self.pipeline.is_macro(self.multiply)
+        self.assertTrue(is_macro)
+        self.assertTrue(index)
+        is_macro, index = self.pipeline.is_macro(self.inp)
+        self.assertFalse(is_macro)
+        self.assertIsNone(index)
+
 
 if __name__ == '__main__':
     unittest.main()
