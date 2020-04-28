@@ -2,6 +2,8 @@ class AbstractNode {
     constructor(block) {
         this.block = block;
         [this.rect, this.text] = draw_block(this.block.name);
+        this.width = this.rect.width;
+        this.height = this.rect.height;
         this.rect.buttonMode = true;
         this.rect.interactive = true;
         this.rect.node = this;
@@ -16,6 +18,33 @@ class StaticNode extends AbstractNode {
         super(block);
         this.rect.on('mousedown', _ => pipeline.spawn_node(this.block), false);  // TODO: Refactor this into this.rect attribute
         this.rect.on('touchstart', _ => pipeline.spawn_node(this.block), false);
+
+        if (this.block.docstring !== null){
+            var doc_width = 256;
+            var style = new PIXI.TextStyle({
+                fontFamily: FONT,
+                breakWords: true,
+                fontSize: VIS_FONT_SIZE,
+                wordWrap: true,
+                align: 'left',
+                fill: TEXT_COLOR,
+                wordWrapWidth: doc_width - 8,
+            });
+
+            this.doc_block = draw_rect(doc_width, PIXI.TextMetrics.measureText(this.block.docstring, style).height + 15, BLOCK_COLOR, 1);
+            this.doc_text = new PIXI.Text(this.block.docstring, style);
+            this.doc_block.addChild(this.doc_text);
+            this.doc_text.position.set(6, 4);
+            this.doc_block.position.set(- doc_width - 10, 0);
+            this.doc_block.visible = false;
+            this.rect.addChild(this.doc_block);
+            this.rect
+                .on('mouseover', _ => {
+                    this.doc_block.visible = true;
+                    this.rect.parent.setChildIndex(this.rect, this.rect.parent.children.length - 1)
+                }, false)
+                .on('mouseout', _ => { this.doc_block.visible = false }, false);
+        }
     }
 }
 
@@ -138,7 +167,7 @@ class VisNode extends Node {
             breakWords: true,
             fontSize: VIS_FONT_SIZE * 2,
             wordWrap: true,
-            align: 'left',
+            align: 'left' - 10,
             fill: TEXT_COLOR,
             wordWrapWidth: this.visrect.width - 8,
         });
@@ -154,7 +183,7 @@ class VisNode extends Node {
 
 
 class Block {
-    constructor(name, input_args, custom_args, custom_args_type, output_names, tag, data_type) {
+    constructor(name, input_args, custom_args, custom_args_type, output_names, tag, data_type, docstring) {
         this.name = name;
         this.input_args = input_args;
         this.custom_args = custom_args;
@@ -162,6 +191,10 @@ class Block {
         this.output_names = output_names;
         this.tag = tag;
         this.data_type = data_type;
+        this.docstring = docstring;
+        if (this.docstring !== null){
+            this.docstring = this.docstring.replace('    ', '')
+        }
     }
 }
 
@@ -655,7 +688,8 @@ class SideMenu {
             var y = 45;
             for (var j = 0; j < this.pane[this.tags[i]].children.length; j++){
                 this.pane[this.tags[i]].children[j].scale.set(0.8);
-                var x = WIDTH - this.pane[this.tags[i]].children[j].width;
+                var obj = this.pane[this.tags[i]].children[j].node
+                var x = WIDTH - obj.width * obj.rect.scale.x;
                 this.pane[this.tags[i]].children[j].position.set(x, y);
                 y += 50
             }

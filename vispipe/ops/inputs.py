@@ -173,21 +173,21 @@ def json_flow(path):
 
 @block(tag='input', max_queue=10)
 class iter_folders:
-    def __init__(self, root_dir: str = '', extension: str = '', recursive: bool = False):
-        """
-        returns the absolute path of all the files with a specified extension in a folder.
-        It can be recursive, the paths will be relative to the folder specified.
-        (e.g. if you want absolute paths specify an absolute root_dir)
+    """
+    returns the absolute path of all the files with a specified extension in a folder.
+    It can be recursive, the paths will be relative to the folder specified.
+    (e.g. if you want absolute paths specify an absolute root_dir)
 
-        Parameters
-        ----------
-        root_dir : str
-            The main directory from which the search will start.
-        extension : str
-            The extension of the files, if not specified all extensions will be returned.
-        recursive : bool
-            Whether the search should be recursive or not.
-        """
+    Parameters
+    ----------
+    root_dir : str
+        The main directory from which the search will start.
+    extension : str
+        The extension of the files, if not specified all extensions will be returned.
+    recursive : bool
+        Whether the search should be recursive or not.
+    """
+    def __init__(self, root_dir: str = '', extension: str = '', recursive: bool = False):
         root_dir = os.path.join(root_dir, '**') if recursive else root_dir
         self.files = (f for f in iglob(root_dir, recursive=recursive) if
                 f.endswith(extension) and os.path.isfile(f))

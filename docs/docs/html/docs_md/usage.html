@@ -327,6 +327,33 @@ skip the communication overhead.
 <p>Loads the mnist dataset from a numpy array + the labels associated.
 It then reshape the images to be actual <code class="docutils literal notranslate"><span class="pre">(28,</span> <span class="pre">28)</span></code>, resize them to another resolution
 and creates batches from them.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create pipeline</span>
+<span class="n">p</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">()</span>
+
+<span class="c1"># Create nodes</span>
+<span class="n">load_images</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="s1">&#39;np_iter_file&#39;</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="s1">&#39;tests/data/mnist.npy&#39;</span><span class="p">)</span>
+<span class="n">load_labels</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="s1">&#39;np_iter_file&#39;</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="s1">&#39;tests/data/mnist_labels.npy&#39;</span><span class="p">)</span>
+<span class="n">reshape</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="s1">&#39;np_reshape&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">))</span>
+<span class="n">resize</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="s1">&#39;resize_cv2&#39;</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">56</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="mi">56</span><span class="p">)</span>
+<span class="n">batch_images</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="s1">&#39;batchify/images&#39;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">32</span><span class="p">)</span>
+<span class="n">batch_labels</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="s1">&#39;batchify/labels&#39;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">32</span><span class="p">)</span>
+
+<span class="c1"># Add connections</span>
+<span class="n">p</span><span class="o">.</span><span class="n">add_conn</span><span class="p">(</span><span class="n">load_images</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">reshape</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="n">p</span><span class="o">.</span><span class="n">add_conn</span><span class="p">(</span><span class="n">reshape</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">resize</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="n">p</span><span class="o">.</span><span class="n">add_conn</span><span class="p">(</span><span class="n">resize</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">batch_images</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="n">p</span><span class="o">.</span><span class="n">add_conn</span><span class="p">(</span><span class="n">load_labels</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">batch_labels</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+<span class="c1"># Set outputs</span>
+<span class="n">p</span><span class="o">.</span><span class="n">add_output</span><span class="p">(</span><span class="n">batch_images</span><span class="p">)</span>
+<span class="n">p</span><span class="o">.</span><span class="n">add_output</span><span class="p">(</span><span class="n">batch_labels</span><span class="p">)</span>
+
+<span class="c1"># Run it</span>
+<span class="n">p</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">slow</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">use_mp</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">batch_x</span><span class="p">,</span> <span class="n">batch_y</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">outputs</span><span class="p">[</span><span class="s1">&#39;images&#39;</span><span class="p">],</span> <span class="n">p</span><span class="o">.</span><span class="n">outputs</span><span class="p">[</span><span class="s1">&#39;labels&#39;</span><span class="p">]):</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">batch_x</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">batch_y</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+</pre></div>
+</div>
 </div>
 </div>
 

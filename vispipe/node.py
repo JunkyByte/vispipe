@@ -1,5 +1,5 @@
 from typing import List, Tuple, Callable
-from inspect import signature, _empty
+from inspect import signature, _empty, getdoc
 from functools import partial
 from types import FunctionType
 from ast import literal_eval
@@ -55,6 +55,7 @@ class Block:
         self.data_type = data_type
         self.intercept_end = intercept_end
         self.allow_macro = allow_macro
+        self.docstring = getdoc(self.f)
         if self.is_class:
             init_params = signature(self.f).parameters
             if any([v.default == _empty for v in init_params.values()]):
@@ -103,6 +104,7 @@ class Block:
         yield 'data_type', self.data_type
         yield 'intercept_end', self.intercept_end
         yield 'allow_macro', self.allow_macro
+        yield 'docstring', self.docstring
 
 
 class Node:

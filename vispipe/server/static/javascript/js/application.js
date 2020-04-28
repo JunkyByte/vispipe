@@ -97,7 +97,7 @@ $(document).ready(function(){
         }
 
         var block = new Block(msg.name, msg.input_args, msg.custom_args, msg.custom_args_type,
-                              msg.output_names, msg.tag, msg.data_type);
+                              msg.output_names, msg.tag, msg.data_type, msg.docstring);
         pipeline.STATIC_NODES.push(new StaticNode(block));
         pipeline.NAMES.push(msg.name);
     });

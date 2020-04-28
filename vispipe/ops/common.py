@@ -36,8 +36,6 @@ def index(x, index: int = 0):
     """
     returns its input indexed by index value.
 
-    [TODO:description]
-
     Parameters
     ----------
     index : int
