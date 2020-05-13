@@ -3,6 +3,8 @@ from flask_socketio import SocketIO
 from threading import Thread, Event
 from flask import Flask, render_template, session
 from .server_gui import CursesQueueGUI
+from itertools import chain
+from collections import defaultdict
 import numpy as np
 import traceback
 import os
@@ -38,6 +40,7 @@ class Server:
         socketio.on_event('set_custom_arg', self.set_custom_arg)
         socketio.on_event('set_name', self.set_name)
         socketio.on_event('set_output', self.set_output)
+        socketio.on_event('set_macro', self.set_macro)
         socketio.on_event('run_pipeline', self.run_pipeline)
         socketio.on_event('stop_pipeline', self.stop_pipeline)
         socketio.on_event('clear_pipeline', self.clear_pipeline)
@@ -123,14 +126,24 @@ class Server:
     def set_output(self, data):
         try:
             node_hash = data['id']
-            state = data['state']
             log.debug('Setting output %s' % node_hash)
-            if state:
+            if data['state']:
                 self.pipeline.add_output(node_hash)
             else:
                 self.pipeline.remove_output(node_hash)
             self.update = True
             return {}, 200
+        except Exception as e:
+            log.error(traceback.format_exc())
+            return str(e), 500
+
+    def set_macro(self, data):
+        try:
+            if data['state']:
+                edges = self.pipeline.add_macro(data['from_id'], data['to_id'])
+            else:
+                edges = self.pipeline.remove_macro(data['from_id'])
+            return {'edges': edges}, 200
         except Exception as e:
             log.error(traceback.format_exc())
             return str(e), 500
@@ -227,11 +240,13 @@ class Server:
             return
 
         self.vis_data = self.pipeline.load(path, vis_mode=True)
-        pipeline_def = {'nodes': [], 'blocks': [], 'connections': [], 'custom_args': []}
+        macros = list(chain.from_iterable(self.pipeline.macro))
+        pipeline_def = defaultdict(list)
         for node in self.pipeline.nodes:
-            value = (hash(node), hash(node) in self.pipeline._outputs, node.name)
+            n_hash = hash(node)
+            value = (n_hash, n_hash in self.pipeline._outputs, n_hash in macros, node.name)
             pipeline_def['nodes'].append(value)
-            conn = self.pipeline.connections(hash(node), out=True)
+            conn = self.pipeline.connections(n_hash, out=True)
             pipeline_def['connections'].append([(hash(n), i, j) for n, i, j, _ in conn])
             pipeline_def['blocks'].append(node.block.serialize())
             pipeline_def['custom_args'].append(node.block.serialize_args(node.custom_args))

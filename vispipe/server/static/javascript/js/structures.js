@@ -2,6 +2,8 @@ class AbstractNode {
     constructor(block) {
         this.block = block;
         [this.rect, this.text] = draw_block(this.block.name);
+        this.width = this.rect.width;
+        this.height = this.rect.height;
         this.rect.buttonMode = true;
         this.rect.interactive = true;
         this.rect.node = this;
@@ -16,6 +18,33 @@ class StaticNode extends AbstractNode {
         super(block);
         this.rect.on('mousedown', _ => pipeline.spawn_node(this.block), false);  // TODO: Refactor this into this.rect attribute
         this.rect.on('touchstart', _ => pipeline.spawn_node(this.block), false);
+
+        if (this.block.docstring !== null){
+            var doc_width = 256;
+            var style = new PIXI.TextStyle({
+                fontFamily: FONT,
+                breakWords: true,
+                fontSize: VIS_FONT_SIZE,
+                wordWrap: true,
+                align: 'left',
+                fill: TEXT_COLOR,
+                wordWrapWidth: doc_width - 8,
+            });
+
+            this.doc_block = draw_rect(doc_width, PIXI.TextMetrics.measureText(this.block.docstring, style).height + 15, BLOCK_COLOR, 1);
+            this.doc_text = new PIXI.Text(this.block.docstring, style);
+            this.doc_block.addChild(this.doc_text);
+            this.doc_text.position.set(6, 4);
+            this.doc_block.position.set(- doc_width - 10, 0);
+            this.doc_block.visible = false;
+            this.rect.addChild(this.doc_block);
+            this.rect
+                .on('mouseover', _ => {
+                    this.doc_block.visible = true;
+                    this.rect.parent.setChildIndex(this.rect, this.rect.parent.children.length - 1)
+                }, false)
+                .on('mouseout', _ => { this.doc_block.visible = false }, false);
+        }
     }
 }
 
@@ -25,6 +54,7 @@ class Node extends AbstractNode {
         this.id = id;
         this.name = null;
         this.is_output = false;
+        this.is_macro = false;
         this.rect
             // events for drag start
             .on('mousedown', onDragStart)
@@ -57,22 +87,29 @@ class Node extends AbstractNode {
         viewport.addChild(this.rect);
     }
 
-    set_output(value){
-        if (value === undefined){
-            this.is_output = !this.is_output;
-        } else {
-            this.is_output = value;
+    set_output(){
+        this.is_output = !this.is_output;
+        this.update_color();
+    }
+
+    set_macro(value){
+        this.is_macro = !this.is_macro;
+        this.update_color();
+    }
+
+    update_color(){
+        var color = BLOCK_COLOR;
+        if (this.is_output && this.is_macro){
+            color = BLOCK_BOTH_COLOR;
+        } else if (this.is_output) {
+            color = BLOCK_OUT_COLOR;
+        } else if (this.is_macro) {
+            color = BLOCK_MACRO_COLOR;
         }
 
-        if (this.is_output){
-            this.rect.clear();
-            var [width, height] = name_to_size(this.text.text);
-            this.rect = draw_rect(width, height, BLOCK_OUT_COLOR, 1, this.rect);
-        } else {
-            this.rect.clear();
-            var [width, height] = name_to_size(this.text.text);
-            this.rect = draw_rect(width, height, BLOCK_COLOR, 1, this.rect);
-        }
+        this.rect.clear();
+        var [width, height] = name_to_size(this.text.text);
+        this.rect = draw_rect(width, height, color, 1, this.rect);
     }
 }
 
@@ -130,7 +167,7 @@ class VisNode extends Node {
             breakWords: true,
             fontSize: VIS_FONT_SIZE * 2,
             wordWrap: true,
-            align: 'left',
+            align: 'left' - 10,
             fill: TEXT_COLOR,
             wordWrapWidth: this.visrect.width - 8,
         });
@@ -146,7 +183,7 @@ class VisNode extends Node {
 
 
 class Block {
-    constructor(name, input_args, custom_args, custom_args_type, output_names, tag, data_type) {
+    constructor(name, input_args, custom_args, custom_args_type, output_names, tag, data_type, docstring) {
         this.name = name;
         this.input_args = input_args;
         this.custom_args = custom_args;
@@ -154,6 +191,10 @@ class Block {
         this.output_names = output_names;
         this.tag = tag;
         this.data_type = data_type;
+        this.docstring = docstring;
+        if (this.docstring !== null){
+            this.docstring = this.docstring.replace('    ', '')
+        }
     }
 }
 
@@ -199,6 +240,7 @@ class Pipeline {
         this.NAMES = [];
         this.DYNAMIC_NODES = [];
         this.vis = {};
+        this.current_macro = null;
     }
 
     find_node(id){
@@ -211,7 +253,6 @@ class Pipeline {
     }
 
     spawn_node(block){
-        console.log(block.custom_args)
         var self = this;
         socket.emit('new_node', block, function() {
             var closure = block;  // Creates closure for block
@@ -304,17 +345,52 @@ class Pipeline {
             }
         }());
     }
+    
+    set_macro(node){
+        if (node.is_macro){
+            this.current_macro = node;
+        }
 
-    add_connection(from_hash, out_idx, to_hash, inp_idx){
+        if (this.current_macro === null){
+            this.current_macro = node;
+            return;
+        }
+
+        var self = this;
+        socket.emit('set_macro', {'from_id': this.current_macro.id, 'to_id': node.id, 'state': !this.current_macro.is_macro},
+            function(response, status){
+                if (status === 200){
+                    var edges = response.edges;
+                    var node;
+                    for (var i=0; i<edges.length; i++){
+                        node = self.find_node(edges[i]).set_macro();
+                    }
+                } else {
+                    console.log(response);
+                }
+            });
+
+        this.current_macro = null;
+    }
+
+    add_connection(output_node, output, input_node, input, start_pos, end_pos){
         socket.emit('new_conn',
             {
-                'from_hash': from_hash,
-                'out_idx': out_idx,
-                'to_hash': to_hash,
-                'inp_idx': inp_idx
+                'from_hash': output_node.id,
+                'out_idx': output.index,
+                'to_hash': input_node.id,
+                'inp_idx': input.index
             },
             function(response, status){
-                if (status !== 200){
+                if (status === 200){
+                    // If we connect a input node which is already connected we need to remap
+                    // its connection to the new output
+                    // If we connect a output node which is already connected we need to APPEND
+                    // its new connection
+                    var line = create_connection(input, output);  // Create the visual connection
+                    viewport.addChildAt(line, viewport.children.length);
+                    update_line(line, start_pos, end_pos);
+                } else {
                     console.log(response);
                 }
             }); 
@@ -382,6 +458,8 @@ class PopupMenu {
         this.delete_button.rect.on('mousedown', _ => pipeline.remove_node(this.currentNode), false);
         this.out_button = new Button(' OUTPUT ', true);
         this.out_button.rect.on('mousedown', _ => pipeline.set_output(this.currentNode), false);
+        this.macro_button = new Button('  MACRO  ', true);
+        this.macro_button.rect.on('mousedown', _ => pipeline.set_macro(this.currentNode), false);
         this.pane.addChild(this.input_container);
         this.pane.buttonMode = true;
         this.pane.interactive = false;
@@ -404,8 +482,6 @@ class PopupMenu {
         this.currentNode = this.target.node;
         var block = this.target.node.block;
         var custom_args = block.custom_args;
-        console.log(block)
-        console.log(custom_args, this.currentNode.id)
         var custom_args_type = block.custom_args_type;
         var value, type, height;
         var x = CUSTOM_ARG_SIZE - 215;
@@ -464,13 +540,16 @@ class PopupMenu {
         }
 
         var scale_y = (y + 40) / this.pane_height;
-        var delete_pos = new PIXI.Point(1 * CUSTOM_ARG_SIZE / 6, y - 2);
-        var out_pos = new PIXI.Point(4 * CUSTOM_ARG_SIZE / 6, y - 2);
+        var delete_pos = new PIXI.Point(CUSTOM_ARG_SIZE / 8, y - 2);
+        var out_pos = new PIXI.Point(3 * CUSTOM_ARG_SIZE / 8, y - 2);
+        var macro_pos = new PIXI.Point(5 * CUSTOM_ARG_SIZE / 8, y - 2);
 
         this.delete_button.rect.position.set(delete_pos.x, delete_pos.y);
         this.out_button.rect.position.set(out_pos.x, out_pos.y);
+        this.macro_button.rect.position.set(macro_pos.x, macro_pos.y);
         this.input_container.addChild(this.delete_button.rect);
         this.input_container.addChild(this.out_button.rect);
+        this.input_container.addChild(this.macro_button.rect);
 
         this.pane.scale.set(1, scale_y)
         for (var i=0; i<this.pane.children.length; i++){
@@ -609,7 +688,8 @@ class SideMenu {
             var y = 45;
             for (var j = 0; j < this.pane[this.tags[i]].children.length; j++){
                 this.pane[this.tags[i]].children[j].scale.set(0.8);
-                var x = WIDTH - this.pane[this.tags[i]].children[j].width;
+                var obj = this.pane[this.tags[i]].children[j].node
+                var x = WIDTH - obj.width * obj.rect.scale.x;
                 this.pane[this.tags[i]].children[j].position.set(x, y);
                 y += 50
             }
