@@ -64,10 +64,8 @@ class Block:
             del input_args['self']
         else:
             input_args = dict(signature(self.f).parameters)
-        args = [(k, val.default) for k, val in input_args.items()]
-        self.input_args = dict([(k, val) for k, val in args if val is _empty])
-        self.custom_args = dict([(k, val) for k, val in args if val is not _empty])
-        self.custom_args_type = dict([(k, type(val)) for k, val in self.custom_args.items()])
+        self.input_args = dict([(k, val.default) for k, val in input_args.items()])
+        self.input_args_type = dict([(k, type(val)) for k, val in self.input_args.items()])
         self.max_queue = max_queue
         self.output_names = output_names if output_names is not None else ['y']
 
@@ -88,16 +86,15 @@ class Block:
         # TODO: Change me to a custom value, using None can cause problems
         x['input_args'] = dict((k, v if v != _empty else None)
                                 for k, v in x['input_args'].items())
-        x['custom_args_type'] = dict((k, str(v.__name__)) for k, v in x['custom_args_type'].items())
-        x['custom_args'] = Block.serialize_args(x['custom_args'])
+        x['input_args_type'] = dict((k, str(v.__name__)) for k, v in x['input_args_type'].items())
+        x['custom_args'] = Block.serialize_args(x['custom_args']) # TODO
         return x
 
     def __iter__(self):
         yield 'f', self.f
         yield 'name', self.name
         yield 'input_args', self.input_args
-        yield 'custom_args', self.custom_args
-        yield 'custom_args_type', self.custom_args_type
+        yield 'custom_inputs_type', self.custom_inputs_type
         yield 'max_queue', self.max_queue
         yield 'output_names', self.output_names
         yield 'tag', self.tag
