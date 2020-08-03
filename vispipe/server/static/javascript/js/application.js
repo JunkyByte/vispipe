@@ -96,7 +96,7 @@ $(document).ready(function(){
             return    
         }
 
-        var block = new Block(msg.name, msg.input_args, msg.custom_args, msg.custom_args_type,
+        var block = new Block(msg.name, msg.input_args, msg.input_args_type,
                               msg.output_names, msg.tag, msg.data_type, msg.docstring);
         pipeline.STATIC_NODES.push(new StaticNode(block));
         pipeline.NAMES.push(msg.name);
@@ -189,9 +189,9 @@ $(document).ready(function(){
         for (i=0; i<nodes.length; i++){
             // Create blocks
             block_dict = blocks[i];
-            block = new Block(block_dict.name, block_dict.input_args, block_dict.custom_args,
-                              block_dict.custom_args_type, block_dict.output_names,
-                              block_dict.tag, block_dict.data_type);
+            block = new Block(block_dict.name, block_dict.input_args,
+                              block_dict.input_args_type, block_dict.output_names,
+                              block_dict.tag, block_dict.data_type, block_dict.docstring);
             obj = pipeline.spawn_node_visual(block, nodes[i]);
 
             pos = viewport.center
@@ -208,7 +208,7 @@ $(document).ready(function(){
             for (j=0; j<Object.keys(custom_args[i]).length; j++){
                 key = Object.keys(custom_args[i])[j];
                 arg = Object.values(custom_args[i])[j];
-                node.block.custom_args[key] = arg;
+                node.block.input_args[key] = arg;
             }
         }
 

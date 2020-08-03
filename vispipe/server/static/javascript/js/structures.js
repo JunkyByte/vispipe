@@ -183,11 +183,10 @@ class VisNode extends Node {
 
 
 class Block {
-    constructor(name, input_args, custom_args, custom_args_type, output_names, tag, data_type, docstring) {
+    constructor(name, input_args, input_args_type, output_names, tag, data_type, docstring) {
         this.name = name;
         this.input_args = input_args;
-        this.custom_args = custom_args;
-        this.custom_args_type = custom_args_type;
+        this.input_args_type = input_args_type;
         this.output_names = output_names;
         this.tag = tag;
         this.data_type = data_type;
@@ -311,7 +310,7 @@ class Pipeline {
         socket.emit('set_custom_arg', {'id': node.id, 'key': key, 'value': value}, function(response, status){
             if (status === 200){
                 console.log('The custom arg has been set');
-                node.block.custom_args[key] = value;
+                node.block.input_args[key] = value;
             } else {
                 console.log(response);
             }
@@ -481,8 +480,8 @@ class PopupMenu {
         this.target = ev.target;
         this.currentNode = this.target.node;
         var block = this.target.node.block;
-        var custom_args = block.custom_args;
-        var custom_args_type = block.custom_args_type;
+        var custom_args = block.input_args; // TODO
+        var custom_args_type = block.input_args_type;
         var value, type, height;
         var x = CUSTOM_ARG_SIZE - 215;
         var y = 15;
@@ -517,9 +516,9 @@ class PopupMenu {
                 input_text.text = String(value);
 
                 if (type === 'int'){
-                    input_text.restrict = '0123456789';
+                    input_text.restrict = '-0123456789';
                 } else if (type === 'float'){
-                    input_text.restrict = '0123456789.';
+                    input_text.restrict = '-0123456789.';
                 }
 
                 input_text.on('input', function(input_text, key) {

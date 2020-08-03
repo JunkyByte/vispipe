@@ -787,7 +787,7 @@ class PipelineRunner:
 
         pipeline = copy.deepcopy(pipeline_def)
         for node in pipeline.v():
-            if node.block.num_inputs() != len(pipeline.adj(node, out=False)):
+            if node.block.num_inputs() > len(pipeline.adj(node, out=False)):
                 pipeline.deleteNode(node)
                 log.warning('"%s" has been removed as its input were not satisfied' % node.block.name)
 
@@ -842,12 +842,13 @@ class PipelineRunner:
                 for node_out, out_idx, inp_idx, _ in adj_out:
                     free_q = get_free_out_q(node_out, out_idx)
                     in_q[inp_idx] = free_q
-                return in_q
+                    in_idx.append(inp_idx)
+                return in_q, in_idx
 
             # Create input and output queues
-            in_q = []
+            in_q, in_idx = [], []
             if block.num_inputs() != 0:  # If there are inputs
-                in_q = get_input_queues(node)
+                in_q, in_idx = get_input_queues(node)
 
             def chain_functions(functions):
                 end_f = functions.pop()
@@ -868,7 +869,6 @@ class PipelineRunner:
                 funcs = [block.get_function(node.custom_args)]
                 for macro_block, custom_args in macro_dict[node][:-1]:
                     # We wrap each function in a warning manager and add them to the list of functions
-                    #funcs.append(macro_block.get_function(custom_args))
                     f = macro_block.get_function(custom_args)
                     if Pipeline.USE_MACRO_WARNINGS:
                         f = self.warning_wrapper(f)
@@ -897,7 +897,7 @@ class PipelineRunner:
                     self.outputs[hash(node)] = OutputConsumer(q)
 
             # Create the thread
-            runner = BlockRunner(block, in_q, out_q, node.custom_args, node.is_macro)
+            runner = BlockRunner(block, in_q, out_q, in_idx, node.custom_args, node.is_macro)
             thr = get_thread_class(use_mp, runner.run, thread_kwargs={'name': block.name})
             thr.daemon = True
             self.threads.append(thr)
@@ -1089,7 +1089,7 @@ def _force_tuple(x):
 
 
 class BlockRunner:
-    def __init__(self, block, in_q, out_q, custom_arg, is_macro):
+    def __init__(self, block, in_q, out_q, inp_idx, custom_arg, is_macro):
         self.block = block
         self.in_q = in_q
         self.out_q = out_q
@@ -1105,11 +1105,18 @@ class BlockRunner:
         self.intercept = self.block.intercept_end
         self.terminate = False
 
+        # Remove arguments that are satisfied by queues
+        custom_arg = copy.copy(self.custom_arg)
+        if inp_idx: # TODO
+            for name in [self.block.get_input_name(idx) for idx in inp_idx]:
+                custom_arg.pop(name, None)
+
+
         # Map the correct function from the block
         if is_macro:
             self.f = block.f
         else:
-            self.f = block.get_function(self.custom_arg)
+            self.f = block.get_function(custom_arg)
 
     def run(self):
         # Pipeline.empty -> The function is not ready to return anything and its output is skip

@@ -73,9 +73,12 @@ class Block:
         if self.is_class:
             return self.f(**custom_args).run
         return partial(self.f, **custom_args)
+    
+    def get_input_name(self, idx):
+        return list(signature(self.f).parameters.keys())[idx]
 
     def num_inputs(self):
-        return len(self.input_args)
+        return len(self.input_args) - sum([1 if v != _empty else 0 for v in self.input_args.values()])
 
     def num_outputs(self):
         return len(self.output_names)
@@ -87,14 +90,15 @@ class Block:
         x['input_args'] = dict((k, v if v != _empty else None)
                                 for k, v in x['input_args'].items())
         x['input_args_type'] = dict((k, str(v.__name__)) for k, v in x['input_args_type'].items())
-        x['custom_args'] = Block.serialize_args(x['custom_args']) # TODO
+        x['input_args'] = Block.serialize_args(x['input_args'])
+
         return x
 
     def __iter__(self):
         yield 'f', self.f
         yield 'name', self.name
         yield 'input_args', self.input_args
-        yield 'custom_inputs_type', self.custom_inputs_type
+        yield 'input_args_type', self.input_args_type
         yield 'max_queue', self.max_queue
         yield 'output_names', self.output_names
         yield 'tag', self.tag
@@ -146,7 +150,7 @@ class Node:
         return self._custom_args
 
     def set_custom_arg(self, key, value):
-        arg_type = self.block.custom_args_type[key]
+        arg_type = self.block.input_args_type[key]
         if arg_type in [list, bool, tuple, dict, None, bytes, np.ndarray]:
             try:
                 parsed = literal_eval(value)
@@ -161,7 +165,6 @@ class Node:
                 raise ValueError('Cannot parse custom arg "%s" of "%s" with value "%s"' %
                         (key, self.block.name, value)) from None
         elif arg_type is FunctionType:
-            print('is a function')
             try:
                 self._custom_args[key] = eval(value)
             except (ValueError, SyntaxError):
