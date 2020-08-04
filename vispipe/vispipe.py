@@ -787,12 +787,12 @@ class PipelineRunner:
 
         pipeline = copy.deepcopy(pipeline_def)
         for node in pipeline.v():
-            if node.block.num_inputs() > len(pipeline.adj(node, out=False)):
+            if node.block.num_inputs() - node.num_custom_args() > len(pipeline.adj(node, out=False)):
                 pipeline.deleteNode(node)
                 log.warning('"%s" has been removed as its input were not satisfied' % node.block.name)
 
         ord_graph = []
-        s = [node for node in pipeline.v() if node.block.num_inputs() == 0]
+        s = [node for node in pipeline.v() if len(pipeline.adj(node, out=False)) == 0]
         while s:
             n = s.pop()
             ord_graph.append(n)
@@ -838,7 +838,7 @@ class PipelineRunner:
             # Helper to create input queues
             def get_input_queues(node):
                 adj_out = pipeline_def.adj(node, out=False)
-                in_q = [FakeQueue() for _ in range(block.num_inputs())]
+                in_q = [FakeQueue() for _ in range(len(pipeline_def.adj(node, out=False)))]
                 for node_out, out_idx, inp_idx, _ in adj_out:
                     free_q = get_free_out_q(node_out, out_idx)
                     in_q[inp_idx] = free_q
@@ -847,8 +847,9 @@ class PipelineRunner:
 
             # Create input and output queues
             in_q, in_idx = [], []
-            if block.num_inputs() != 0:  # If there are inputs
+            if len(pipeline_def.adj(node, out=False)) != 0:  # If there are queue inputs
                 in_q, in_idx = get_input_queues(node)
+                print(block.name, in_q)
 
             def chain_functions(functions):
                 end_f = functions.pop()
@@ -1105,12 +1106,14 @@ class BlockRunner:
         self.intercept = self.block.intercept_end
         self.terminate = False
 
+        print(self.block.name, in_q)
         # Remove arguments that are satisfied by queues
         custom_arg = copy.copy(self.custom_arg)
         if inp_idx: # TODO
             for name in [self.block.get_input_name(idx) for idx in inp_idx]:
                 custom_arg.pop(name, None)
-
+            print('%s Found force queue for input %s' % (self.block.name, inp_idx))
+        # TODO CHECK PROBABLY THE CONNECTION WITH A INPUT TAGGED AS CUSTOM ARGS IS BROKEN
 
         # Map the correct function from the block
         if is_macro:

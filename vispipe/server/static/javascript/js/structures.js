@@ -523,7 +523,8 @@ class PopupMenu {
 
                 input_text.on('input', function(input_text, key) {
                     return function() {
-                        if (input_text.text && String(input_text.text) !== input_text.placeholder){
+                        //if (input_text.text && String(input_text.text) !== input_text.placeholder){
+                        if (String(input_text.text) !== input_text.placeholder){
                             pipeline.set_custom_arg(self.currentNode, key, input_text.text);
                         }
                     }

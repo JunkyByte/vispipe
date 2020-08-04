@@ -78,7 +78,7 @@ class Block:
         return list(signature(self.f).parameters.keys())[idx]
 
     def num_inputs(self):
-        return len(self.input_args) - sum([1 if v != _empty else 0 for v in self.input_args.values()])
+        return len(self.input_args)
 
     def num_outputs(self):
         return len(self.output_names)
@@ -148,9 +148,15 @@ class Node:
     @property
     def custom_args(self):
         return self._custom_args
+    
+    def num_custom_args(self):
+        return  sum([1 if v != _empty else 0 for v in self._custom_args.values()])
 
     def set_custom_arg(self, key, value):
         arg_type = self.block.input_args_type[key]
+        if arg_type is type(_empty): # If no type was specified fallback to string
+            arg_type = str
+
         if arg_type in [list, bool, tuple, dict, None, bytes, np.ndarray]:
             try:
                 parsed = literal_eval(value)
@@ -172,6 +178,7 @@ class Node:
                         (key, self.block.name, value)) from None
         else:
             self._custom_args[key] = arg_type(value)
+        print(self._custom_args, key, value, arg_type)
 
     def __hash__(self):
         if self._hash is None:

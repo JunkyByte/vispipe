@@ -5,7 +5,8 @@ import numpy as np
 
 @vispipe.block
 def rand_range(minn=-1., maxx=1.):
-    return (np.random.random() * (maxx - minn)) - minn
+    print(minn, maxx)
+    return np.random.uniform(low=minn, high=maxx)
 
 
 @vispipe.block(output_names=['y1', 'y2'])
